@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "35844123331",
+    "project_id": "rentdone-92c6f",
+    "storage_bucket": "rentdone-92c6f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35844123331:android:3e3ff565505d29efb85076",
+        "android_client_info": {
+          "package_name": "com.example.rentdone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoBj8qlBknm-g4wsAHNz_tCyQAWfG3jx0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
