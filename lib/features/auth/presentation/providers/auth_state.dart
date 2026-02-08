@@ -43,9 +43,16 @@ class AuthState {
   AuthState copyWith({
     bool? otpSent,
     bool? isLoading,
+
     String? nameError,
+    bool clearNameError = false,
+
     String? phoneError,
+    bool clearPhoneError = false,
+
     String? otpError,
+    bool clearOtpError = false,
+
     int? resendSeconds,
     String? countryCode,
     String? countryFlag,
@@ -53,9 +60,13 @@ class AuthState {
     return AuthState(
       otpSent: otpSent ?? this.otpSent,
       isLoading: isLoading ?? this.isLoading,
-      nameError: nameError,
-      phoneError: phoneError,
-      otpError: otpError,
+
+      nameError: clearNameError ? null : nameError ?? this.nameError,
+
+      phoneError: clearPhoneError ? null : phoneError ?? this.phoneError,
+
+      otpError: clearOtpError ? null : otpError ?? this.otpError,
+
       resendSeconds: resendSeconds ?? this.resendSeconds,
       countryCode: countryCode ?? this.countryCode,
       countryFlag: countryFlag ?? this.countryFlag,

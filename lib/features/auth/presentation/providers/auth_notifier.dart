@@ -51,6 +51,18 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  void onPrimaryAction({
+    required String name,
+    required String phone,
+    required String otp,
+  }) {
+    if (!state.otpSent) {
+      sendOtp(phone, name: name);
+    } else {
+      verifyOtp(otp);
+    }
+  }
+
   // ─────────────────────────────
   // VERIFY OTP
   // ─────────────────────────────

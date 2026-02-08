@@ -3,8 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
 import 'package:rentdone/features/owner/presentation/pages/owner_dashboard.dart';
-import 'package:rentdone/shared/widgets/role_selection_screen.dart';
-import 'package:rentdone/shared/widgets/splash_screen.dart';
+
+import 'package:rentdone/shared/pages/role_selection_screen.dart';
+import 'package:rentdone/shared/pages/splash_screen.dart';
 
 
 /// App-level router (ONLY splash for now)
