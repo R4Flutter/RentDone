@@ -1,8 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:rentdone/app/app_theme.dart';
-import 'package:rentdone/shared/widgets/Glass_Role_card.dart';
+
+import 'package:rentdone/shared/widgets/glass_role.dart';
 
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -14,7 +14,7 @@ class RoleSelectionScreen extends StatelessWidget {
     final colors = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -64,7 +64,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 subtitle: 'Manage properties & collect rent',
                 imagePath: 'assets/images/owner_final.png',
                 onTap: () {
-                  context.pushNamed('owner_dashboard');
+                  context.pushNamed('ownerDashboard');
                 },
               ),
             ],

@@ -1,45 +1,46 @@
 import 'package:flutter/material.dart';
 
-/// ------------------------------------------------------------
-/// APP THEME – RENTDONE (PRODUCTION READY, MATERIAL 3)
-/// ------------------------------------------------------------
+/// =============================================================
+/// APP THEME – RENTDONE (INDUSTRY GRADE, MATERIAL 3)
+/// =============================================================
 ///
-/// DESIGN SYSTEM: 60 : 30 : 10
+/// DESIGN SYSTEM: 60 / 30 / 10
 ///
-/// 60% → Base background
-/// 30% → Brand blue surfaces (flat + gradient)
-/// 10% → Text / accents
+/// LIGHT MODE
+/// 60% → White background
+/// 30% → Blue gradient surfaces
+/// 10% → Near-black text
 ///
-/// Rules:
-/// - Material 3
-/// - Single source of truth
-/// - Gradients exposed as tokens (not in ColorScheme)
+/// DARK MODE
+/// 60% → Near-black background
+/// 30% → Blue gradient surfaces
+/// 10% → White text
+///
+/// RULES:
+/// - No gradients in ColorScheme
+/// - No blue text ever
+/// - Widgets must read from Theme.of(context)
 ///
 class AppTheme {
   AppTheme._();
 
-  // ============================================================
+  // =============================================================
   // BRAND CORE
-  // ============================================================
+  // =============================================================
+
+  static const Color pureWhite = Color(0xFFFFFFFF);
+  static const Color nearBlack = Color(0xFF0F172A);
 
   static const Color primaryBlue = Color(0xFF2563EB);
-  static const Color nearBlack   = Color(0xFF0F172A);
-  static const Color pureWhite   = Color(0xFFFFFFFF);
 
-  static const Color errorRed     = Color(0xFFDC2626);
   static const Color successGreen = Color(0xFF16A34A);
   static const Color warningAmber = Color(0xFFF59E0B);
+  static const Color errorRed = Color(0xFFDC2626);
 
-  // ============================================================
-  // UNIVERSAL BLUE SYSTEM (30%)
-  // ============================================================
+  // =============================================================
+  // BLUE SYSTEM (30% — SURFACES ONLY)
+  // =============================================================
 
-  /// Exact logo blues
-  static const Color blueLight = Color.fromARGB(255, 47, 107, 255); // #2F6BFF
-  static const Color blueMain  = Color.fromARGB(255, 21, 74, 246);  // #154AF6
-  static const Color blueDark  = Color.fromARGB(255, 5, 18, 174);   // #0512AE
-
-  /// 🔥 UNIVERSAL GRADIENT (USE FOR CARDS / GLASS / HERO)
   static const LinearGradient blueSurfaceGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -49,126 +50,130 @@ class AppTheme {
       Color.fromARGB(140, 5, 18, 174),
     ],
   );
+  static const LinearGradient blueNavGradient = LinearGradient(
+  begin: Alignment.centerLeft,
+  end: Alignment.centerRight,
+  colors: [
+    Color.fromARGB(200, 47, 107, 255), // slightly stronger
+    Color.fromARGB(180, 21, 74, 246),
+    Color.fromARGB(160, 5, 18, 174),
+  ],
+);
 
-  /// Flat fallback (ThemeData safe)
-  static const Color blueSurface = blueMain;
+  // =============================================================
+  // COLOR SCHEMES (TEXT + SEMANTICS ONLY)
+  // =============================================================
 
-  // ============================================================
-  // LIGHT THEME (60 : 30 : 10)
-  // ============================================================
-
-  static final Color lightBlueSurface =
-      primaryBlue.withValues(alpha: 0.08);
-
-  static final Color lightBlueSurfaceStrong =
-      primaryBlue.withValues(alpha: 0.12);
-
-  // ============================================================
-  // DARK THEME (60 : 30 : 10)
-  // ============================================================
-
-  static const Color darkBackground = Color(0xFF020B14); // 60%
-  static const Color darkSurface    = blueSurface;       // 30%
-  static const Color darkText       = Color(0xFFE6F1FF);  // 10%
-
-  // ============================================================
-  // COLOR SCHEMES (COLOR ONLY)
-  // ============================================================
-
-  static const ColorScheme _lightColorScheme = ColorScheme(
+  static const ColorScheme _lightScheme = ColorScheme(
     brightness: Brightness.light,
+    surface: pureWhite,      // 60%
+    onSurface: nearBlack,    // 10%
     primary: primaryBlue,
     secondary: primaryBlue,
-    surface: pureWhite,
-    onSurface: nearBlack,
     onPrimary: pureWhite,
     onSecondary: pureWhite,
     error: errorRed,
     onError: pureWhite,
   );
 
-  static const ColorScheme _darkColorScheme = ColorScheme(
+  static const ColorScheme _darkScheme = ColorScheme(
     brightness: Brightness.dark,
+    surface: nearBlack,      // 60%
+    onSurface: pureWhite,    // 10%
     primary: primaryBlue,
     secondary: primaryBlue,
-    surface: darkBackground,
-    onSurface: darkText,
-    onPrimary: darkText,
-    onSecondary: darkText,
+    onPrimary: pureWhite,
+    onSecondary: pureWhite,
     error: errorRed,
-    onError: darkText,
+    onError: pureWhite,
   );
 
-  // ============================================================
+  // =============================================================
   // LIGHT THEME
-  // ============================================================
+  // =============================================================
 
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
-    colorScheme: _lightColorScheme,
+    brightness: Brightness.light,
+    colorScheme: _lightScheme,
+
     scaffoldBackgroundColor: pureWhite,
+
     textTheme: _textTheme(nearBlack),
 
-    appBarTheme: AppBarTheme(
-      backgroundColor: lightBlueSurface,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: pureWhite,
       foregroundColor: nearBlack,
       elevation: 0,
       centerTitle: true,
     ),
 
     cardTheme: CardThemeData(
-      color: lightBlueSurfaceStrong,
+      color: pureWhite, // neutral card, gradients applied manually
       elevation: 0,
       shadowColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
     ),
+
+    dividerTheme: DividerThemeData(
+      color: nearBlack.withValues(alpha :0.1),
+      thickness: 1,
+    ),
   );
 
-  // ============================================================
+  // =============================================================
   // DARK THEME
-  // ============================================================
+  // =============================================================
 
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
-    colorScheme: _darkColorScheme,
-    scaffoldBackgroundColor: darkBackground,
-    textTheme: _textTheme(darkText),
+    brightness: Brightness.dark,
+    colorScheme: _darkScheme,
 
-    appBarTheme: AppBarTheme(
-      backgroundColor: darkBackground,
-      foregroundColor: darkText,
+    scaffoldBackgroundColor: nearBlack,
+
+    textTheme: _textTheme(pureWhite),
+
+    appBarTheme: const AppBarTheme(
+      backgroundColor: nearBlack,
+      foregroundColor: pureWhite,
       elevation: 0,
       centerTitle: true,
     ),
 
     cardTheme: CardThemeData(
-      color: darkSurface,
+      color: nearBlack,
       elevation: 0,
       shadowColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
     ),
+
+    dividerTheme: DividerThemeData(
+      color: pureWhite.withValues(alpha: 0.12),
+      thickness: 1,
+    ),
   );
 
-  // ============================================================
-  // TEXT SYSTEM
-  // ============================================================
+  // =============================================================
+  // TYPOGRAPHY
+  // =============================================================
 
   static TextTheme _textTheme(Color color) {
     return TextTheme(
-      displayLarge: _textStyle(32, FontWeight.bold, color),
-      displayMedium: _textStyle(26, FontWeight.w600, color),
-      titleLarge: _textStyle(18, FontWeight.w600, color),
-      bodyLarge: _textStyle(16, FontWeight.normal, color),
-      bodyMedium: _textStyle(14, FontWeight.normal, color),
-      labelLarge: _textStyle(14, FontWeight.w600, color),
+      displayLarge: _style(32, FontWeight.bold, color),
+      displayMedium: _style(26, FontWeight.w600, color),
+      titleLarge: _style(18, FontWeight.w600, color),
+      bodyLarge: _style(16, FontWeight.normal, color),
+      bodyMedium: _style(14, FontWeight.normal, color),
+      labelLarge: _style(14, FontWeight.w600, color),
     );
   }
 
-  static TextStyle _textStyle(
+  static TextStyle _style(
     double size,
     FontWeight weight,
     Color color,

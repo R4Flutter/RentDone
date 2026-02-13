@@ -40,6 +40,8 @@ dependencies:
   country_picker: ^2.0.27
   firebase_auth: ^6.1.4
   cloud_firestore: ^6.1.2
+  uuid: ^4.5.2
+  flutter_animate: ^4.5.2
 
 dev_dependencies:
   flutter_test:
@@ -68,6 +70,11 @@ flutter:
     - assets/images/rentdone_logo.png
     - assets/images/owner_final.png
     - assets/images/tenant_final.png
+    - assets/images/cash.png
+    - assets/images/collected.png
+    - assets/images/property.png
+    - assets/images/pending.png
+    - assets/images/upi.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
