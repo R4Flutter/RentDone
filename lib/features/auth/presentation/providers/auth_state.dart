@@ -2,25 +2,26 @@ import 'package:flutter/material.dart';
 
 @immutable
 class AuthState {
-  final bool otpSent;
+  final bool linkSent;
   final bool isLoading;
 
   // 🎯 Field-level errors
   final String? nameError;
-  final String? phoneError;
-  final String? otpError;
+  final String? emailError;
+  final String? linkError;
 
   // 🌍 Other state
   final int resendSeconds;
-  final String countryCode;
-  final String countryFlag;
+  // (optional) keep for UI if needed
+  final String? countryCode;
+  final String? countryFlag;
 
   const AuthState({
-    required this.otpSent,
+    required this.linkSent,
     required this.isLoading,
     required this.nameError,
-    required this.phoneError,
-    required this.otpError,
+    required this.emailError,
+    required this.linkError,
     required this.resendSeconds,
     required this.countryCode,
     required this.countryFlag,
@@ -29,43 +30,43 @@ class AuthState {
   // INITIAL STATE
   factory AuthState.initial() {
     return const AuthState(
-      otpSent: false,
+      linkSent: false,
       isLoading: false,
       nameError: null,
-      phoneError: null,
-      otpError: null,
+      emailError: null,
+      linkError: null,
       resendSeconds: 0,
-      countryCode: '+91',
-      countryFlag: '🇮🇳',
+      countryCode: null,
+      countryFlag: null,
     );
   }
 
   AuthState copyWith({
-    bool? otpSent,
+    bool? linkSent,
     bool? isLoading,
 
     String? nameError,
     bool clearNameError = false,
 
-    String? phoneError,
-    bool clearPhoneError = false,
+    String? emailError,
+    bool clearEmailError = false,
 
-    String? otpError,
-    bool clearOtpError = false,
+    String? linkError,
+    bool clearLinkError = false,
 
     int? resendSeconds,
     String? countryCode,
     String? countryFlag,
   }) {
     return AuthState(
-      otpSent: otpSent ?? this.otpSent,
+      linkSent: linkSent ?? this.linkSent,
       isLoading: isLoading ?? this.isLoading,
 
       nameError: clearNameError ? null : nameError ?? this.nameError,
 
-      phoneError: clearPhoneError ? null : phoneError ?? this.phoneError,
+      emailError: clearEmailError ? null : emailError ?? this.emailError,
 
-      otpError: clearOtpError ? null : otpError ?? this.otpError,
+      linkError: clearLinkError ? null : linkError ?? this.linkError,
 
       resendSeconds: resendSeconds ?? this.resendSeconds,
       countryCode: countryCode ?? this.countryCode,

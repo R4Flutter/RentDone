@@ -20,7 +20,7 @@ class OwnerDashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ui = ref.watch(dashboardLayoutProvider);
     final isDesktop = MediaQuery.of(context).size.width >= 1024;
-    int _calculateIndex(BuildContext context) {
+    int calculateIndex(BuildContext context) {
   final location = GoRouterState.of(context).uri.toString();
 
   if (location.contains('/owner/tenants/add')) return 1;
@@ -58,7 +58,7 @@ return Scaffold(
   bottomNavigationBar: isDesktop
       ? null
       : PinterestMorphNavBar(
-          currentIndex: _calculateIndex(context),
+          currentIndex: calculateIndex(context),
           onTap: (index) {
             switch (index) {
               case 0:

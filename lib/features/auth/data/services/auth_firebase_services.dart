@@ -1,137 +1,123 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 
+/// Auth service implementing Email Link authentication
 class AuthFirebaseService {
   AuthFirebaseService(this._auth);
 
   final FirebaseAuth _auth;
 
-  String? _verificationId;
-
-  /// ─────────────────────────────
-  /// SEND OTP
-  /// ─────────────────────────────
-  Future<void> sendOtp({
-    required String phoneNumber,
-    Duration timeout = const Duration(seconds: 60),
-  }) async {
+  /// Send a sign-in link to the given email. Uses Firebase Email Link
+  /// authentication (magic link). Configure `ActionCodeSettings` in
+  /// production with your app's package names / dynamic link domain.
+  Future<void> sendSignInLinkToEmail({required String email}) async {
     try {
-      // WEB FLOW
-      if (kIsWeb) {
-        final confirmationResult =
-            await _auth.signInWithPhoneNumber(phoneNumber);
+      final actionCodeSettings = ActionCodeSettings(
+        url: 'https://rentdone.example.com/finishSignIn', // Update to your URL
+        handleCodeInApp: true,
+        androidPackageName: 'com.rentdone.app',
+        androidInstallApp: true,
+        androidMinimumVersion: '21',
+        iOSBundleId: 'com.rentdone.app',
+      );
 
-        _verificationId = confirmationResult.verificationId;
-        return;
-      }
-
-      // MOBILE FLOW
-      await _auth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        timeout: timeout,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // 🔥 Auto-verification (Android)
-          await _auth.signInWithCredential(credential);
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          throw _mapFirebaseException(e);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          _verificationId = verificationId;
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-        },
+      await _auth.sendSignInLinkToEmail(
+        email: email,
+        actionCodeSettings: actionCodeSettings,
       );
     } on FirebaseAuthException catch (e) {
       throw _mapFirebaseException(e);
-    } catch (_) {
-      throw const AuthException(
-        message: 'Something went wrong. Please try again.',
+    } catch (e) {
+      throw AuthException(
+        message: 'Failed to send sign-in link. ${e.toString()}',
       );
     }
   }
 
-
-  Future<UserCredential> verifyOtp({
-    required String otp,
+  /// Complete sign-in using the email and the incoming link (emailLink).
+  Future<UserCredential> signInWithEmailLink({
+    required String email,
+    required String emailLink,
   }) async {
     try {
-      if (_verificationId == null) {
-        throw const AuthException(
-          message: 'OTP session expired. Please request again.',
-        );
+      if (!FirebaseAuth.instance.isSignInWithEmailLink(emailLink)) {
+        throw const AuthException(message: 'Invalid sign-in link.');
       }
 
-      final credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
-        smsCode: otp,
+      final userCredential = await _auth.signInWithEmailLink(
+        email: email,
+        emailLink: emailLink,
       );
-
-      return await _auth.signInWithCredential(credential);
+      return userCredential;
     } on FirebaseAuthException catch (e) {
       throw _mapFirebaseException(e);
-    } catch (_) {
-      throw const AuthException(
-        message: 'Invalid OTP. Please try again.',
+    } catch (e) {
+      throw AuthException(
+        message: 'Failed to sign in with link. ${e.toString()}',
       );
     }
   }
 
-  /// ─────────────────────────────
-  /// SIGN OUT
-  /// ─────────────────────────────
+  /// Sign out
   Future<void> signOut() async {
-    await _auth.signOut();
+    try {
+      await _auth.signOut();
+    } catch (e) {
+      throw const AuthException(
+        message: 'Failed to sign out. Please try again.',
+      );
+    }
   }
 
-  /// ─────────────────────────────
-  /// CURRENT USER
-  /// ─────────────────────────────
+  /// Update User Profile
+  Future<void> updateUserProfile({
+    String? displayName,
+    String? photoUrl,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw const AuthException(message: 'User not authenticated.');
+      }
+
+      await user.updateProfile(displayName: displayName, photoURL: photoUrl);
+      await user.reload();
+    } on FirebaseAuthException catch (e) {
+      throw _mapFirebaseException(e);
+    } catch (e) {
+      throw AuthException(message: 'Failed to update profile: ${e.toString()}');
+    }
+  }
+
+  /// Get Current User
   User? get currentUser => _auth.currentUser;
 
-  /// ─────────────────────────────
-  /// ERROR MAPPING (IMPORTANT)
-  /// ─────────────────────────────
+  /// Stream Auth State Changes
+  Stream<User?> getAuthStateChanges() => _auth.authStateChanges();
+
+  /// Map firebase exceptions to user-friendly messages
   AuthException _mapFirebaseException(FirebaseAuthException e) {
     switch (e.code) {
-      case 'invalid-phone-number':
-        return const AuthException(
-          message: 'The phone number entered is invalid.',
-        );
-
+      case 'invalid-email':
+        return const AuthException(message: 'The email address is invalid.');
+      case 'user-disabled':
+        return const AuthException(message: 'This account has been disabled.');
+      case 'user-not-found':
+        return const AuthException(message: 'No user found for this email.');
       case 'too-many-requests':
         return const AuthException(
-          message:
-              'Too many attempts. Please wait before trying again.',
+          message: 'Too many attempts. Please try later.',
         );
-
-      case 'session-expired':
-        return const AuthException(
-          message: 'OTP expired. Please request a new one.',
-        );
-
-      case 'invalid-verification-code':
-        return const AuthException(
-          message: 'Incorrect OTP. Please try again.',
-        );
-
       case 'network-request-failed':
-        return const AuthException(
-          message: 'No internet connection.',
-        );
-
+        return const AuthException(message: 'No internet connection.');
+      case 'invalid-action-code':
+        return const AuthException(message: 'Invalid or expired sign-in link.');
       default:
-        return AuthException(
-          message: e.message ?? 'Authentication failed.',
-        );
+        return AuthException(message: e.message ?? 'Authentication failed.');
     }
   }
 }
 
-/// ─────────────────────────────
-/// CUSTOM AUTH EXCEPTION
-/// ─────────────────────────────
+/// Custom Auth Exception
 class AuthException implements Exception {
   final String message;
   const AuthException({required this.message});

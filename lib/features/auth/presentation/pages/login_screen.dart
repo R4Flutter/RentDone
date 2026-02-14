@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:rentdone/app/app_theme.dart';
-
 import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
-import 'package:rentdone/shared/widgets/otp_input.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -15,30 +12,19 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   late final TextEditingController nameController;
-  late final TextEditingController phoneController;
-  late final List<TextEditingController> otpControllers;
-  late final List<FocusNode> otpFocusNodes;
+  late final TextEditingController emailController;
 
   @override
   void initState() {
     super.initState();
     nameController = TextEditingController();
-    phoneController = TextEditingController();
-
-    otpControllers = List.generate(6, (_) => TextEditingController());
-    otpFocusNodes = List.generate(6, (_) => FocusNode());
+    emailController = TextEditingController();
   }
 
   @override
   void dispose() {
     nameController.dispose();
-    phoneController.dispose();
-    for (final c in otpControllers) {
-      c.dispose();
-    }
-    for (final f in otpFocusNodes) {
-      f.dispose();
-    }
+    emailController.dispose();
     super.dispose();
   }
 
@@ -46,226 +32,188 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(authProvider);
     final notifier = ref.read(authProvider.notifier);
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 24),
-
-              Center(
-                child: Text(
-                  'Login with phone',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Center(
-                child: Text(
-                  'We’ll send you a one-time password',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-              TextFormField(
-                controller: nameController,
-                onChanged: (_) {
-                  ref.read(authProvider.notifier).clearErrors();
-                },
-                keyboardType: TextInputType.name,
-                textCapitalization: TextCapitalization.words,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Full name',
-                  floatingLabelBehavior: FloatingLabelBehavior.auto,
-
-                  errorText: state.nameError,
-
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 0,
-                    minHeight: 0,
-                  ),
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.only(left: 16, right: 12),
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 22,
-                      color: Color(0xFF2563EB),
-                    ),
-                  ),
-
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 18,
-                  ),
-
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2563EB),
-                      width: 1.5,
-                    ),
-                  ),
-
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2563EB),
-                      width: 2,
-                    ),
-                  ),
-
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2563EB),
-                      width: 1.2,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // ───────── PHONE INPUT ─────────
-              TextFormField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                enabled: !state.otpSent,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Phone number',
-                  floatingLabelBehavior: FloatingLabelBehavior.auto,
-
-                  // 🌍 PREFIX UI ONLY (no logic)
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 0,
-                    minHeight: 0,
-                  ),
-                  prefixIcon: Padding(
-                    padding: const EdgeInsets.only(left: 16, right: 12),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('🇮🇳', style: TextStyle(fontSize: 18)),
-                        const SizedBox(width: 6),
-                        const Text(
-                          '+91',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.keyboard_arrow_down, size: 20),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome to RentDone',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Sign in with your email — we will send a secure link',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: Colors.white70),
+                        ),
                       ],
                     ),
                   ),
 
-                  // 🟦 PILL SIZE
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 18,
-                  ),
+                  const SizedBox(height: 18),
 
-                  // 🟦 NORMAL
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2563EB),
-                      width: 1.5,
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: nameController,
+                            decoration: InputDecoration(
+                              labelText: 'Full name',
+                              errorText: state.nameError,
+                              prefixIcon: const Icon(Icons.person_outline),
+                            ),
+                            onChanged: (_) => notifier.clearErrors(),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email address',
+                              hintText: 'you@company.com',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              errorText: state.emailError,
+                            ),
+                            onChanged: (_) => notifier.clearErrors(),
+                          ),
+                          const SizedBox(height: 18),
+
+                          if (state.linkSent)
+                            Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Expanded(
+                                      child: Text(
+                                        'Sign-in link sent. Check your email.',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed:
+                                            state.resendSeconds == 0 &&
+                                                !state.isLoading
+                                            ? () => notifier.resendEmailLink()
+                                            : null,
+                                        child: Text(
+                                          state.resendSeconds == 0
+                                              ? 'Resend link'
+                                              : 'Resend in ${state.resendSeconds}s',
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: state.isLoading
+                                            ? null
+                                            : () {
+                                                final link = Uri.base
+                                                    .toString();
+                                                notifier.completeSignIn(
+                                                  email: emailController.text,
+                                                  emailLink: link,
+                                                );
+                                              },
+                                        child: state.isLoading
+                                            ? const SizedBox(
+                                                height: 18,
+                                                width: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : const Text('I opened the link'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+
+                          const SizedBox(height: 6),
+
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: state.isLoading
+                                  ? null
+                                  : () => notifier.sendEmailLink(
+                                      emailController.text,
+                                      name: nameController.text,
+                                    ),
+                              child: state.isLoading
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      state.linkSent
+                                          ? 'Link Sent'
+                                          : 'Send Sign-in Link',
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-
-                  // 🟦 FOCUSED
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2563EB),
-                      width: 2,
-                    ),
-                  ),
-
-                  // 🔒 DISABLED
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2563EB),
-                      width: 1.2,
-                    ),
-                  ),
-                ),
+                ],
               ),
-              const SizedBox(height: 24),
-
-              if (state.otpSent) ...[
-                OtpInput(
-                  controllers: otpControllers,
-                  focusNodes: otpFocusNodes,
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: (state.resendSeconds == 0 && !state.isLoading)
-                        ? () => notifier.sendOtp(phoneController.text, name: '')
-                        : null,
-                    child: Text(
-                      state.resendSeconds == 0
-                          ? 'Resend OTP'
-                          : 'Resend in ${state.resendSeconds}s',
-                    ),
-                  ),
-                ),
-              ],
-
-              if (state.otpError != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    state.otpError!,
-                    style: const TextStyle(color: AppTheme.errorRed),
-                  ),
-                ),
-
-              const SizedBox(height: 24),
-
-              SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: state.isLoading
-                      ? null
-                      : () {
-                          notifier.onPrimaryAction(
-                            name: nameController.text,
-                            phone: phoneController.text,
-                            otp: otpControllers.map((e) => e.text).join(),
-                          );
-                        },
-                  child: state.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(state.otpSent ? 'Verify OTP' : 'Send OTP'),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

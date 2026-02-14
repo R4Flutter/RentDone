@@ -1,12 +1,26 @@
-// tenant_repository.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
 
+
+import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
+import 'package:rentdone/features/owner/owners_properties/data/serices/firestore_services.dart';
 
 class TenantRepository {
-  final _db = FirebaseFirestore.instance;
+  final FirestoreService _firestoreService;
+
+  TenantRepository(this._firestoreService);
 
   Future<void> addTenant(Tenant tenant) async {
-    await _db.collection('tenants').doc(tenant.id).set(tenant.toMap());
+    await _firestoreService.addTenant(tenant);
+  }
+
+  Future<void> removeTenant(
+    String tenantId,
+    String propertyId,
+    String roomId,
+  ) async {
+    await _firestoreService.removeTenant(tenantId, propertyId, roomId);
+  }
+
+  Future<void> updateTenant(Tenant tenant) async {
+    await _firestoreService.updateTenant(tenant);
   }
 }

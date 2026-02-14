@@ -15,26 +15,18 @@ class AuthInputValidator {
   }
 
   // ─────────────────────────────
-  // PHONE VALIDATION (INDIA)
+  // EMAIL VALIDATION
   // ─────────────────────────────
-  String? validatePhone(String? input) {
+  String? validateEmail(String? input) {
     if (input == null || input.trim().isEmpty) {
-      return 'Phone number is required';
+      return 'Email is required';
     }
 
-    final phone = input.trim();
-
-    if (!RegExp(r'^\d+$').hasMatch(phone)) {
-      return 'Phone number must contain only digits';
-    }
-
-    if (phone.length != 10) {
-      return 'Enter a valid 10-digit mobile number';
-    }
-
-    final firstDigit = int.tryParse(phone[0]);
-    if (firstDigit == null || firstDigit < 6) {
-      return 'Enter a valid Indian mobile number';
+    final email = input.trim();
+    // Basic email regex
+    final emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}");
+    if (!emailRegex.hasMatch(email)) {
+      return 'Enter a valid email address';
     }
 
     return null;

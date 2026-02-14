@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
-
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_scrren.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/owner_dashboard.dart';
 import 'package:rentdone/features/owner/owner_payment/presenation/pages/payment_scrren.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_settings_scrren.dart';
-import 'package:rentdone/features/owner/owners_properties/presenatation/pages/owners_properties.dart';
+import 'package:rentdone/features/owner/owners_properties/presenatation/pages/manage_property_scrren.dart';
+import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/reports/presentation/pages/report_screen.dart';
 import 'package:rentdone/shared/pages/role_selection_screen.dart';
 import 'package:rentdone/shared/pages/splash_screen.dart';
@@ -17,76 +17,138 @@ import 'package:rentdone/shared/pages/splash_screen.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
-
     routes: [
+      // ============================================================
+      // 🌍 AUTHENTICATION & ONBOARDING ROUTES
+      // ============================================================
 
-      /// 🌊 Splash
+      /// 🌊 Splash Screen - App Entry Point
       GoRoute(
         path: '/',
         name: 'splash',
         builder: (context, state) => const SplashPage(),
       ),
 
-      /// 🎭 Role Selection
+      /// 🎭 Role Selection Screen
       GoRoute(
         path: '/role',
         name: 'roleSelection',
         builder: (context, state) => const RoleSelectionScreen(),
       ),
 
-      /// 🔐 Login
+      /// 🔐 Login Screen
       GoRoute(
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginPage(),
       ),
 
-      /// 🧠 OWNER SHELL (Dashboard Layout)
+      // ============================================================
+      // 🏠 OWNER DASHBOARD SHELL & ROUTES
+      // ============================================================
+
+      /// Main Shell Route - Owner Dashboard Layout
       ShellRoute(
         builder: (context, state, child) {
           return OwnerDashboardPage(child: child);
         },
         routes: [
+          // ========================================================
+          // 📊 DASHBOARD
+          // ========================================================
 
-          /// 📊 Dashboard
+          /// 📊 Main Dashboard
           GoRoute(
             path: '/owner/dashboard',
             name: 'ownerDashboard',
             builder: (context, state) => const DashboardScreen(),
           ),
 
-          /// 🏠 Properties
+          // ========================================================
+          // 🏠 PROPERTY MANAGEMENT
+          // ========================================================
+
+          /// �️ Manage Properties - CRUD Operations
+          GoRoute(
+            path: '/owner/properties/manage',
+            name: 'manageProperties',
+            builder: (context, state) => const ManagePropertiesScreen(),
+          ),
+
+          /// ➕ Add New Property
+          GoRoute(
+            path: '/owner/properties/add',
+            name: 'addProperty',
+            builder: (context, state) => const AddPropertyScreen(),
+          ),
+
+          /// ✏️ Edit Existing Property
+          GoRoute(
+            path: '/owner/properties/edit/:propertyId',
+            name: 'editProperty',
+            builder: (context, state) {
+              // final propertyId = state.pathParameters['propertyId'];
+              // You can pass the property object if needed
+              return const AddPropertyScreen();
+            },
+          ),
+
+          /// 🏠 Property Overview - View All Properties & Tenants
           GoRoute(
             path: '/owner/properties',
             name: 'ownerProperties',
-            builder: (context, state) => const PropertyOverviewScreen(),
+            builder: (context, state) => const ManagePropertiesScreen(),
           ),
 
-          /// 👥 Tenants
-          
+          // ========================================================
+          // 👥 TENANT MANAGEMENT
+          // ========================================================
 
-          /// ➕ Add Tenant
+          /// ➕ Add New Tenant to Property
           GoRoute(
             path: '/owner/tenants/add',
             name: 'addTenant',
             builder: (context, state) => const AddTenantScreen(),
           ),
 
-          /// 💰 Payments
+          /// ✏️ Edit Tenant Information
+          GoRoute(
+            path: '/owner/tenants/edit/:tenantId',
+            name: 'editTenant',
+            builder: (context, state) {
+              // final tenantId = state.pathParameters['tenantId'];
+              // Pass tenant ID to edit screen
+              return const AddTenantScreen();
+            },
+          ),
+
+          // ========================================================
+          // 💰 PAYMENTS & FINANCIAL
+          // ========================================================
+
+          /// 💰 Payment Management - View & Track Payments
           GoRoute(
             path: '/owner/payments',
-            name: 'ownerPayment',
+            name: 'ownerPayments',
             builder: (context, state) => const PaymentsScreen(),
           ),
 
-          /// 📈 Reports
+          // ========================================================
+          // 📈 REPORTS & ANALYTICS
+          // ========================================================
+
+          /// 📈 Reports & Analytics Dashboard
           GoRoute(
             path: '/owner/reports',
             name: 'ownerReports',
             builder: (context, state) => const ReportsScreen(),
           ),
 
-          /// ⚙ Settings
+          // ========================================================
+          // ⚙️ ACCOUNT & SETTINGS
+          // ========================================================
+
+          /// ⚙️ Settings - User Preferences & Configuration
           GoRoute(
             path: '/owner/settings',
             name: 'ownerSettings',
@@ -97,8 +159,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
 
     errorBuilder: (context, state) {
-      return const Scaffold(
-        body: Center(child: Text('Something went wrong')),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'Page Not Found',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Requested path: ${state.uri}',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  context.go('/owner/dashboard');
+                },
+                child: const Text('Go to Dashboard'),
+              ),
+            ],
+          ),
+        ),
       );
     },
   );

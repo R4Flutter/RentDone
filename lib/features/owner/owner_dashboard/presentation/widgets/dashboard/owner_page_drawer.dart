@@ -67,7 +67,7 @@ class OwnerSideDrawer extends ConsumerWidget {
                             context.goNamed('ownerDashboard');
                             break;
                           case 1:
-                            context.goNamed('ownerProperties');
+                            context.goNamed('manageProperties');
                             break;
                           case 2:
                             context.goNamed('addTenant');
