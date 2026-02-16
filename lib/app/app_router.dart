@@ -7,7 +7,11 @@ import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_scrren.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/owner_dashboard.dart';
 import 'package:rentdone/features/owner/owner_payment/presenation/pages/payment_scrren.dart';
+import 'package:rentdone/features/owner/owner_profile/presentation/pages/profile_screen.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_settings_scrren.dart';
+import 'package:rentdone/features/owner/owner_support/presentation/pages/support_screen.dart';
+import 'package:rentdone/features/owner/owner_notifications/presentation/pages/owner_notifications_screen.dart';
+import 'package:rentdone/features/owner/owner_tenants/presentation/pages/manage_tenants_screen.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/manage_property_scrren.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/reports/presentation/pages/report_screen.dart';
@@ -111,6 +115,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AddTenantScreen(),
           ),
 
+          /// 👥 Manage Tenants
+          GoRoute(
+            path: '/owner/tenants/manage',
+            name: 'manageTenants',
+            builder: (context, state) => const ManageTenantsScreen(),
+          ),
+
           /// ✏️ Edit Tenant Information
           GoRoute(
             path: '/owner/tenants/edit/:tenantId',
@@ -130,7 +141,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/owner/payments',
             name: 'ownerPayments',
-            builder: (context, state) => const PaymentsScreen(),
+            builder: (context, state) => PaymentsScreen(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
 
           // ========================================================
@@ -145,6 +158,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
 
           // ========================================================
+          // 👤 PROFILE
+          // ========================================================
+
+          GoRoute(
+            path: '/owner/profile',
+            name: 'ownerProfile',
+            builder: (context, state) => const ProfileScreen(),
+          ),
+
+          // ========================================================
+          // 🔔 NOTIFICATIONS
+          // ========================================================
+
+          GoRoute(
+            path: '/owner/notifications',
+            name: 'ownerNotifications',
+            builder: (context, state) => const OwnerNotificationsScreen(),
+          ),
+
+          // ========================================================
           // ⚙️ ACCOUNT & SETTINGS
           // ========================================================
 
@@ -153,6 +186,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/owner/settings',
             name: 'ownerSettings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+
+          // ========================================================
+          // 🆘 SUPPORT
+          // ========================================================
+
+          GoRoute(
+            path: '/owner/support',
+            name: 'ownerSupport',
+            builder: (context, state) => const SupportScreen(),
           ),
         ],
       ),

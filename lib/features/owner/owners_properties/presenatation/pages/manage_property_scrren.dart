@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart';
+import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/property_detail_screen.dart';
 
@@ -18,6 +19,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Manage Properties"),
+        centerTitle: false,
         actions: [
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -42,29 +44,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
               label: const Text("Add Property"),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white.withAlpha(18),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddTenantScreen()),
-                );
-              },
-              icon: const Icon(Icons.person_add, color: Colors.white),
-              label: const Text("Add Tenant"),
-            ),
-          ),
+        
         ],
       ),
       body: LayoutBuilder(
@@ -266,33 +246,36 @@ class ManagePropertiesScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 12),
                     if (room.isOccupied && room.tenantId != null)
-                      FutureBuilder<dynamic>(
-                        future: ref
-                            .read(firestoreServiceProvider)
-                            .getTenant(room.tenantId!),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return Text(
-                              "Loading...",
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.grey,
-                                fontSize: 11,
-                              ),
-                            );
-                          }
-                          final tenant = snapshot.data;
-                          if (tenant == null) {
-                            return Text(
-                              "Occupied",
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.red,
-                                fontSize: 11,
-                              ),
-                            );
-                          }
-                          return Expanded(
-                            child: Column(
+                      Expanded(
+                        child: FutureBuilder<Tenant?>(
+                          future: ref
+                              .read(getTenantByIdUseCaseProvider)
+                              .call(room.tenantId!),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return Text(
+                                "Loading tenant...",
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey,
+                                  fontSize: 11,
+                                ),
+                              );
+                            }
+
+                            final tenant = snapshot.data;
+                            if (tenant == null) {
+                              return Text(
+                                "Occupied",
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.red,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              );
+                            }
+
+                            return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
@@ -312,10 +295,20 @@ class ManagePropertiesScreen extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                if ((tenant.email ?? '').isNotEmpty)
+                                  Text(
+                                    tenant.email!,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                               ],
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       )
                     else
                       Text(
@@ -377,8 +370,8 @@ class ManagePropertiesScreen extends ConsumerWidget {
               Navigator.pop(context);
               try {
                 await ref
-                    .read(firestoreServiceProvider)
-                    .deleteProperty(property.id);
+                    .read(deletePropertyUseCaseProvider)
+                    .call(property.id);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

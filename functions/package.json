@@ -1,0 +1,12 @@
+{
+  "name": "rentdone-functions",
+  "description": "Cloud Functions for RentDone",
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^4.8.1"
+  }
+}

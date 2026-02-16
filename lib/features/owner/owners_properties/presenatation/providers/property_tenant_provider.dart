@@ -1,50 +1,105 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
-import 'package:rentdone/features/owner/owners_properties/data/serices/firestore_services.dart';
-import 'package:rentdone/features/owner/owners_properties/ui_models/property_model.dart';
+import 'package:rentdone/features/owner/owners_properties/data/repositories/property_repository_impl.dart';
+import 'package:rentdone/features/owner/owners_properties/data/services/property_firebase_service.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/repositories/property_repository.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/add_property.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/delete_property.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/get_tenant_by_id.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/remove_tenant_from_room.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/update_property.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_all_properties.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_all_tenants.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_property.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_property_tenants.dart';
 
-// ===== FIRESTORE SERVICE PROVIDER =====
-final firestoreServiceProvider = Provider<FirestoreService>((ref) {
-  return FirestoreService();
+// ===== DATA/DOMAIN COMPOSITION =====
+
+final propertyFirebaseServiceProvider = Provider<PropertyFirebaseService>((ref) {
+  return PropertyFirebaseService();
 });
 
-// ===== PROPERTY PROVIDERS =====
+final propertyRepositoryProvider = Provider<PropertyRepository>((ref) {
+  final service = ref.watch(propertyFirebaseServiceProvider);
+  return PropertyRepositoryImpl(service);
+});
 
-/// Stream of all properties
+final watchAllPropertiesUseCaseProvider = Provider<WatchAllPropertiesUseCase>((
+  ref,
+) {
+  return WatchAllPropertiesUseCase(ref.watch(propertyRepositoryProvider));
+});
+
+final watchPropertyUseCaseProvider = Provider<WatchPropertyUseCase>((ref) {
+  return WatchPropertyUseCase(ref.watch(propertyRepositoryProvider));
+});
+
+final addPropertyUseCaseProvider = Provider<AddPropertyUseCase>((ref) {
+  return AddPropertyUseCase(ref.watch(propertyRepositoryProvider));
+});
+
+final updatePropertyUseCaseProvider = Provider<UpdatePropertyUseCase>((ref) {
+  return UpdatePropertyUseCase(ref.watch(propertyRepositoryProvider));
+});
+
+final deletePropertyUseCaseProvider = Provider<DeletePropertyUseCase>((ref) {
+  return DeletePropertyUseCase(ref.watch(propertyRepositoryProvider));
+});
+
+final watchAllTenantsUseCaseProvider = Provider<WatchAllTenantsUseCase>((ref) {
+  return WatchAllTenantsUseCase(ref.watch(propertyRepositoryProvider));
+});
+
+final watchPropertyTenantsUseCaseProvider =
+    Provider<WatchPropertyTenantsUseCase>((ref) {
+      return WatchPropertyTenantsUseCase(ref.watch(propertyRepositoryProvider));
+    });
+
+final getTenantByIdUseCaseProvider = Provider<GetTenantByIdUseCase>((ref) {
+  return GetTenantByIdUseCase(ref.watch(propertyRepositoryProvider));
+});
+
+final removeTenantFromRoomUseCaseProvider =
+    Provider<RemoveTenantFromRoomUseCase>((ref) {
+      return RemoveTenantFromRoomUseCase(ref.watch(propertyRepositoryProvider));
+    });
+
+// ===== UI READ PROVIDERS =====
+
 final allPropertiesProvider = StreamProvider<List<Property>>((ref) {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getAllProperties();
+  final useCase = ref.watch(watchAllPropertiesUseCaseProvider);
+  return useCase();
 });
 
-/// Stream of a single property by ID
 final propertyProvider = StreamProvider.family<Property, String>((
   ref,
   propertyId,
 ) {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getPropertyStream(propertyId);
+  final useCase = ref.watch(watchPropertyUseCaseProvider);
+  return useCase(propertyId);
 });
 
-// ===== TENANT PROVIDERS =====
-
-/// Stream of all tenants
 final allTenantsProvider = StreamProvider<List<Tenant>>((ref) {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getAllTenants();
+  final useCase = ref.watch(watchAllTenantsUseCaseProvider);
+  return useCase();
 });
 
-/// Stream of tenants for a specific property
 final propertyTenantsProvider = StreamProvider.family<List<Tenant>, String>((
   ref,
   propertyId,
 ) {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getTenantsForProperty(propertyId);
+  final useCase = ref.watch(watchPropertyTenantsUseCaseProvider);
+  return useCase(propertyId);
 });
 
-// ===== TENANT STATE MANAGEMENT =====
+final tenantByIdProvider = FutureProvider.family<Tenant?, String>((ref, id) {
+  final useCase = ref.watch(getTenantByIdUseCaseProvider);
+  return useCase(id);
+});
 
-/// State for add/remove tenant operations
+// ===== ACTION STATE =====
+
 class TenantActionState {
   final bool isLoading;
   final String? successMessage;
@@ -67,67 +122,17 @@ class TenantActionState {
       errorMessage: errorMessage,
     );
   }
-
-  void reset() {
-    // This will be handled by the notifier
-  }
 }
-
-// ===== ADD TENANT NOTIFIER =====
-
-class AddTenantNotifier extends Notifier<TenantActionState> {
-  late final FirestoreService _firestoreService;
-
-  @override
-  TenantActionState build() {
-    _firestoreService = ref.watch(firestoreServiceProvider);
-    return const TenantActionState();
-  }
-
-  /// Add a new tenant to the database
-  Future<void> addTenant(Tenant tenant) async {
-    state = state.copyWith(
-      isLoading: true,
-      errorMessage: null,
-      successMessage: null,
-    );
-
-    try {
-      await _firestoreService.addTenant(tenant);
-      state = state.copyWith(
-        isLoading: false,
-        successMessage: 'Tenant added successfully!',
-      );
-    } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
-      rethrow;
-    }
-  }
-
-  /// Reset the state
-  void reset() {
-    state = const TenantActionState();
-  }
-}
-
-/// Provider for add tenant notifier
-final addTenantNotifierProvider =
-    NotifierProvider<AddTenantNotifier, TenantActionState>(() {
-      return AddTenantNotifier();
-    });
-
-// ===== REMOVE TENANT NOTIFIER =====
 
 class RemoveTenantNotifier extends Notifier<TenantActionState> {
-  late final FirestoreService _firestoreService;
+  late final RemoveTenantFromRoomUseCase _useCase;
 
   @override
   TenantActionState build() {
-    _firestoreService = ref.watch(firestoreServiceProvider);
+    _useCase = ref.watch(removeTenantFromRoomUseCaseProvider);
     return const TenantActionState();
   }
 
-  /// Remove a tenant and mark room as vacant
   Future<void> removeTenant(
     String tenantId,
     String propertyId,
@@ -140,34 +145,30 @@ class RemoveTenantNotifier extends Notifier<TenantActionState> {
     );
 
     try {
-      await _firestoreService.removeTenant(tenantId, propertyId, roomId);
+      await _useCase(
+        tenantId: tenantId,
+        propertyId: propertyId,
+        roomId: roomId,
+      );
       state = state.copyWith(
         isLoading: false,
         successMessage: 'Tenant removed and room marked as vacant',
       );
-    } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: error.toString(),
+      );
       rethrow;
     }
   }
 
-  /// Reset the state
   void reset() {
     state = const TenantActionState();
   }
 }
 
-/// Provider for remove tenant notifier
 final removeTenantNotifierProvider =
-    NotifierProvider<RemoveTenantNotifier, TenantActionState>(() {
-      return RemoveTenantNotifier();
-    });
-
-/// Fetch a tenant by id (one-time future)
-final tenantByIdProvider = FutureProvider.family<Tenant?, String>((
-  ref,
-  id,
-) async {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getTenant(id);
-});
+    NotifierProvider<RemoveTenantNotifier, TenantActionState>(
+  RemoveTenantNotifier.new,
+);

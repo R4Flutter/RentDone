@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:rentdone/features/owner/add_tenant/presentation/providers/add_tenant_provider.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/providers/property_tenant_provider.dart';
-import 'package:rentdone/features/owner/owners_properties/ui_models/property_model.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 import 'package:uuid/uuid.dart';
 import 'package:rentdone/app/app_theme.dart';
-import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
 
 class AddTenantScreen extends ConsumerStatefulWidget {
   final String? propertyId;
@@ -186,7 +188,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                       Text("Property", style: theme.textTheme.bodyMedium),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: selectedPropertyId,
+                        initialValue: selectedPropertyId,
                         decoration: InputDecoration(
                           hintText: "Select a property",
                           filled: true,
@@ -258,7 +260,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
 
     return [
       DropdownButtonFormField<String>(
-        value: selectedRoomId,
+        initialValue: selectedRoomId,
         decoration: InputDecoration(
           hintText: "Select a room",
           filled: true,
@@ -376,7 +378,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           _reviewItem(theme, "Name", nameCtrl.text),
           _reviewItem(theme, "Phone", phoneCtrl.text),
           _reviewItem(theme, "Email", emailCtrl.text),
-          _reviewItem(theme, "Rent", "₹${rentCtrl.text}"),
+          _reviewItem(theme, "Rent", "Rs ${rentCtrl.text}"),
           _reviewItem(
             theme,
             "Move-in",
@@ -558,33 +560,24 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       );
 
       // Add tenant to database
-      await ref.read(addTenantNotifierProvider.notifier).addTenant(tenant);
+      await ref.read(addTenantNotifierProvider.notifier).submitTenant(tenant);
 
       if (!mounted) return;
 
       // Close loading dialog
-      Navigator.of(context).pop();
+      Navigator.of(context, rootNavigator: true).pop();
 
-      // Show success message and pop
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Tenant allocated successfully!"),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-      // Pop back to property detail screen
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
-      });
+      // Return to previous screen immediately after save.
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      } else {
+        context.go('/owner/tenants/manage');
+      }
     } catch (e) {
       if (!mounted) return;
 
       // Close loading dialog if open
-      Navigator.of(context).pop();
+      Navigator.of(context, rootNavigator: true).pop();
 
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(

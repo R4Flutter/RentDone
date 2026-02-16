@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/providers/property_tenant_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:rentdone/app/app_theme.dart';
-import 'package:rentdone/features/owner/owners_properties/ui_models/property_model.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/property_detail_screen.dart';
 
 class AddPropertyScreen extends ConsumerStatefulWidget {
@@ -291,11 +291,9 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
 
     try {
       if (widget.property != null) {
-        // Update existing property
-        await ref.read(firestoreServiceProvider).updateProperty(property);
+        await ref.read(updatePropertyUseCaseProvider)(property);
       } else {
-        // Add new property
-        await ref.read(firestoreServiceProvider).addProperty(property);
+        await ref.read(addPropertyUseCaseProvider)(property);
       }
 
       if (mounted) {

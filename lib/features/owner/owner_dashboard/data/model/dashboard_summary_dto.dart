@@ -11,10 +11,12 @@ class DashboardSummaryDto {
     return DashboardSummary(
       totalProperties: json['totalProperties'] ?? 0,
       vacantProperties: json['vacantProperties'] ?? 0,
+      totalTenants: json['totalTenants'] ?? 0,
       collectedAmount: json['collectedAmount'] ?? 0,
       collectedPayments: json['collectedPayments'] ?? 0,
       pendingAmount: json['pendingAmount'] ?? 0,
       pendingPayments: json['pendingPayments'] ?? 0,
+      pendingTenants: json['pendingTenants'] ?? 0,
       cashAmount: json['cashAmount'] ?? 0,
       onlineAmount: json['onlineAmount'] ?? 0,
     );

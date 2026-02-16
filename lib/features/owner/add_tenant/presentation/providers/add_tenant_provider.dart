@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/add_tenant/domain/usecases/add_tenant_usecases.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/providers/add_tenant_di.dart';
-import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 
 import 'add_tenant_state.dart';
 
@@ -41,3 +41,6 @@ class AddTenantNotifier extends Notifier<AddTenantState> {
     state = const AddTenantState();
   }
 }
+
+final addTenantNotifierProvider =
+    NotifierProvider<AddTenantNotifier, AddTenantState>(AddTenantNotifier.new);

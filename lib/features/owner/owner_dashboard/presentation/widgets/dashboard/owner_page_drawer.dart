@@ -12,7 +12,7 @@ class OwnerSideDrawer extends ConsumerWidget {
   static const double _sidebarWidth = 280;
 
   static final List<SidebarItem> items = [
-    SidebarItem('Dashboard', Icons.grid_view_rounded),
+    SidebarItem('Profile', Icons.person_outline_rounded),
     SidebarItem('Properties', Icons.apartment_rounded),
     SidebarItem('Tenants', Icons.people_alt_rounded),
     SidebarItem('Payments', Icons.account_balance_wallet_rounded),
@@ -22,9 +22,8 @@ class OwnerSideDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(dashboardLayoutProvider);
     final scheme = Theme.of(context).colorScheme;
-   
+    final currentIndex = _calculateIndex(context);
 
     return Material(
       color: scheme.surface, // 60%
@@ -44,7 +43,7 @@ class OwnerSideDrawer extends ConsumerWidget {
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   final item = items[index];
-                  final selected = index == state.index;
+                  final selected = index == currentIndex;
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -64,7 +63,7 @@ class OwnerSideDrawer extends ConsumerWidget {
 
                         switch (index) {
                           case 0:
-                            context.goNamed('ownerDashboard');
+                            context.goNamed('ownerProfile');
                             break;
                           case 1:
                             context.goNamed('ownerProperties');
@@ -93,5 +92,18 @@ class OwnerSideDrawer extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  int _calculateIndex(BuildContext context) {
+    final location = GoRouterState.of(context).uri.toString();
+
+    if (location.contains('/owner/profile')) return 0;
+    if (location.contains('/owner/properties')) return 1;
+    if (location.contains('/owner/tenants')) return 2;
+    if (location.contains('/owner/payments')) return 3;
+    if (location.contains('/owner/reports')) return 4;
+    if (location.contains('/owner/settings')) return 5;
+
+    return 0;
   }
 }

@@ -44,6 +44,10 @@ class DashboardLayoutNotifier
     state = state.copyWith(isSidebarOpen: false);
   }
 
+  void setSidebarOpen(bool isOpen) {
+    state = state.copyWith(isSidebarOpen: isOpen);
+  }
+
   void onItemSelected(int index, bool isDesktop) {
     state = state.copyWith(index: index);
 

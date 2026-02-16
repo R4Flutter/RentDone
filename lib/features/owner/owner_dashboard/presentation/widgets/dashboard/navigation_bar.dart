@@ -22,6 +22,7 @@ class _OwnerTopNavBarState extends ConsumerState<OwnerTopNavBar> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final isDesktop = MediaQuery.of(context).size.width >= 1024;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -64,9 +65,17 @@ class _OwnerTopNavBarState extends ConsumerState<OwnerTopNavBar> {
                     tooltip: 'Toggle sidebar',
                     icon: Icon(Icons.menu, color: colors.onPrimary),
                     onPressed: () {
-                      ref
-                          .read(dashboardLayoutProvider.notifier)
-                          .toggleSidebar();
+                      if (isDesktop) {
+                        ref
+                            .read(dashboardLayoutProvider.notifier)
+                            .toggleSidebar();
+                        return;
+                      }
+
+                      final scaffold = Scaffold.maybeOf(context);
+                      if (scaffold != null && scaffold.hasDrawer) {
+                        scaffold.openDrawer();
+                      }
                     },
                   ),
                 ),

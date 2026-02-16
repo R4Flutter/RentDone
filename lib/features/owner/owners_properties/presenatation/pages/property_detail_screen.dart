@@ -1,12 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/providers/property_tenant_provider.dart';
-import 'package:rentdone/features/owner/owners_properties/ui_models/property_model.dart';
-import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 
 class PropertyDetailScreen extends ConsumerStatefulWidget {
   final String propertyId;
@@ -117,11 +115,11 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
         children: [
           Text('Room ${room.roomNumber}', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          room.isOccupied
+          room.isOccupied && room.tenantId != null
               ? FutureBuilder<Tenant?>(
                   future: ref
-                      .read(firestoreServiceProvider)
-                      .getTenant(room.tenantId!),
+                      .read(getTenantByIdUseCaseProvider)
+                      .call(room.tenantId!),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return Text(
@@ -142,6 +140,15 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                         Text(tenant.fullName, style: theme.textTheme.bodyLarge),
                         const SizedBox(height: 4),
                         Text(tenant.phone, style: theme.textTheme.bodyMedium),
+                        if ((tenant.email ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            tenant.email!,
+                            style: theme.textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
                     );
                   },
@@ -160,7 +167,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                   onPressed: () async {
                     if (!room.isOccupied || room.tenantId == null) {
                       // Navigate to Add Tenant Screen
-                      await Navigator.push(
+                      final allocated = await Navigator.push<bool>(
                         context,
                         MaterialPageRoute(
                           builder: (_) => AddTenantScreen(
@@ -169,11 +176,10 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           ),
                         ),
                       );
-                      // Refresh parent after returning
-                      if (context.mounted) {
-                        unawaited(
-                          ref.refresh(
-                            propertyProvider(widget.propertyId).future,
+                      if (context.mounted && allocated == true) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Tenant allocated successfully'),
                           ),
                         );
                       }
@@ -181,18 +187,20 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     }
 
                     final tenant = await ref
-                        .read(firestoreServiceProvider)
-                        .getTenant(room.tenantId!);
+                        .read(getTenantByIdUseCaseProvider)
+                        .call(room.tenantId!);
                     if (tenant == null) {
-                      if (context.mounted)
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Tenant not found'),
                             backgroundColor: Colors.orange,
                           ),
                         );
+                      }
                       return;
                     }
+                    if (!context.mounted) return;
                     _showTenantDetailsDialog(context, tenant);
                   },
                   child: Text(room.isOccupied ? 'View' : 'Allocate'),
@@ -229,15 +237,17 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               await ref
                                   .read(removeTenantNotifierProvider.notifier)
                                   .removeTenant(tenantId, property.id, room.id);
-                              if (context.mounted)
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('Room vacated')),
                                 );
+                              }
                             } catch (e) {
-                              if (context.mounted)
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Error: $e')),
                                 );
+                              }
                             }
                           }
                         }
@@ -266,7 +276,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
             Text(
               'Move-in: ${tenant.moveInDate.day}/${tenant.moveInDate.month}/${tenant.moveInDate.year}',
             ),
-            Text('Rent: ₹${tenant.rentAmount}'),
+            Text('Rent: Rs ${tenant.rentAmount}'),
           ],
         ),
         actions: [

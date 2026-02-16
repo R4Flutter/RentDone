@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Node / Firebase Functions
+node_modules/
+functions/.firebase/
+
 # Symbolication related
 app.*.symbols
 

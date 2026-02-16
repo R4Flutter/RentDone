@@ -1,5 +1,5 @@
 import 'package:rentdone/features/owner/add_tenant/domain/repositories/add_tenant.dart';
-import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 
 
 class AddTenantUseCase {
