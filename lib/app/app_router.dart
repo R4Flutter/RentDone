@@ -8,6 +8,7 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashb
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/owner_dashboard.dart';
 import 'package:rentdone/features/owner/owner_payment/presenation/pages/payment_scrren.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/pages/profile_screen.dart';
+import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_bank_details_screen.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_settings_scrren.dart';
 import 'package:rentdone/features/owner/owner_support/presentation/pages/support_screen.dart';
 import 'package:rentdone/features/owner/owner_notifications/presentation/pages/owner_notifications_screen.dart';
@@ -15,6 +16,9 @@ import 'package:rentdone/features/owner/owner_tenants/presentation/pages/manage_
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/manage_property_scrren.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/reports/presentation/pages/report_screen.dart';
+import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
+import 'package:rentdone/features/payment/presentation/screens/tenant_payment_dashboard_screen.dart';
+import 'package:rentdone/features/payment/presentation/screens/transaction_history_screen.dart';
 import 'package:rentdone/shared/pages/role_selection_screen.dart';
 import 'package:rentdone/shared/pages/splash_screen.dart';
 
@@ -45,6 +49,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginPage(),
+      ),
+
+      /// 👤 Tenant Payments Dashboard
+      GoRoute(
+        path: '/tenant/payments',
+        name: 'tenantPayments',
+        builder: (context, state) => const TenantPaymentDashboardScreen(),
+      ),
+
+      /// 🧾 Tenant Transactions
+      GoRoute(
+        path: '/tenant/transactions',
+        name: 'tenantTransactions',
+        builder: (context, state) =>
+            const TransactionHistoryScreen(actor: TransactionActor.tenant),
       ),
 
       // ============================================================
@@ -143,7 +162,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'ownerPayments',
             builder: (context, state) => PaymentsScreen(
               initialStatus: state.uri.queryParameters['status'],
+              initialTenantId: state.uri.queryParameters['tenantId'],
+              initialPropertyId: state.uri.queryParameters['propertyId'],
+              initialTenantName: state.uri.queryParameters['tenantName'],
             ),
+          ),
+
+          /// 🧾 Owner Transactions
+          GoRoute(
+            path: '/owner/transactions',
+            name: 'ownerTransactions',
+            builder: (context, state) {
+              final tenantId = state.uri.queryParameters['tenantId'];
+              if (tenantId != null && tenantId.isNotEmpty) {
+                return TransactionHistoryScreen(
+                  actor: TransactionActor.tenant,
+                  actorId: tenantId,
+                );
+              }
+              return const TransactionHistoryScreen(
+                actor: TransactionActor.owner,
+              );
+            },
           ),
 
           // ========================================================
@@ -160,7 +200,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ========================================================
           // 👤 PROFILE
           // ========================================================
-
           GoRoute(
             path: '/owner/profile',
             name: 'ownerProfile',
@@ -170,7 +209,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // ========================================================
           // 🔔 NOTIFICATIONS
           // ========================================================
-
           GoRoute(
             path: '/owner/notifications',
             name: 'ownerNotifications',
@@ -188,10 +226,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SettingsScreen(),
           ),
 
+          /// 🏦 Bank Details
+          GoRoute(
+            path: '/owner/bank-details',
+            name: 'ownerBankDetails',
+            builder: (context, state) => const OwnerBankDetailsScreen(),
+          ),
+
           // ========================================================
           // 🆘 SUPPORT
           // ========================================================
-
           GoRoute(
             path: '/owner/support',
             name: 'ownerSupport',

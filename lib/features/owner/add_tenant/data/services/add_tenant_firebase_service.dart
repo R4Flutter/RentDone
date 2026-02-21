@@ -6,7 +6,7 @@ class AddTenantFirebaseService {
   final FirebaseFirestore _db;
 
   AddTenantFirebaseService({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+    : _db = firestore ?? FirebaseFirestore.instance;
 
   Future<void> addTenant(Tenant tenant) async {
     final dto = TenantDto.fromEntity(tenant);
@@ -35,13 +35,9 @@ class AddTenantFirebaseService {
         throw StateError('Selected room is already occupied');
       }
 
-      rooms[roomIndex] = {
-        ...room,
-        'isOccupied': true,
-        'tenantId': dto.id,
-      };
+      rooms[roomIndex] = {...room, 'isOccupied': true, 'tenantId': dto.id};
 
-      txn.set(tenantRef, dto.toMap());
+      txn.set(tenantRef, dto.toMap(), SetOptions(merge: true));
       txn.update(propertyRef, {'rooms': rooms});
     });
   }

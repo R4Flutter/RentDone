@@ -3,8 +3,10 @@ import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant
 
 class TenantDto {
   final String id;
+  final String? ownerId;
   final String fullName;
   final String phone;
+  final String? whatsappPhone;
   final String? alternatePhone;
   final String? email;
   final DateTime? dateOfBirth;
@@ -15,6 +17,7 @@ class TenantDto {
   final String? panNumber;
   final String? photoUrl;
   final String? idDocumentUrl;
+  final List<String> documentUrls;
   final String? companyName;
   final String? jobTitle;
   final String? officeAddress;
@@ -28,6 +31,7 @@ class TenantDto {
   final String rentFrequency;
   final int rentDueDay;
   final String paymentMode;
+  final String? upiId;
   final double lateFinePercentage;
   final int noticePeriodDays;
   final double maintenanceCharge;
@@ -44,8 +48,10 @@ class TenantDto {
 
   const TenantDto({
     required this.id,
+    required this.ownerId,
     required this.fullName,
     required this.phone,
+    required this.whatsappPhone,
     required this.alternatePhone,
     required this.email,
     required this.dateOfBirth,
@@ -56,6 +62,7 @@ class TenantDto {
     required this.panNumber,
     required this.photoUrl,
     required this.idDocumentUrl,
+    required this.documentUrls,
     required this.companyName,
     required this.jobTitle,
     required this.officeAddress,
@@ -69,6 +76,7 @@ class TenantDto {
     required this.rentFrequency,
     required this.rentDueDay,
     required this.paymentMode,
+    required this.upiId,
     required this.lateFinePercentage,
     required this.noticePeriodDays,
     required this.maintenanceCharge,
@@ -87,8 +95,10 @@ class TenantDto {
   factory TenantDto.fromEntity(Tenant tenant) {
     return TenantDto(
       id: tenant.id,
+      ownerId: tenant.ownerId,
       fullName: tenant.fullName,
       phone: tenant.phone,
+      whatsappPhone: tenant.whatsappPhone,
       alternatePhone: tenant.alternatePhone,
       email: tenant.email,
       dateOfBirth: tenant.dateOfBirth,
@@ -99,6 +109,7 @@ class TenantDto {
       panNumber: tenant.panNumber,
       photoUrl: tenant.photoUrl,
       idDocumentUrl: tenant.idDocumentUrl,
+      documentUrls: tenant.documentUrls,
       companyName: tenant.companyName,
       jobTitle: tenant.jobTitle,
       officeAddress: tenant.officeAddress,
@@ -112,6 +123,7 @@ class TenantDto {
       rentFrequency: tenant.rentFrequency,
       rentDueDay: tenant.rentDueDay,
       paymentMode: tenant.paymentMode,
+      upiId: tenant.upiId,
       lateFinePercentage: tenant.lateFinePercentage,
       noticePeriodDays: tenant.noticePeriodDays,
       maintenanceCharge: tenant.maintenanceCharge,
@@ -135,8 +147,10 @@ class TenantDto {
   factory TenantDto.fromMap(String id, Map<String, dynamic> data) {
     return TenantDto(
       id: id,
+      ownerId: data['ownerId']?.toString(),
       fullName: (data['fullName'] ?? '').toString(),
       phone: (data['phone'] ?? '').toString(),
+      whatsappPhone: data['whatsappPhone']?.toString(),
       alternatePhone: data['alternatePhone']?.toString(),
       email: data['email']?.toString(),
       dateOfBirth: _toDateTime(data['dateOfBirth']),
@@ -147,6 +161,7 @@ class TenantDto {
       panNumber: data['panNumber']?.toString(),
       photoUrl: data['photoUrl']?.toString(),
       idDocumentUrl: data['idDocumentUrl']?.toString(),
+      documentUrls: _toStringList(data['documentUrls']),
       companyName: data['companyName']?.toString(),
       jobTitle: data['jobTitle']?.toString(),
       officeAddress: data['officeAddress']?.toString(),
@@ -160,6 +175,7 @@ class TenantDto {
       rentFrequency: (data['rentFrequency'] ?? 'Monthly').toString(),
       rentDueDay: _toInt(data['rentDueDay'], fallback: 1),
       paymentMode: (data['paymentMode'] ?? 'UPI').toString(),
+      upiId: data['upiId']?.toString(),
       lateFinePercentage: _toDouble(data['lateFinePercentage']) ?? 0,
       noticePeriodDays: _toInt(data['noticePeriodDays'], fallback: 30),
       maintenanceCharge: _toDouble(data['maintenanceCharge']) ?? 0,
@@ -179,8 +195,10 @@ class TenantDto {
   Tenant toEntity() {
     return Tenant(
       id: id,
+      ownerId: ownerId,
       fullName: fullName,
       phone: phone,
+      whatsappPhone: whatsappPhone,
       alternatePhone: alternatePhone,
       email: email,
       dateOfBirth: dateOfBirth,
@@ -191,6 +209,7 @@ class TenantDto {
       panNumber: panNumber,
       photoUrl: photoUrl,
       idDocumentUrl: idDocumentUrl,
+      documentUrls: documentUrls,
       companyName: companyName,
       jobTitle: jobTitle,
       officeAddress: officeAddress,
@@ -204,6 +223,7 @@ class TenantDto {
       rentFrequency: rentFrequency,
       rentDueDay: rentDueDay,
       paymentMode: paymentMode,
+      upiId: upiId,
       lateFinePercentage: lateFinePercentage,
       noticePeriodDays: noticePeriodDays,
       maintenanceCharge: maintenanceCharge,
@@ -223,8 +243,10 @@ class TenantDto {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'ownerId': ownerId,
       'fullName': fullName,
       'phone': phone,
+      'whatsappPhone': whatsappPhone,
       'alternatePhone': alternatePhone,
       'email': email,
       'dateOfBirth': dateOfBirth,
@@ -235,6 +257,7 @@ class TenantDto {
       'panNumber': panNumber,
       'photoUrl': photoUrl,
       'idDocumentUrl': idDocumentUrl,
+      'documentUrls': documentUrls,
       'companyName': companyName,
       'jobTitle': jobTitle,
       'officeAddress': officeAddress,
@@ -248,6 +271,7 @@ class TenantDto {
       'rentFrequency': rentFrequency,
       'rentDueDay': rentDueDay,
       'paymentMode': paymentMode,
+      'upiId': upiId,
       'lateFinePercentage': lateFinePercentage,
       'noticePeriodDays': noticePeriodDays,
       'maintenanceCharge': maintenanceCharge,
@@ -281,5 +305,12 @@ class TenantDto {
   static double? _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '');
+  }
+
+  static List<String> _toStringList(dynamic value) {
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    return [];
   }
 }

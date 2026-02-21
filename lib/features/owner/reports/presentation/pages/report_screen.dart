@@ -1,30 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/features/owner/reports/domain/entities/property_performance.dart';
+import 'package:rentdone/features/owner/reports/domain/entities/report_data.dart';
+import 'package:rentdone/features/owner/reports/presentation/providers/report_provider.dart';
 
-class ReportsScreen extends StatefulWidget {
+const ReportData _fallbackReportData = ReportData(
+  totalRevenue: 'Rs 2,40,000',
+  totalRevenueGrowth: '+12%',
+  expenses: 'Rs 60,000',
+  expensesGrowth: '-3%',
+  netProfit: 'Rs 1,80,000',
+  netProfitGrowth: '+18%',
+  occupancyRate: '82%',
+  occupancyGrowth: '+5%',
+  propertyPerformance: [
+    PropertyPerformance(
+      property: 'Sunshine Residency',
+      revenue: 'Rs 1,20,000',
+      expenses: 'Rs 30,000',
+      occupancy: '90%',
+    ),
+    PropertyPerformance(
+      property: 'Palm Heights',
+      revenue: 'Rs 1,00,000',
+      expenses: 'Rs 25,000',
+      occupancy: '80%',
+    ),
+  ],
+);
+
+class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
   @override
-  State<ReportsScreen> createState() => _ReportsScreenState();
-}
-
-class _ReportsScreenState extends State<ReportsScreen> {
-  bool isMonthly = true;
-  String selectedYear = "2026";
-  String selectedProperty = "All Properties";
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final state = ref.watch(reportsProvider);
+    final notifier = ref.read(reportsProvider.notifier);
+
+    if (state.isLoading && state.reportData == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (state.error != null && state.reportData == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Financial Reports')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Error: ${state.error}'),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: notifier.retry,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final yearOptions = state.yearOptions.isNotEmpty
+        ? state.yearOptions
+        : const ['2024', '2025', '2026'];
+    final propertyOptions = state.propertyOptions.isNotEmpty
+        ? state.propertyOptions
+        : const ['All Properties', 'Sunshine Residency', 'Palm Heights'];
+    final selectedYear = yearOptions.contains(state.selectedYear)
+        ? state.selectedYear
+        : yearOptions.first;
+    final selectedProperty = propertyOptions.contains(state.selectedProperty)
+        ? state.selectedProperty
+        : propertyOptions.first;
+    final reportData = state.reportData ?? _fallbackReportData;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Financial Reports"),
+        title: const Text('Financial Reports'),
         actions: [
-          TextButton(
-            onPressed: () {},
-            child: const Text("Export PDF"),
-          ),
+          TextButton(onPressed: () {}, child: const Text('Export PDF')),
           const SizedBox(width: 16),
         ],
       ),
@@ -37,17 +93,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                    maxWidth: isDesktop ? 1400 : double.infinity),
+                  maxWidth: isDesktop ? 1400 : double.infinity,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _filterBar(theme, isDesktop),
+                    _filterBar(
+                      theme,
+                      isMonthly: state.isMonthly,
+                      yearOptions: yearOptions,
+                      selectedYear: selectedYear,
+                      propertyOptions: propertyOptions,
+                      selectedProperty: selectedProperty,
+                      onSelectMonthly: () => notifier.setPeriod(true),
+                      onSelectYearly: () => notifier.setPeriod(false),
+                      onSelectYear: (value) => notifier.setYear(value),
+                      onSelectProperty: (value) => notifier.setProperty(value),
+                    ),
                     const SizedBox(height: 32),
-                    _kpiSection(theme, isDesktop),
+                    _kpiSection(theme, reportData),
                     const SizedBox(height: 40),
                     _analyticsSection(theme, isDesktop),
                     const SizedBox(height: 40),
-                    _propertyPerformance(theme),
+                    _propertyPerformance(theme, reportData),
                   ],
                 ),
               ),
@@ -58,11 +126,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // ==========================================================
-  // FILTER BAR
-  // ==========================================================
-
-  Widget _filterBar(ThemeData theme, bool isDesktop) {
+  Widget _filterBar(
+    ThemeData theme, {
+    required bool isMonthly,
+    required List<String> yearOptions,
+    required String selectedYear,
+    required List<String> propertyOptions,
+    required String selectedProperty,
+    required VoidCallback onSelectMonthly,
+    required VoidCallback onSelectYearly,
+    required ValueChanged<String> onSelectYear,
+    required ValueChanged<String> onSelectProperty,
+  }) {
     return Wrap(
       spacing: 20,
       runSpacing: 16,
@@ -71,57 +146,89 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ToggleButtons(
           borderRadius: BorderRadius.circular(12),
           isSelected: [isMonthly, !isMonthly],
-          onPressed: (i) => setState(() => isMonthly = i == 0),
+          onPressed: (index) {
+            if (index == 0) {
+              onSelectMonthly();
+            } else {
+              onSelectYearly();
+            }
+          },
           children: const [
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text("Monthly"),
+              child: Text('Monthly'),
             ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text("Yearly"),
+              child: Text('Yearly'),
             ),
           ],
         ),
         DropdownButton<String>(
           value: selectedYear,
-          onChanged: (v) => setState(() => selectedYear = v!),
-          items: ["2024", "2025", "2026"]
-              .map((e) =>
-                  DropdownMenuItem(value: e, child: Text("Year $e")))
+          onChanged: (value) {
+            if (value != null) {
+              onSelectYear(value);
+            }
+          },
+          items: yearOptions
+              .map(
+                (entry) =>
+                    DropdownMenuItem(value: entry, child: Text('Year $entry')),
+              )
               .toList(),
         ),
         DropdownButton<String>(
           value: selectedProperty,
-          onChanged: (v) => setState(() => selectedProperty = v!),
-          items: ["All Properties", "Sunshine Residency"]
-              .map((e) =>
-                  DropdownMenuItem(value: e, child: Text(e)))
+          onChanged: (value) {
+            if (value != null) {
+              onSelectProperty(value);
+            }
+          },
+          items: propertyOptions
+              .map(
+                (entry) => DropdownMenuItem(value: entry, child: Text(entry)),
+              )
               .toList(),
         ),
       ],
     );
   }
 
-  // ==========================================================
-  // KPI SECTION
-  // ==========================================================
-
-  Widget _kpiSection(ThemeData theme, bool isDesktop) {
+  Widget _kpiSection(ThemeData theme, ReportData reportData) {
     return Wrap(
       spacing: 24,
       runSpacing: 24,
       children: [
-        _kpiCard(theme, "Total Revenue", "₹ 2,40,000", "+12%"),
-        _kpiCard(theme, "Expenses", "₹ 60,000", "-3%"),
-        _kpiCard(theme, "Net Profit", "₹ 1,80,000", "+18%"),
-        _kpiCard(theme, "Occupancy Rate", "82%", "+5%"),
+        _kpiCard(
+          theme,
+          'Total Revenue',
+          reportData.totalRevenue,
+          reportData.totalRevenueGrowth,
+        ),
+        _kpiCard(
+          theme,
+          'Expenses',
+          reportData.expenses,
+          reportData.expensesGrowth,
+        ),
+        _kpiCard(
+          theme,
+          'Net Profit',
+          reportData.netProfit,
+          reportData.netProfitGrowth,
+        ),
+        _kpiCard(
+          theme,
+          'Occupancy Rate',
+          reportData.occupancyRate,
+          reportData.occupancyGrowth,
+        ),
       ],
     );
   }
 
-  Widget _kpiCard(
-      ThemeData theme, String title, String value, String growth) {
+  Widget _kpiCard(ThemeData theme, String title, String value, String growth) {
     return Container(
       width: 280,
       padding: const EdgeInsets.all(24),
@@ -136,37 +243,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
           const SizedBox(height: 12),
           Text(value, style: theme.textTheme.displayMedium),
           const SizedBox(height: 6),
-          Text(
-            "Growth: $growth",
-            style: theme.textTheme.bodyMedium,
-          ),
+          Text('Growth: $growth', style: theme.textTheme.bodyMedium),
         ],
       ),
     );
   }
 
-  // ==========================================================
-  // ANALYTICS SECTION
-  // ==========================================================
-
   Widget _analyticsSection(ThemeData theme, bool isDesktop) {
     if (isDesktop) {
       return Row(
         children: [
-          Expanded(child: _chartCard(theme, "Revenue vs Expense")),
+          Expanded(child: _chartCard(theme, 'Revenue vs Expense')),
           const SizedBox(width: 24),
-          Expanded(child: _chartCard(theme, "Occupancy Trend")),
-        ],
-      );
-    } else {
-      return Column(
-        children: [
-          _chartCard(theme, "Revenue vs Expense"),
-          const SizedBox(height: 24),
-          _chartCard(theme, "Occupancy Trend"),
+          Expanded(child: _chartCard(theme, 'Occupancy Trend')),
         ],
       );
     }
+
+    return Column(
+      children: [
+        _chartCard(theme, 'Revenue vs Expense'),
+        const SizedBox(height: 24),
+        _chartCard(theme, 'Occupancy Trend'),
+      ],
+    );
   }
 
   Widget _chartCard(ThemeData theme, String title) {
@@ -184,11 +284,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // ==========================================================
-  // PROPERTY PERFORMANCE TABLE
-  // ==========================================================
+  Widget _propertyPerformance(ThemeData theme, ReportData reportData) {
+    final rows = reportData.propertyPerformance;
 
-  Widget _propertyPerformance(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -198,30 +296,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Property Performance",
-              style: theme.textTheme.titleLarge),
+          Text('Property Performance', style: theme.textTheme.titleLarge),
           const SizedBox(height: 24),
           DataTable(
             columns: const [
-              DataColumn(label: Text("Property")),
-              DataColumn(label: Text("Revenue")),
-              DataColumn(label: Text("Expenses")),
-              DataColumn(label: Text("Occupancy")),
+              DataColumn(label: Text('Property')),
+              DataColumn(label: Text('Revenue')),
+              DataColumn(label: Text('Expenses')),
+              DataColumn(label: Text('Occupancy')),
             ],
-            rows: const [
-              DataRow(cells: [
-                DataCell(Text("Sunshine Residency")),
-                DataCell(Text("₹1,20,000")),
-                DataCell(Text("₹30,000")),
-                DataCell(Text("90%")),
-              ]),
-              DataRow(cells: [
-                DataCell(Text("Palm Heights")),
-                DataCell(Text("₹1,00,000")),
-                DataCell(Text("₹25,000")),
-                DataCell(Text("80%")),
-              ]),
-            ],
+            rows: rows
+                .map(
+                  (entry) => DataRow(
+                    cells: [
+                      DataCell(Text(entry.property)),
+                      DataCell(Text(entry.revenue)),
+                      DataCell(Text(entry.expenses)),
+                      DataCell(Text(entry.occupancy)),
+                    ],
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),

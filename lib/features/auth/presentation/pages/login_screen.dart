@@ -151,6 +151,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 decoration: InputDecoration(
                   labelText: 'Phone number',
                   floatingLabelBehavior: FloatingLabelBehavior.auto,
+                  errorText: state.phoneError,
 
                   // 🌍 PREFIX UI ONLY (no logic)
                   prefixIconConstraints: const BoxConstraints(
@@ -222,7 +223,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: (state.resendSeconds == 0 && !state.isLoading)
-                        ? () => notifier.sendOtp(phoneController.text, name: '')
+                        ? () => notifier.sendOtp(
+                            phoneController.text,
+                            name: nameController.text,
+                          )
                         : null,
                     child: Text(
                       state.resendSeconds == 0

@@ -1,0 +1,1 @@
+enum TransactionActor { tenant, owner }

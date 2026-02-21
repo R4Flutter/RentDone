@@ -1,6 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/features/owner/owner_profile/di/owner_profile_di.dart';
+import 'package:rentdone/features/owner/owner_profile/domain/entities/owner_profile.dart';
 
 enum OwnerAvatar { male, female }
 
@@ -21,6 +22,16 @@ extension OwnerAvatarX on OwnerAvatar {
       case OwnerAvatar.female:
         return 'assets/images/tenant_final.png';
     }
+  }
+}
+
+OwnerAvatar ownerAvatarFromCode(String avatarCode) {
+  switch (avatarCode.trim().toLowerCase()) {
+    case 'female':
+      return OwnerAvatar.female;
+    case 'male':
+    default:
+      return OwnerAvatar.male;
   }
 }
 
@@ -45,6 +56,19 @@ class OwnerProfileState {
     required this.memberId,
     required this.avatar,
   });
+
+  factory OwnerProfileState.fromEntity(OwnerProfile profile) {
+    return OwnerProfileState(
+      fullName: profile.fullName,
+      email: profile.email,
+      phone: profile.phone,
+      role: profile.role,
+      location: profile.location,
+      status: profile.status,
+      memberId: profile.memberId,
+      avatar: ownerAvatarFromCode(profile.avatarCode),
+    );
+  }
 
   OwnerProfileState copyWith({
     String? fullName,
@@ -72,23 +96,8 @@ class OwnerProfileState {
 class OwnerProfileNotifier extends Notifier<OwnerProfileState> {
   @override
   OwnerProfileState build() {
-    final user = FirebaseAuth.instance.currentUser;
-    return OwnerProfileState(
-      fullName: user?.displayName?.trim().isNotEmpty == true
-          ? user!.displayName!.trim()
-          : 'Owner Name',
-      email: user?.email?.trim().isNotEmpty == true
-          ? user!.email!.trim()
-          : 'owner@example.com',
-      phone: user?.phoneNumber?.trim().isNotEmpty == true
-          ? user!.phoneNumber!.trim()
-          : '+91 90000 00000',
-      role: 'Property Owner',
-      location: 'India',
-      status: 'Active',
-      memberId: '#RD-0001',
-      avatar: OwnerAvatar.male,
-    );
+    final profile = ref.read(getOwnerProfileUseCaseProvider).call();
+    return OwnerProfileState.fromEntity(profile);
   }
 
   void setAvatar(OwnerAvatar avatar) {
@@ -118,5 +127,5 @@ class OwnerProfileNotifier extends Notifier<OwnerProfileState> {
 
 final ownerProfileProvider =
     NotifierProvider<OwnerProfileNotifier, OwnerProfileState>(
-  OwnerProfileNotifier.new,
-);
+      OwnerProfileNotifier.new,
+    );

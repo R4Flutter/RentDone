@@ -1,15 +1,15 @@
 import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/auth/domain/usecases/validate_user_input.dart';
+
 import 'auth_state.dart';
 
 class AuthNotifier extends Notifier<AuthState> {
   Timer? _timer;
   final _validator = AuthInputValidator();
 
-  // ─────────────────────────────
-  // INITIAL STATE
-  // ─────────────────────────────
   @override
   AuthState build() {
     ref.onDispose(() {
@@ -18,13 +18,15 @@ class AuthNotifier extends Notifier<AuthState> {
     return AuthState.initial();
   }
 
-  // ─────────────────────────────
-  // SEND OTP (PHONE ONLY)
-  // ─────────────────────────────
   Future<void> sendOtp(String phone, {required String name}) async {
     if (state.isLoading) return;
 
-    // PHONE VALIDATION
+    final nameError = _validator.validateName(name);
+    if (nameError != null) {
+      _setNameError(nameError);
+      return;
+    }
+
     final phoneError = _validator.validatePhone(phone);
     if (phoneError != null) {
       _setPhoneError(phoneError);
@@ -35,18 +37,22 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true);
 
     try {
-      // 🔮 Replace with Firebase verifyPhoneNumber
-      await Future.delayed(const Duration(seconds: 1));
+      await ref
+          .read(sendOtpUseCaseProvider)
+          .call(phone: '${state.countryCode}${phone.trim()}');
 
       state = state.copyWith(
         isLoading: false,
         otpSent: true,
         resendSeconds: 30,
+        clearNameError: true,
+        clearPhoneError: true,
+        clearOtpError: true,
       );
 
       _startResendTimer();
-    } catch (_) {
-      _setOtpError('Failed to send OTP. Please try again.');
+    } catch (error) {
+      _setOtpError(error.toString());
       state = state.copyWith(isLoading: false);
     }
   }
@@ -63,9 +69,6 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  // ─────────────────────────────
-  // VERIFY OTP
-  // ─────────────────────────────
   Future<void> verifyOtp(String otp) async {
     if (state.isLoading) return;
 
@@ -84,19 +87,14 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true);
 
     try {
-      // 🔮 Replace with Firebase signInWithCredential
-      await Future.delayed(const Duration(seconds: 1));
-
-      state = state.copyWith(isLoading: false);
-    } catch (_) {
-      _setOtpError('Invalid OTP. Please try again.');
+      await ref.read(verifyOtpUseCaseProvider).call(otp: otp.trim());
+      state = state.copyWith(isLoading: false, clearOtpError: true);
+    } catch (error) {
+      _setOtpError(error.toString());
       state = state.copyWith(isLoading: false);
     }
   }
 
-  // ─────────────────────────────
-  // RESEND TIMER
-  // ─────────────────────────────
   void _startResendTimer() {
     _timer?.cancel();
 
@@ -117,27 +115,35 @@ class AuthNotifier extends Notifier<AuthState> {
     });
   }
 
-  // ─────────────────────────────
-  // ERROR HANDLING
-  // ─────────────────────────────
+  void _setNameError(String message) {
+    state = state.copyWith(
+      nameError: message,
+      clearPhoneError: true,
+      clearOtpError: true,
+    );
+  }
+
   void _setPhoneError(String message) {
     state = state.copyWith(
       phoneError: message,
-      nameError: null,
-      otpError: null,
+      clearNameError: true,
+      clearOtpError: true,
     );
   }
 
   void _setOtpError(String message) {
     state = state.copyWith(
       otpError: message,
-      nameError: null,
-      phoneError: null,
+      clearNameError: true,
+      clearPhoneError: true,
     );
   }
 
-  /// Clear errors on typing
   void clearErrors() {
-    state = state.copyWith(nameError: null, phoneError: null, otpError: null);
+    state = state.copyWith(
+      clearNameError: true,
+      clearPhoneError: true,
+      clearOtpError: true,
+    );
   }
 }

@@ -1,12 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rentdone/features/owner/owner_payment/data/models/payment_model.dart';
-import 'package:rentdone/features/owner/owner_payment/data/services/payment_firebase_service.dart';
+import 'package:rentdone/features/owner/owner_payment/di/payment_di.dart';
+import 'package:rentdone/features/owner/owner_payment/domain/entities/payment.dart';
 
-final paymentFirebaseServiceProvider = Provider<PaymentFirebaseService>((ref) {
-  return PaymentFirebaseService();
-});
+export 'package:rentdone/features/owner/owner_payment/di/payment_di.dart'
+    show
+        confirmRazorpayPaymentUseCaseProvider,
+        createRazorpayOrderUseCaseProvider,
+        markPaymentPaidCashUseCaseProvider,
+        markPaymentPaidOnlineUseCaseProvider;
 
 final paymentsProvider = StreamProvider<List<Payment>>((ref) {
-  final service = ref.watch(paymentFirebaseServiceProvider);
-  return service.watchPayments();
+  final watchPayments = ref.watch(watchPaymentsUseCaseProvider);
+  return watchPayments();
 });

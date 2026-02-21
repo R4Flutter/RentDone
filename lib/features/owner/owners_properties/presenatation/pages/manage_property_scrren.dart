@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
@@ -44,7 +45,6 @@ class ManagePropertiesScreen extends ConsumerWidget {
               label: const Text("Add Property"),
             ),
           ),
-        
         ],
       ),
       body: LayoutBuilder(
@@ -239,6 +239,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       "Room ${room.roomNumber}",
@@ -305,6 +306,41 @@ class ManagePropertiesScreen extends ConsumerWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    FilledButton.icon(
+                                      onPressed: () {
+                                        final route = Uri(
+                                          path: '/owner/payments',
+                                          queryParameters: {
+                                            'tenantId': tenant.id,
+                                            'propertyId': property.id,
+                                            'tenantName': tenant.fullName,
+                                          },
+                                        ).toString();
+                                        context.go(route);
+                                      },
+                                      icon: const Icon(Icons.receipt_long),
+                                      label: const Text('View Payments'),
+                                    ),
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        final route = Uri(
+                                          path: '/owner/transactions',
+                                          queryParameters: {
+                                            'tenantId': tenant.id,
+                                          },
+                                        ).toString();
+                                        context.go(route);
+                                      },
+                                      icon: const Icon(Icons.history),
+                                      label: const Text('Transactions'),
+                                    ),
+                                  ],
+                                ),
                               ],
                             );
                           },
@@ -324,7 +360,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
             ),
             if (!room.isOccupied) ...[
               const SizedBox(width: 8),
-              OutlinedButton(
+              FilledButton.icon(
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -336,7 +372,8 @@ class ManagePropertiesScreen extends ConsumerWidget {
                     ),
                   );
                 },
-                child: const Text("Allocate"),
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text("Allocate"),
               ),
             ],
           ],
@@ -369,9 +406,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await ref
-                    .read(deletePropertyUseCaseProvider)
-                    .call(property.id);
+                await ref.read(deletePropertyUseCaseProvider).call(property.id);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

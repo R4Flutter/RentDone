@@ -26,7 +26,7 @@ class StatCard extends StatelessWidget {
 
     return DashboardCard(
       useGradient: true,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       child: Stack(
         children: [
           if (assetPath != null)
@@ -61,8 +61,10 @@ class StatCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(999),

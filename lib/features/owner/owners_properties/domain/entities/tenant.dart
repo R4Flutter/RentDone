@@ -1,9 +1,11 @@
 class Tenant {
   final String id;
+  final String? ownerId;
 
   // Basic Info
   final String fullName;
   final String phone;
+  final String? whatsappPhone;
   final String? alternatePhone;
   final String? email;
   final DateTime? dateOfBirth;
@@ -16,6 +18,7 @@ class Tenant {
   final String? panNumber;
   final String? photoUrl;
   final String? idDocumentUrl;
+  final List<String> documentUrls; // Additional documents
 
   // Employment
   final String? companyName;
@@ -33,6 +36,7 @@ class Tenant {
   final String rentFrequency;
   final int rentDueDay;
   final String paymentMode;
+  final String? upiId;
   final double lateFinePercentage;
   final int noticePeriodDays;
   final double maintenanceCharge;
@@ -57,8 +61,10 @@ class Tenant {
 
   const Tenant({
     required this.id,
+    this.ownerId,
     required this.fullName,
     required this.phone,
+    this.whatsappPhone,
     this.alternatePhone,
     this.email,
     this.dateOfBirth,
@@ -69,6 +75,7 @@ class Tenant {
     this.panNumber,
     this.photoUrl,
     this.idDocumentUrl,
+    required this.documentUrls,
     this.companyName,
     this.jobTitle,
     this.officeAddress,
@@ -82,6 +89,7 @@ class Tenant {
     required this.rentFrequency,
     required this.rentDueDay,
     required this.paymentMode,
+    this.upiId,
     required this.lateFinePercentage,
     required this.noticePeriodDays,
     required this.maintenanceCharge,

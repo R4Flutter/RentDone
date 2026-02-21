@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
@@ -5,46 +7,59 @@ class AuthFirebaseService {
   AuthFirebaseService(this._auth);
 
   final FirebaseAuth _auth;
-
   String? _verificationId;
 
-  /// ─────────────────────────────
-  /// SEND OTP
-  /// ─────────────────────────────
   Future<void> sendOtp({
     required String phoneNumber,
     Duration timeout = const Duration(seconds: 60),
   }) async {
     try {
-      // WEB FLOW
       if (kIsWeb) {
-        final confirmationResult =
-            await _auth.signInWithPhoneNumber(phoneNumber);
-
+        final confirmationResult = await _auth.signInWithPhoneNumber(
+          phoneNumber,
+        );
         _verificationId = confirmationResult.verificationId;
         return;
       }
 
-      // MOBILE FLOW
+      final completer = Completer<void>();
+
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         timeout: timeout,
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // 🔥 Auto-verification (Android)
-          await _auth.signInWithCredential(credential);
+          try {
+            await _auth.signInWithCredential(credential);
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
+          } on FirebaseAuthException catch (error) {
+            if (!completer.isCompleted) {
+              completer.completeError(_mapFirebaseException(error));
+            }
+          }
         },
-        verificationFailed: (FirebaseAuthException e) {
-          throw _mapFirebaseException(e);
+        verificationFailed: (FirebaseAuthException error) {
+          if (!completer.isCompleted) {
+            completer.completeError(_mapFirebaseException(error));
+          }
         },
         codeSent: (String verificationId, int? resendToken) {
           _verificationId = verificationId;
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
           _verificationId = verificationId;
         },
       );
-    } on FirebaseAuthException catch (e) {
-      throw _mapFirebaseException(e);
+
+      await completer.future;
+    } on AuthException {
+      rethrow;
+    } on FirebaseAuthException catch (error) {
+      throw _mapFirebaseException(error);
     } catch (_) {
       throw const AuthException(
         message: 'Something went wrong. Please try again.',
@@ -52,88 +67,65 @@ class AuthFirebaseService {
     }
   }
 
-
-  Future<UserCredential> verifyOtp({
-    required String otp,
-  }) async {
+  Future<UserCredential> verifyOtp({required String otp}) async {
     try {
-      if (_verificationId == null) {
+      final verificationId = _verificationId;
+      if (verificationId == null) {
         throw const AuthException(
           message: 'OTP session expired. Please request again.',
         );
       }
 
       final credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
+        verificationId: verificationId,
         smsCode: otp,
       );
 
       return await _auth.signInWithCredential(credential);
-    } on FirebaseAuthException catch (e) {
-      throw _mapFirebaseException(e);
+    } on AuthException {
+      rethrow;
+    } on FirebaseAuthException catch (error) {
+      throw _mapFirebaseException(error);
     } catch (_) {
-      throw const AuthException(
-        message: 'Invalid OTP. Please try again.',
-      );
+      throw const AuthException(message: 'Invalid OTP. Please try again.');
     }
   }
 
-  /// ─────────────────────────────
-  /// SIGN OUT
-  /// ─────────────────────────────
-  Future<void> signOut() async {
-    await _auth.signOut();
+  Future<void> signOut() {
+    return _auth.signOut();
   }
 
-  /// ─────────────────────────────
-  /// CURRENT USER
-  /// ─────────────────────────────
   User? get currentUser => _auth.currentUser;
 
-  /// ─────────────────────────────
-  /// ERROR MAPPING (IMPORTANT)
-  /// ─────────────────────────────
-  AuthException _mapFirebaseException(FirebaseAuthException e) {
-    switch (e.code) {
+  AuthException _mapFirebaseException(FirebaseAuthException error) {
+    switch (error.code) {
       case 'invalid-phone-number':
         return const AuthException(
           message: 'The phone number entered is invalid.',
         );
-
       case 'too-many-requests':
         return const AuthException(
-          message:
-              'Too many attempts. Please wait before trying again.',
+          message: 'Too many attempts. Please wait before trying again.',
         );
-
       case 'session-expired':
         return const AuthException(
           message: 'OTP expired. Please request a new one.',
         );
-
       case 'invalid-verification-code':
-        return const AuthException(
-          message: 'Incorrect OTP. Please try again.',
-        );
-
+        return const AuthException(message: 'Incorrect OTP. Please try again.');
       case 'network-request-failed':
-        return const AuthException(
-          message: 'No internet connection.',
-        );
-
+        return const AuthException(message: 'No internet connection.');
       default:
         return AuthException(
-          message: e.message ?? 'Authentication failed.',
+          message: error.message ?? 'Authentication failed.',
         );
     }
   }
 }
 
-/// ─────────────────────────────
-/// CUSTOM AUTH EXCEPTION
-/// ─────────────────────────────
 class AuthException implements Exception {
   final String message;
+
   const AuthException({required this.message});
 
   @override

@@ -16,6 +16,7 @@ class OwnerSideDrawer extends ConsumerWidget {
     SidebarItem('Properties', Icons.apartment_rounded),
     SidebarItem('Tenants', Icons.people_alt_rounded),
     SidebarItem('Payments', Icons.account_balance_wallet_rounded),
+    SidebarItem('Bank Details', Icons.account_balance_outlined),
     SidebarItem('Reports', Icons.bar_chart_rounded),
     SidebarItem('Settings', Icons.settings_rounded),
   ];
@@ -72,15 +73,17 @@ class OwnerSideDrawer extends ConsumerWidget {
                             context.goNamed('addTenant');
                             break;
                           case 3:
-                            context.goNamed('ownerPayment');
+                            context.goNamed('ownerPayments');
                             break;
                           case 4:
+                            context.goNamed('ownerBankDetails');
+                            break;
+                          case 5:
                             context.goNamed('ownerReports');
                             break;
-                            case 5:
+                          case 6:
                             context.goNamed('ownerSettings');
                             break;
-                          
                         }
                       },
                     ),
@@ -101,8 +104,9 @@ class OwnerSideDrawer extends ConsumerWidget {
     if (location.contains('/owner/properties')) return 1;
     if (location.contains('/owner/tenants')) return 2;
     if (location.contains('/owner/payments')) return 3;
-    if (location.contains('/owner/reports')) return 4;
-    if (location.contains('/owner/settings')) return 5;
+    if (location.contains('/owner/bank-details')) return 4;
+    if (location.contains('/owner/reports')) return 5;
+    if (location.contains('/owner/settings')) return 6;
 
     return 0;
   }

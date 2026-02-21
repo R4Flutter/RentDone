@@ -11,6 +11,7 @@ class Tenant {
   final bool backgroundChecked;
   final String? emergencyName;
   final String? emergencyPhone;
+  final List<String> documentUrls; // URLs of uploaded documents
 
   const Tenant({
     required this.id,
@@ -21,6 +22,7 @@ class Tenant {
     required this.securityDeposit,
     required this.policeVerified,
     required this.backgroundChecked,
+    required this.documentUrls,
     this.email,
     this.monthlyIncome,
     this.emergencyName,

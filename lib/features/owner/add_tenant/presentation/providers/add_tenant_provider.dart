@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/features/owner/add_tenant/di/add_tenant_di.dart';
 import 'package:rentdone/features/owner/add_tenant/domain/usecases/add_tenant_usecases.dart';
-import 'package:rentdone/features/owner/add_tenant/presentation/providers/add_tenant_di.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 
 import 'add_tenant_state.dart';
@@ -25,20 +25,23 @@ class AddTenantNotifier extends Notifier<AddTenantState> {
     try {
       await _useCase(tenant);
 
-      state = state.copyWith(
-        isLoading: false,
-        isSuccess: true,
-      );
+      state = state.copyWith(isLoading: false, isSuccess: true);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 
   void reset() {
     state = const AddTenantState();
+  }
+
+  void addDocument(String url) {
+    state = state.copyWith(documentUrls: [...state.documentUrls, url]);
+  }
+
+  void removeDocument(int index) {
+    final newUrls = List<String>.from(state.documentUrls)..removeAt(index);
+    state = state.copyWith(documentUrls: newUrls);
   }
 }
 

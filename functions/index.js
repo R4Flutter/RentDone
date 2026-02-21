@@ -15,15 +15,189 @@ function getRazorpayConfig() {
   };
 }
 
+function getStripeConfig() {
+  const cfg = functions.config().stripe || {};
+  return {
+    secretKey: cfg.secret_key,
+    webhookSecret: cfg.webhook_secret,
+  };
+}
+
+function getWhatsAppConfig() {
+  const cfg = functions.config().whatsapp || {};
+  return {
+    token: cfg.token,
+    phoneNumberId: cfg.phone_number_id,
+    businessName: cfg.business_name || 'RentDone',
+    apiVersion: cfg.api_version || 'v21.0',
+    templateName: cfg.template_name || null,
+    templateLanguage: cfg.template_language || 'en',
+    maxRetries: Number(cfg.max_retries || 3),
+    remindersEnabled: cfg.enabled !== 'false',
+  };
+}
+
 function monthKey(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   return `${date.getFullYear()}-${m}`;
+}
+
+function previousMonthKey(date = new Date()) {
+  const previous = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+  return monthKey(previous);
 }
 
 function dueDateFor(year, month, dueDay) {
   const lastDay = new Date(year, month, 0).getDate();
   const safeDay = Math.min(Math.max(dueDay || 1, 1), lastDay);
   return new Date(year, month - 1, safeDay, 9, 0, 0);
+}
+
+function toDate(value) {
+  if (!value) return null;
+  if (value.toDate) return value.toDate();
+  if (value instanceof Date) return value;
+  return null;
+}
+
+function normalizeIndianPhone(value) {
+  if (!value) return null;
+  const digits = String(value).replace(/\D/g, '');
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.length === 12 && digits.startsWith('91')) return digits;
+  return null;
+}
+
+function buildUpiLink({ upiId, amount, payeeName, note }) {
+  const query = new URLSearchParams({
+    pa: upiId,
+    pn: payeeName,
+    am: String(amount),
+    cu: 'INR',
+    tn: note,
+  });
+  return `upi://pay?${query.toString()}`;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function postWhatsAppMessage({ token, phoneNumberId, apiVersion, payload }) {
+  return fetch(
+    `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+async function sendWhatsAppMessage({ to, body, templateParams }) {
+  const {
+    token,
+    phoneNumberId,
+    apiVersion,
+    templateName,
+    templateLanguage,
+    maxRetries,
+  } = getWhatsAppConfig();
+  if (!token || !phoneNumberId) {
+    functions.logger.warn(
+      'WhatsApp config missing. Set whatsapp.token and whatsapp.phone_number_id.',
+    );
+    return {
+      ok: false,
+      status: 0,
+      providerMessageId: null,
+      errorBody: 'Missing WhatsApp config',
+    };
+  }
+
+  const payload = templateName
+    ? {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: templateLanguage },
+        components: [
+          {
+            type: 'body',
+            parameters: (templateParams || []).map((value) => ({
+              type: 'text',
+              text: String(value ?? ''),
+            })),
+          },
+        ],
+      },
+    }
+    : {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'text',
+      text: { body },
+    };
+
+  let attempt = 0;
+  while (attempt < Math.max(maxRetries, 1)) {
+    attempt += 1;
+    const response = await postWhatsAppMessage({
+      token,
+      phoneNumberId,
+      apiVersion,
+      payload,
+    });
+
+    const raw = await response.text();
+    let parsed;
+    try {
+      parsed = raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      parsed = null;
+    }
+
+    if (response.ok) {
+      return {
+        ok: true,
+        status: response.status,
+        providerMessageId: parsed?.messages?.[0]?.id || null,
+        errorBody: null,
+      };
+    }
+
+    const retryable = response.status === 429 || response.status >= 500;
+    const errorBody = raw || 'Unknown WhatsApp API error';
+    functions.logger.error('WhatsApp send failed', {
+      status: response.status,
+      body: errorBody,
+      to,
+      attempt,
+    });
+
+    if (!retryable || attempt >= Math.max(maxRetries, 1)) {
+      return {
+        ok: false,
+        status: response.status,
+        providerMessageId: null,
+        errorBody,
+      };
+    }
+
+    await sleep(500 * attempt * attempt);
+  }
+
+  return {
+    ok: false,
+    status: 0,
+    providerMessageId: null,
+    errorBody: 'Unexpected send flow',
+  };
 }
 
 async function sendPushToAll(title, body) {
@@ -89,6 +263,7 @@ exports.generateMonthlyPayments = functions.pubsub
       const paymentId = `${doc.id}_${period}`;
 
       writer.create(db.collection('payments').doc(paymentId), {
+        ownerId: t.ownerId || null,
         tenantId: doc.id,
         propertyId: t.propertyId,
         roomId: t.roomId,
@@ -126,6 +301,7 @@ exports.markOverdueAndNotify = functions.pubsub
 
     for (const doc of overdueSnap.docs) {
       const p = doc.data();
+      let ownerId = p.ownerId || null;
       writer.update(doc.ref, {
         status: 'overdue',
         updatedAt: FieldValue.serverTimestamp(),
@@ -135,7 +311,9 @@ exports.markOverdueAndNotify = functions.pubsub
       if (p.tenantId) {
         const tenantDoc = await db.collection('tenants').doc(p.tenantId).get();
         if (tenantDoc.exists) {
-          tenantName = tenantDoc.data().fullName || tenantName;
+          const tenantData = tenantDoc.data() || {};
+          tenantName = tenantData.fullName || tenantName;
+          ownerId = ownerId || tenantData.ownerId || null;
         }
       }
 
@@ -145,6 +323,7 @@ exports.markOverdueAndNotify = functions.pubsub
         title: 'Rent overdue',
         body: `${tenantName} has not paid for ${p.periodKey}.`,
         severity: 'critical',
+        ownerId,
         tenantId: p.tenantId,
         paymentId: doc.id,
         createdAt: FieldValue.serverTimestamp(),
@@ -167,10 +346,13 @@ exports.onPaymentPaid = functions.firestore
     if (before.status === after.status || after.status !== 'paid') return;
 
     let tenantName = 'Tenant';
+    let ownerId = after.ownerId || null;
     if (after.tenantId) {
       const tenantDoc = await db.collection('tenants').doc(after.tenantId).get();
       if (tenantDoc.exists) {
-        tenantName = tenantDoc.data().fullName || tenantName;
+        const tenantData = tenantDoc.data() || {};
+        tenantName = tenantData.fullName || tenantName;
+        ownerId = ownerId || tenantData.ownerId || null;
       }
     }
 
@@ -182,6 +364,7 @@ exports.onPaymentPaid = functions.firestore
         title: 'Payment received',
         body: `${tenantName} paid Rs ${after.amount} for ${after.periodKey}.`,
         severity: 'info',
+        ownerId,
         tenantId: after.tenantId,
         paymentId: change.after.id,
         createdAt: FieldValue.serverTimestamp(),
@@ -193,6 +376,519 @@ exports.onPaymentPaid = functions.firestore
       `${tenantName} paid Rs ${after.amount} for ${after.periodKey}.`,
     );
   });
+
+exports.sendMonthlyRentStatusNotifications = functions.pubsub
+  .schedule('15 10 1 * *')
+  .timeZone('Asia/Kolkata')
+  .onRun(async () => {
+    const period = previousMonthKey(new Date());
+    const monthlyRunKey = monthKey(new Date());
+
+    const paymentsSnap = await db
+      .collection('payments')
+      .where('periodKey', '==', period)
+      .get();
+
+    if (paymentsSnap.empty) return;
+
+    const writer = db.bulkWriter();
+    writer.onWriteError((err) => {
+      if (err.code === 6) return false;
+      return true;
+    });
+
+    for (const paymentDoc of paymentsSnap.docs) {
+      const payment = paymentDoc.data() || {};
+
+      let ownerId = payment.ownerId || null;
+      let tenantName = 'Tenant';
+
+      const tenantId = payment.tenantId;
+      if (tenantId) {
+        const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+        if (tenantDoc.exists) {
+          const tenantData = tenantDoc.data() || {};
+          tenantName = tenantData.fullName || tenantName;
+          ownerId = ownerId || tenantData.ownerId || null;
+        }
+      }
+
+      if (!ownerId) continue;
+
+      const status = String(payment.status || 'pending').toLowerCase();
+      const isPaid = status === 'paid' || status === 'success';
+      const statusLabel = isPaid ? 'Paid' : 'Not paid';
+
+      const messageId = `${paymentDoc.id}_monthly_status_${monthlyRunKey}`;
+      writer.create(db.collection('messages').doc(messageId), {
+        type: 'monthly-status',
+        title: 'Monthly rent status',
+        body: `${tenantName} rent for ${period}: ${statusLabel}.`,
+        severity: isPaid ? 'info' : 'warn',
+        ownerId,
+        tenantId: tenantId || null,
+        paymentId: paymentDoc.id,
+        periodKey: period,
+        createdAt: FieldValue.serverTimestamp(),
+        read: false,
+      });
+    }
+
+    await writer.close();
+  });
+
+exports.sendRentDueWhatsAppReminders = functions.pubsub
+  .schedule('0 9,12,15,18,21 * * *')
+  .timeZone('Asia/Kolkata')
+  .onRun(async () => {
+    const { businessName, remindersEnabled } = getWhatsAppConfig();
+    if (!remindersEnabled) {
+      functions.logger.info('WhatsApp reminders are disabled via config.');
+      return;
+    }
+
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    const dueSnap = await db
+      .collection('payments')
+      .where('status', '==', 'pending')
+      .where('dueDate', '>=', start)
+      .where('dueDate', '<', end)
+      .get();
+
+    if (dueSnap.empty) return;
+
+    for (const paymentDoc of dueSnap.docs) {
+      const payment = paymentDoc.data();
+      const reminderRef = db.collection('messages').doc(`${paymentDoc.id}_wa_due`);
+      const reminderExists = await reminderRef.get();
+      if (reminderExists.exists) continue;
+
+      if (!payment.tenantId) continue;
+      const tenantDoc = await db.collection('tenants').doc(payment.tenantId).get();
+      if (!tenantDoc.exists) continue;
+
+      const tenant = tenantDoc.data() || {};
+      const ownerId = payment.ownerId || tenant.ownerId || null;
+      let bankSnippet = '';
+      const to = normalizeIndianPhone(tenant.whatsappPhone || tenant.phone);
+      const upiId = String(tenant.upiId || '').trim();
+      if (!to || !upiId) continue;
+
+      if (ownerId) {
+        const ownerProfileDoc = await db
+          .collection('ownerPaymentProfiles')
+          .doc(ownerId)
+          .get();
+        if (ownerProfileDoc.exists) {
+          const ownerProfile = ownerProfileDoc.data() || {};
+          const bankName = ownerProfile.bankName || '';
+          const accountHolder = ownerProfile.bankAccountHolderName || '';
+          const accountNumber = ownerProfile.bankAccountNumber || '';
+          const ifsc = ownerProfile.bankIfsc || '';
+          if (bankName && accountHolder && accountNumber && ifsc) {
+            bankSnippet =
+              `\n\nBank Transfer Details:\n` +
+              `Name: ${accountHolder}\n` +
+              `Bank: ${bankName}\n` +
+              `A/C: ${accountNumber}\n` +
+              `IFSC: ${ifsc}`;
+          }
+        }
+      }
+
+      const amount = Number(payment.amount || tenant.rentAmount || 0);
+      const period = payment.periodKey || monthKey(now);
+      const tenantName = tenant.fullName || 'Tenant';
+      const upiLink = buildUpiLink({
+        upiId,
+        amount,
+        payeeName: businessName,
+        note: `Rent ${period}`,
+      });
+
+      const body =
+        `Hi ${tenantName}, your rent for ${period} is due today.\n` +
+        `Amount: Rs ${amount}\n` +
+        `Pay now: ${upiLink}` +
+        bankSnippet;
+
+      const sent = await sendWhatsAppMessage({
+        to,
+        body,
+        templateParams: [tenantName, period, amount, upiLink],
+      });
+      if (!sent.ok) {
+        await db
+          .collection('messages')
+          .doc(`${paymentDoc.id}_wa_due_failed_${Date.now()}`)
+          .set({
+            type: 'reminder',
+            channel: 'whatsapp',
+            title: 'Rent due reminder failed',
+            body: `WhatsApp reminder failed for ${to}.`,
+            severity: 'warn',
+            ownerId,
+            tenantId: payment.tenantId,
+            paymentId: paymentDoc.id,
+            providerStatus: sent.status,
+            providerError: sent.errorBody,
+            createdAt: FieldValue.serverTimestamp(),
+            read: false,
+          });
+        continue;
+      }
+
+      await reminderRef.set({
+        type: 'reminder',
+        channel: 'whatsapp',
+        title: 'Rent due reminder sent',
+        body: `WhatsApp reminder sent to ${to} for ${period}.`,
+        severity: 'info',
+        ownerId,
+        tenantId: payment.tenantId,
+        paymentId: paymentDoc.id,
+        providerMessageId: sent.providerMessageId,
+        providerStatus: sent.status,
+        createdAt: FieldValue.serverTimestamp(),
+        read: false,
+      });
+    }
+  });
+
+// ==========================================================
+// PAYMENT INTENT + VERIFICATION
+// ==========================================================
+
+exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Authentication required',
+    );
+  }
+
+  const leaseId = data.leaseId;
+  const month = Number(data.month);
+  const year = Number(data.year);
+  const gateway = (data.gateway || 'razorpay').toLowerCase();
+  const idempotencyKey = data.idempotencyKey;
+
+  if (!leaseId || !month || !year || !idempotencyKey) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'leaseId, month, year and idempotencyKey are required',
+    );
+  }
+
+  const leaseDoc = await db.collection('leases').doc(leaseId).get();
+  if (!leaseDoc.exists) {
+    throw new functions.https.HttpsError('not-found', 'Lease not found');
+  }
+
+  const lease = leaseDoc.data();
+  if (lease.tenantId && lease.tenantId !== context.auth.uid) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Lease does not belong to tenant',
+    );
+  }
+
+  if (lease.status && lease.status !== 'active') {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Lease is not active',
+    );
+  }
+
+  const paymentId = `${leaseId}_${year}_${String(month).padStart(2, '0')}`;
+  const paymentRef = db.collection('payments').doc(paymentId);
+  const transactionRef = db.collection('transactions').doc(idempotencyKey);
+
+  const existingPayment = await paymentRef.get();
+  if (existingPayment.exists) {
+    const currentStatus = existingPayment.get('status');
+    if (currentStatus === 'paid' || currentStatus === 'success') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Payment already completed for this period',
+      );
+    }
+  }
+
+  const existingTransaction = await transactionRef.get();
+  if (existingTransaction.exists) {
+    const payment = await paymentRef.get();
+    return {
+      paymentId,
+      gateway,
+      amount: payment.get('totalAmount') || 0,
+      currency: payment.get('currency') || 'INR',
+      idempotencyKey,
+      orderId: payment.get('razorpayOrderId') || null,
+      clientSecret: payment.get('stripeClientSecret') || null,
+      keyId: payment.get('razorpayKeyId') || null,
+    };
+  }
+
+  const baseAmount = Number(lease.rentAmount || 0);
+  const lateFeePercentage = Number(lease.lateFeePercentage || 0);
+  const dueDate = toDate(lease.dueDate) || new Date();
+  const now = new Date();
+  const isOverdue = now > dueDate;
+  const lateFeeAmount = isOverdue
+    ? Math.round(baseAmount * (lateFeePercentage / 100))
+    : 0;
+  const totalAmount = baseAmount + lateFeeAmount;
+
+  await db.runTransaction(async (t) => {
+    const paymentSnap = await t.get(paymentRef);
+    if (paymentSnap.exists) {
+      const status = paymentSnap.get('status');
+      if (status === 'paid' || status === 'success') {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'Payment already completed for this period',
+        );
+      }
+    }
+
+    t.set(
+      paymentRef,
+      {
+        paymentId,
+        leaseId,
+        tenantId: lease.tenantId || context.auth.uid,
+        ownerId: lease.ownerId || '',
+        propertyId: lease.propertyId || '',
+        month,
+        year,
+        baseAmount,
+        lateFeeAmount,
+        totalAmount,
+        status: 'pending',
+        gateway,
+        currency: lease.currency || 'INR',
+        transactionId: idempotencyKey,
+        idempotencyKey,
+        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    t.set(transactionRef, {
+      transactionId: idempotencyKey,
+      paymentId,
+      leaseId,
+      tenantId: lease.tenantId || context.auth.uid,
+      ownerId: lease.ownerId || '',
+      amount: totalAmount,
+      currency: lease.currency || 'INR',
+      status: 'initiated',
+      gateway,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  if (gateway === 'razorpay') {
+    const { keyId, keySecret } = getRazorpayConfig();
+    if (!keyId || !keySecret) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Razorpay keys not configured',
+      );
+    }
+
+    const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+    const amountInPaise = totalAmount * 100;
+    const receipt = paymentId;
+
+    const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${auth}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: amountInPaise,
+        currency: lease.currency || 'INR',
+        receipt,
+        notes: { paymentId },
+      }),
+    });
+
+    if (!orderRes.ok) {
+      const text = await orderRes.text();
+      throw new functions.https.HttpsError(
+        'internal',
+        `Razorpay order failed: ${text}`,
+      );
+    }
+
+    const order = await orderRes.json();
+    await paymentRef.set(
+      {
+        razorpayOrderId: order.id,
+        razorpayKeyId: keyId,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    return {
+      paymentId,
+      gateway: 'razorpay',
+      amount: order.amount,
+      currency: order.currency,
+      idempotencyKey,
+      orderId: order.id,
+      keyId,
+    };
+  }
+
+  if (gateway === 'stripe') {
+    const { secretKey } = getStripeConfig();
+    if (!secretKey) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Stripe keys not configured',
+      );
+    }
+
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Stripe intent creation not configured',
+    );
+  }
+
+  throw new functions.https.HttpsError(
+    'invalid-argument',
+    'Unsupported payment gateway',
+  );
+});
+
+exports.verifyPayment = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Authentication required',
+    );
+  }
+
+  const paymentId = data.paymentId;
+  const gateway = (data.gateway || '').toLowerCase();
+  const payload = data.payload || {};
+
+  if (!paymentId || !gateway) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'paymentId and gateway are required',
+    );
+  }
+
+  const paymentRef = db.collection('payments').doc(paymentId);
+  const paymentSnap = await paymentRef.get();
+  if (!paymentSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Payment not found');
+  }
+
+  const payment = paymentSnap.data();
+  const transactionId = payment.transactionId || payload.transactionId;
+  if (!transactionId) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Transaction not found for payment',
+    );
+  }
+
+  const transactionRef = db.collection('transactions').doc(transactionId);
+  const transactionSnap = await transactionRef.get();
+  if (transactionSnap.exists && transactionSnap.get('status') === 'success') {
+    return { ok: true };
+  }
+
+  if (gateway === 'razorpay') {
+    const { keySecret } = getRazorpayConfig();
+    if (!keySecret) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Razorpay secret not configured',
+      );
+    }
+
+    const razorpayOrderId = payload.orderId;
+    const razorpayPaymentId = payload.paymentId;
+    const razorpaySignature = payload.signature;
+
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Missing Razorpay verification data',
+      );
+    }
+
+    const expected = crypto
+      .createHmac('sha256', keySecret)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+      .digest('hex');
+
+    if (expected !== razorpaySignature) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Invalid Razorpay signature',
+      );
+    }
+
+    await db.runTransaction(async (t) => {
+      const txSnap = await t.get(transactionRef);
+      if (txSnap.exists && txSnap.get('status') === 'success') return;
+
+      t.set(
+        paymentRef,
+        {
+          status: 'paid',
+          method: 'online',
+          transactionId: transactionId,
+          razorpayOrderId,
+          paidAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      t.set(
+        transactionRef,
+        {
+          status: 'success',
+          gatewayResponse: {
+            razorpayPaymentId,
+            razorpayOrderId,
+          },
+          verificationSignature: razorpaySignature,
+          completedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
+
+    return { ok: true };
+  }
+
+  if (gateway === 'stripe') {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Stripe verification not configured',
+    );
+  }
+
+  throw new functions.https.HttpsError(
+    'invalid-argument',
+    'Unsupported payment gateway',
+  );
+});
 
 // ==========================================================
 // RAZORPAY INTEGRATION
@@ -391,4 +1087,8 @@ exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {
   }
 
   res.json({ received: true });
+});
+
+exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+  res.status(501).send('Stripe webhook not configured');
 });

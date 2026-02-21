@@ -1,18 +1,27 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
-import 'package:rentdone/features/owner/owner_payment/data/models/payment_model.dart';
+import 'package:rentdone/features/owner/owner_payment/domain/entities/payment.dart';
 import 'package:rentdone/features/owner/owner_payment/presenation/providers/payments_provider.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/providers/property_tenant_provider.dart';
 import 'package:rentdone/features/owner/owners_properties/ui_models/property_model.dart';
 
 class PaymentsScreen extends ConsumerStatefulWidget {
   final String? initialStatus;
+  final String? initialTenantId;
+  final String? initialPropertyId;
+  final String? initialTenantName;
 
-  const PaymentsScreen({super.key, this.initialStatus});
+  const PaymentsScreen({
+    super.key,
+    this.initialStatus,
+    this.initialTenantId,
+    this.initialPropertyId,
+    this.initialTenantName,
+  });
 
   @override
   ConsumerState<PaymentsScreen> createState() => _PaymentsScreenState();
@@ -21,6 +30,7 @@ class PaymentsScreen extends ConsumerStatefulWidget {
 class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   String selectedMonth = 'All Months';
   String selectedPropertyId = 'all';
+  String selectedTenantId = 'all';
   late String selectedStatus;
   final TextEditingController searchCtrl = TextEditingController();
   late final Razorpay _razorpay;
@@ -30,11 +40,14 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   void initState() {
     super.initState();
     selectedStatus = _normalizeStatus(widget.initialStatus);
+    selectedPropertyId = (widget.initialPropertyId?.trim().isNotEmpty ?? false)
+        ? widget.initialPropertyId!.trim()
+        : 'all';
+    selectedTenantId = (widget.initialTenantId?.trim().isNotEmpty ?? false)
+        ? widget.initialTenantId!.trim()
+        : 'all';
     _razorpay = Razorpay();
-    _razorpay.on(
-      Razorpay.EVENT_PAYMENT_SUCCESS,
-      _handlePaymentSuccess,
-    );
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
@@ -49,9 +62,18 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   @override
   void didUpdateWidget(covariant PaymentsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialStatus != widget.initialStatus) {
+    if (oldWidget.initialStatus != widget.initialStatus ||
+        oldWidget.initialTenantId != widget.initialTenantId ||
+        oldWidget.initialPropertyId != widget.initialPropertyId) {
       setState(() {
         selectedStatus = _normalizeStatus(widget.initialStatus);
+        selectedPropertyId =
+            (widget.initialPropertyId?.trim().isNotEmpty ?? false)
+            ? widget.initialPropertyId!.trim()
+            : 'all';
+        selectedTenantId = (widget.initialTenantId?.trim().isNotEmpty ?? false)
+            ? widget.initialTenantId!.trim()
+            : 'all';
       });
     }
   }
@@ -65,12 +87,17 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Rent Payments"),
+        title: Text(
+          (widget.initialTenantName?.trim().isNotEmpty ?? false)
+              ? 'Rent Payments - ${widget.initialTenantName!.trim()}'
+              : 'Rent Payments',
+        ),
         actions: [
           TextButton(
-            onPressed: () {},
-            child: const Text("Export Report"),
+            onPressed: () => context.go('/owner/transactions'),
+            child: const Text('Transactions'),
           ),
+          TextButton(onPressed: () {}, child: const Text("Export Report")),
           const SizedBox(width: 16),
         ],
       ),
@@ -81,35 +108,40 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           final properties = propertiesAsync.value ?? <Property>[];
           final tenants = tenantsAsync.value ?? <Tenant>[];
 
-          final propertyNameById = {
-            for (final p in properties) p.id: p.name,
-          };
-          final tenantNameById = {
-            for (final t in tenants) t.id: t.fullName,
-          };
-          final tenantById = {
-            for (final t in tenants) t.id: t,
-          };
+          final propertyNameById = {for (final p in properties) p.id: p.name};
+          final tenantNameById = {for (final t in tenants) t.id: t.fullName};
+          final tenantById = {for (final t in tenants) t.id: t};
 
           final monthOptions = _buildMonthOptions(payments);
           final propertyOptions = _buildPropertyOptions(properties);
+          final tenantOptions = _buildTenantOptions(tenants);
 
-          final effectiveMonth =
-              monthOptions.contains(selectedMonth) ? selectedMonth : 'All Months';
-          final effectivePropertyId = propertyOptions
-                  .any((element) => element.value == selectedPropertyId)
+          final effectiveMonth = monthOptions.contains(selectedMonth)
+              ? selectedMonth
+              : 'All Months';
+          final effectivePropertyId =
+              propertyOptions.any(
+                (element) => element.value == selectedPropertyId,
+              )
               ? selectedPropertyId
+              : 'all';
+          final effectiveTenantId =
+              tenantOptions.any((element) => element.value == selectedTenantId)
+              ? selectedTenantId
               : 'all';
 
           final filteredPayments = payments.where((p) {
-            final monthKey =
-                p.periodKey.isNotEmpty ? p.periodKey : _monthKey(p.dueDate);
-            if (effectiveMonth != 'All Months' &&
-                monthKey != effectiveMonth) {
+            final monthKey = p.periodKey.isNotEmpty
+                ? p.periodKey
+                : _monthKey(p.dueDate);
+            if (effectiveMonth != 'All Months' && monthKey != effectiveMonth) {
               return false;
             }
             if (effectivePropertyId != 'all' &&
                 p.propertyId != effectivePropertyId) {
+              return false;
+            }
+            if (effectiveTenantId != 'all' && p.tenantId != effectiveTenantId) {
               return false;
             }
             if (selectedStatus != 'All' &&
@@ -124,8 +156,10 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             return true;
           }).toList();
 
-          final expected =
-              filteredPayments.fold<int>(0, (sum, p) => sum + p.amount);
+          final expected = filteredPayments.fold<int>(
+            0,
+            (sum, p) => sum + p.amount,
+          );
           final collected = filteredPayments
               .where((p) => p.status == 'paid')
               .fold<int>(0, (sum, p) => sum + p.amount);
@@ -135,8 +169,9 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           final overdue = filteredPayments
               .where((p) => p.status == 'overdue')
               .fold<int>(0, (sum, p) => sum + p.amount);
-          final collectionRate =
-              expected == 0 ? 0 : ((collected / expected) * 100).round();
+          final collectionRate = expected == 0
+              ? 0
+              : ((collected / expected) * 100).round();
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -157,6 +192,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                           propertyOptions,
                           effectiveMonth,
                           effectivePropertyId,
+                          tenantOptions,
+                          effectiveTenantId,
                         ),
                         const SizedBox(height: 32),
                         _kpiSection(
@@ -204,6 +241,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     List<DropdownMenuItem<String>> propertyOptions,
     String effectiveMonth,
     String effectivePropertyId,
+    List<DropdownMenuItem<String>> tenantOptions,
+    String effectiveTenantId,
   ) {
     return Wrap(
       spacing: 20,
@@ -223,11 +262,19 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           items: propertyOptions,
         ),
         DropdownButton<String>(
+          value: effectiveTenantId,
+          onChanged: (v) => setState(() => selectedTenantId = v!),
+          items: tenantOptions,
+        ),
+        DropdownButton<String>(
           value: selectedStatus,
           onChanged: (v) => setState(() => selectedStatus = v!),
-          items: const ["All", "Paid", "Pending", "Overdue"]
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
+          items: const [
+            "All",
+            "Paid",
+            "Pending",
+            "Overdue",
+          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
         ),
         SizedBox(
           width: 240,
@@ -320,14 +367,16 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         rows: payments.map((p) {
           final tenantName = tenantNameById[p.tenantId] ?? 'Unknown';
           final propertyName = propertyNameById[p.propertyId] ?? 'Unknown';
-          return DataRow(cells: [
-            DataCell(Text(tenantName)),
-            DataCell(Text(propertyName)),
-            DataCell(Text("Rs ${p.amount}")),
-            DataCell(Text(_formatDate(p.dueDate))),
-            DataCell(Text(_statusLabel(p.status))),
-            DataCell(_actionCell(p, tenantById[p.tenantId]) as Widget),
-          ]);
+          return DataRow(
+            cells: [
+              DataCell(Text(tenantName)),
+              DataCell(Text(propertyName)),
+              DataCell(Text("Rs ${p.amount}")),
+              DataCell(Text(_formatDate(p.dueDate))),
+              DataCell(Text(_statusLabel(p.status))),
+              DataCell(_actionCell(p, tenantById[p.tenantId]) as Widget),
+            ],
+          );
         }).toList(),
       ),
     );
@@ -357,10 +406,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     Map<String, Tenant> tenantById,
   ) {
     if (payments.isEmpty) {
-      return Text(
-        "No payments found",
-        style: theme.textTheme.bodyMedium,
-      );
+      return Text("No payments found", style: theme.textTheme.bodyMedium);
     }
     return Column(
       children: payments.map((p) {
@@ -430,9 +476,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ListTile(
-                title: Text("Collect Payment"),
-              ),
+              const ListTile(title: Text("Collect Payment")),
               ListTile(
                 leading: const Icon(Icons.payments_rounded),
                 title: const Text("Cash (Manual)"),
@@ -462,13 +506,13 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
 
     try {
       if (action == 'cash') {
-        await ref
-            .read(paymentFirebaseServiceProvider)
-            .markPaymentPaidCash(payment.id);
+        await ref.read(markPaymentPaidCashUseCaseProvider).call(payment.id);
       } else if (action == 'online-manual') {
         final txId = await _askTransactionId();
         if (!mounted) return;
-        await ref.read(paymentFirebaseServiceProvider).markPaymentPaidOnline(
+        await ref
+            .read(markPaymentPaidOnlineUseCaseProvider)
+            .call(
               payment.id,
               transactionId: txId?.trim().isEmpty ?? true ? null : txId,
             );
@@ -488,10 +532,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error: $e"),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
         );
       }
     }
@@ -533,37 +574,30 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
 
   Future<void> _startRazorpayCheckout(Payment payment, Tenant? tenant) async {
     try {
-      final callable =
-          FirebaseFunctions.instance.httpsCallable('createRazorpayOrder');
-      final result = await callable.call({
-        'paymentId': payment.id,
-        'amount': payment.amount * 100, // Razorpay expects paise
-        'currency': 'INR',
-        'receipt': 'rent_${payment.id}',
-      });
-
-      final data = Map<String, dynamic>.from(result.data as Map);
-      final orderId = data['orderId'] as String;
-      final keyId = data['keyId'] as String;
-      final amount = data['amount'] as int;
-      final currency = data['currency'] as String;
+      final order = await ref
+          .read(createRazorpayOrderUseCaseProvider)
+          .call(
+            paymentId: payment.id,
+            amountInPaise: payment.amount * 100, // Razorpay expects paise
+            currency: 'INR',
+            receipt: 'rent_${payment.id}',
+          );
 
       _activePaymentId = payment.id;
 
       _razorpay.open({
-        'key': keyId,
-        'amount': amount,
-        'currency': currency,
+        'key': order.keyId,
+        'amount': order.amount,
+        'currency': order.currency,
         'name': 'RentDone',
-        'description': 'Rent ${payment.periodKey.isNotEmpty ? payment.periodKey : _monthKey(payment.dueDate)}',
-        'order_id': orderId,
+        'description':
+            'Rent ${payment.periodKey.isNotEmpty ? payment.periodKey : _monthKey(payment.dueDate)}',
+        'order_id': order.orderId,
         'prefill': {
           'contact': tenant?.phone ?? '',
           'email': tenant?.email ?? '',
         },
-        'notes': {
-          'paymentId': payment.id,
-        },
+        'notes': {'paymentId': payment.id},
       });
     } catch (e) {
       if (mounted) {
@@ -577,9 +611,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     }
   }
 
-  Future<void> _handlePaymentSuccess(
-    PaymentSuccessResponse response,
-  ) async {
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     final paymentId = _activePaymentId;
     _activePaymentId = null;
     if (paymentId == null) return;
@@ -590,14 +622,14 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           response.signature == null) {
         throw Exception('Missing Razorpay response fields');
       }
-      final callable =
-          FirebaseFunctions.instance.httpsCallable('confirmRazorpayPayment');
-      await callable.call({
-        'paymentId': paymentId,
-        'razorpayOrderId': response.orderId,
-        'razorpayPaymentId': response.paymentId,
-        'razorpaySignature': response.signature,
-      });
+      await ref
+          .read(confirmRazorpayPaymentUseCaseProvider)
+          .call(
+            paymentId: paymentId,
+            razorpayOrderId: response.orderId!,
+            razorpayPaymentId: response.paymentId!,
+            razorpaySignature: response.signature!,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -635,9 +667,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   void _handleExternalWallet(ExternalWalletResponse response) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("External wallet: ${response.walletName ?? ''}"),
-      ),
+      SnackBar(content: Text("External wallet: ${response.walletName ?? ''}")),
     );
   }
 
@@ -661,12 +691,24 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       const DropdownMenuItem(value: 'all', child: Text('All Properties')),
     ];
     items.addAll(
-      properties.map(
-        (p) => DropdownMenuItem(
-          value: p.id,
-          child: Text(p.name),
-        ),
-      ),
+      properties.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
+    );
+    return items;
+  }
+
+  List<DropdownMenuItem<String>> _buildTenantOptions(List<Tenant> tenants) {
+    final items = <DropdownMenuItem<String>>[
+      const DropdownMenuItem(value: 'all', child: Text('All Tenants')),
+    ];
+    items.addAll(
+      tenants
+          .map(
+            (tenant) => DropdownMenuItem(
+              value: tenant.id,
+              child: Text(tenant.fullName),
+            ),
+          )
+          .toList(),
     );
     return items;
   }

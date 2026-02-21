@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rentdone/features/owner/owner_dashboard/presentation/providers/messages_provider.dart';
+import 'package:rentdone/features/owner/owner_notifications/presentation/providers/owner_notifications_provider.dart';
 
 class OwnerNotificationsScreen extends ConsumerWidget {
   const OwnerNotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(messagesProvider);
+    final async = ref.watch(ownerNotificationsProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -57,8 +57,9 @@ class OwnerNotificationsScreen extends ConsumerWidget {
                           Text(
                             m.body,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.7),
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.7,
+                              ),
                             ),
                           ),
                         ],

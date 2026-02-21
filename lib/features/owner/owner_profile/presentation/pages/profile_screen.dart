@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
 
-const Color _bg = Color(0xFFF8F9FA);
-const Color _card = Color(0xFFFFFFFF);
-const Color _primaryText = Color(0xFF202124);
-const Color _secondaryText = Color(0xFF5F6368);
-const Color _divider = Color(0xFFE0E0E0);
-const Color _accent = Color(0xFF2563EB);
 
 class ProfileScreen extends ConsumerWidget {
   final String? fullName;
@@ -44,21 +38,24 @@ class ProfileScreen extends ConsumerWidget {
     final displayName = fullName ?? profile.fullName;
     final displayEmail = email ?? profile.email;
     final displayPhone = phone ?? profile.phone;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+ 
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Profile',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: _primaryText,
+                  color: scheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
@@ -69,13 +66,13 @@ class ProfileScreen extends ConsumerWidget {
                 displayEmail: displayEmail,
               ),
               const SizedBox(height: 20),
-              _sectionTitle('Choose Character'),
+              _sectionTitle(context, 'Choose Character'),
               const SizedBox(height: 12),
               _characterPicker(context, ref, profile),
               const SizedBox(height: 24),
-              _sectionTitle('Account Info'),
+              _sectionTitle(context, 'Account Info'),
               const SizedBox(height: 12),
-              _cardSection(
+              _cardSection(context,
                 children: [
                   _profileRow(
                     context,
@@ -106,9 +103,9 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              _sectionTitle('App Preferences'),
+              _sectionTitle(context, 'App Preferences'),
               const SizedBox(height: 12),
-              _cardSection(
+              _cardSection( context,
                 children: [
                   _profileRow(
                     context,
@@ -151,6 +148,8 @@ class ProfileScreen extends ConsumerWidget {
     required String displayName,
     required String displayEmail,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Stack(
@@ -161,8 +160,11 @@ class ProfileScreen extends ConsumerWidget {
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: _divider, width: 2),
-                color: _card,
+                border: Border.all(
+                  color: scheme.onSurface.withValues(alpha: 0.1),
+                  width: 2,
+                ),
+                color: scheme.surface,
                 image: avatarUrl != null && avatarUrl!.isNotEmpty
                     ? DecorationImage(
                         image: NetworkImage(avatarUrl!),
@@ -181,15 +183,19 @@ class ProfileScreen extends ConsumerWidget {
                 label: 'Edit profile',
                 button: true,
                 child: Material(
-                  color: _card,
+                  color: scheme.surface,
                   shape: const CircleBorder(),
                   elevation: 2,
                   child: InkWell(
                     customBorder: const CircleBorder(),
                     onTap: onEditProfile,
-                    child: const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Icon(Icons.edit, size: 18, color: _secondaryText),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.edit,
+                        size: 18,
+                        color: scheme.onSurface,
+                      ),
                     ),
                   ),
                 ),
@@ -200,20 +206,20 @@ class ProfileScreen extends ConsumerWidget {
         const SizedBox(height: 12),
         Text(
           displayName,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
-            color: _primaryText,
+            color: scheme.onSurface,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
           displayEmail,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            color: _secondaryText,
+            color: scheme.onSurface,
           ),
           textAlign: TextAlign.center,
         ),
@@ -233,9 +239,8 @@ class ProfileScreen extends ConsumerWidget {
           return _CharacterOption(
             avatar: avatar,
             selected: avatar == profile.avatar,
-            onTap: () => ref
-                .read(ownerProfileProvider.notifier)
-                .setAvatar(avatar),
+            onTap: () =>
+                ref.read(ownerProfileProvider.notifier).setAvatar(avatar),
           );
         }).toList();
 
@@ -250,30 +255,23 @@ class ProfileScreen extends ConsumerWidget {
         }
 
         return Column(
-          children: [
-            options[0],
-            const SizedBox(height: 12),
-            options[1],
-          ],
+          children: [options[0], const SizedBox(height: 12), options[1]],
         );
       },
     );
   }
 
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: _primaryText,
-      ),
-    );
+  Widget _sectionTitle(BuildContext context, String title) {
+    final text = Theme.of(context).textTheme;
+
+    return Text(title, style: text.titleLarge);
   }
 
-  Widget _cardSection({required List<Widget> children}) {
+  Widget _cardSection(BuildContext context, {required List<Widget> children}) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Card(
-      color: _card,
+      color: scheme.surface,
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -291,11 +289,13 @@ class ProfileScreen extends ConsumerWidget {
     required String semanticsLabel,
     VoidCallback? onTap,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+   
     return Semantics(
       label: semanticsLabel,
       button: true,
       child: Material(
-        color: _card,
+        color: scheme.surface,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
@@ -303,7 +303,11 @@ class ProfileScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
             child: Row(
               children: [
-                Icon(icon, color: _secondaryText, size: 22),
+                Icon(
+                  icon,
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                  size: 22,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -311,29 +315,26 @@ class ProfileScreen extends ConsumerWidget {
                     children: [
                       Text(
                         label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: _primaryText,
+                          color: scheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         value,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
-                          color: _secondaryText,
+                          color: scheme.onSurface,
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Icon(
-                  Icons.chevron_right,
-                  color: _secondaryText,
-                ),
+                Icon(Icons.chevron_right, color: scheme.onSurface),
               ],
             ),
           ),
@@ -356,8 +357,14 @@ class _CharacterOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = selected ? _accent : _divider;
-    final bgColor = selected ? _accent.withValues(alpha: 0.08) : _card;
+    final scheme = Theme.of(context).colorScheme;
+   
+    final borderColor = selected
+        ? scheme.primary
+        : scheme.onSurface.withValues(alpha: 0.1);
+    final bgColor = selected
+        ? scheme.primary.withValues(alpha: 0.08)
+        : scheme.surface;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
@@ -385,14 +392,13 @@ class _CharacterOption extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _divider),
+                border: Border.all(
+                  color: scheme.onSurface.withValues(alpha: 0.1),
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(6),
-                child: Image.asset(
-                  avatar.assetPath,
-                  fit: BoxFit.contain,
-                ),
+                child: Image.asset(avatar.assetPath, fit: BoxFit.contain),
               ),
             ),
             const SizedBox(width: 12),
@@ -402,10 +408,10 @@ class _CharacterOption extends StatelessWidget {
                 children: [
                   Text(
                     avatar.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: _primaryText,
+                      color: scheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -413,7 +419,9 @@ class _CharacterOption extends StatelessWidget {
                     selected ? 'Selected' : 'Tap to select',
                     style: TextStyle(
                       fontSize: 13,
-                      color: selected ? _accent : _secondaryText,
+                      color: selected
+                          ? scheme.primary
+                          : scheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -422,7 +430,9 @@ class _CharacterOption extends StatelessWidget {
             ),
             Icon(
               selected ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: selected ? _accent : _secondaryText,
+              color: selected
+                  ? scheme.primary
+                  : scheme.onSurface.withValues(alpha: 0.6),
             ),
           ],
         ),

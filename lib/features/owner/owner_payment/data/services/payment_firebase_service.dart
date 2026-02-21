@@ -1,18 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rentdone/features/owner/owner_payment/data/models/payment_model.dart';
+import 'package:rentdone/features/owner/owner_payment/data/models/payment_dto.dart';
 
 class PaymentFirebaseService {
   final FirebaseFirestore _firestore;
 
   PaymentFirebaseService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  Stream<List<Payment>> watchPayments() {
+  Stream<List<PaymentDto>> watchPayments() {
     return _firestore
         .collection('payments')
         .orderBy('dueDate', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(Payment.fromDoc).toList());
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return PaymentDto.fromFirestore(doc.id, doc.data());
+          }).toList();
+        });
   }
 
   Future<void> markPaymentPaidCash(String paymentId) async {

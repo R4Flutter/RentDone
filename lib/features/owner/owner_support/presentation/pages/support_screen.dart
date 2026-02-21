@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/features/owner/owner_support/presentation/providers/support_provider.dart';
 
-class SupportScreen extends StatelessWidget {
+class SupportScreen extends ConsumerWidget {
   const SupportScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final content = ref.watch(supportContentProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Help & Support')),
@@ -14,21 +17,16 @@ class SupportScreen extends StatelessWidget {
         children: [
           _sectionTitle(theme, 'FAQs'),
           const SizedBox(height: 8),
-          _faqTile('How do I add a tenant?'),
-          _faqTile('How do I mark a payment as paid?'),
-          _faqTile('How do I generate reports?'),
+          ...content.faqs.map((faq) => _faqTile(faq.question)),
           const SizedBox(height: 24),
           _sectionTitle(theme, 'Contact Support'),
           const SizedBox(height: 8),
-          _supportTile(
-            icon: Icons.email_outlined,
-            title: 'Email',
-            subtitle: 'support@rentdone.app',
-          ),
-          _supportTile(
-            icon: Icons.phone_outlined,
-            title: 'Phone',
-            subtitle: '+91 90000 00000',
+          ...content.contacts.map(
+            (contact) => _supportTile(
+              icon: _iconForType(contact.type),
+              title: contact.title,
+              subtitle: contact.subtitle,
+            ),
           ),
         ],
       ),
@@ -38,9 +36,7 @@ class SupportScreen extends StatelessWidget {
   Widget _sectionTitle(ThemeData theme, String text) {
     return Text(
       text,
-      style: theme.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w600,
-      ),
+      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
     );
   }
 
@@ -64,5 +60,16 @@ class SupportScreen extends StatelessWidget {
       title: Text(title),
       subtitle: Text(subtitle),
     );
+  }
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'email':
+        return Icons.email_outlined;
+      case 'phone':
+        return Icons.phone_outlined;
+      default:
+        return Icons.support_agent;
+    }
   }
 }
