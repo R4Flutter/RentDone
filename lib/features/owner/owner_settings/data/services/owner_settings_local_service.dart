@@ -14,6 +14,9 @@ class OwnerSettingsLocalService {
     enable2FA: false,
     notificationsEnabled: true,
     darkMode: false,
+    locationAddress: '',
+    locationLatitude: null,
+    locationLongitude: null,
   );
 
   OwnerSettingsDto getSettings() {

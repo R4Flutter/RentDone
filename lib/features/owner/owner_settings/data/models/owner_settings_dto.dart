@@ -13,6 +13,9 @@ class OwnerSettingsDto {
   final bool enable2FA;
   final bool notificationsEnabled;
   final bool darkMode;
+  final String locationAddress;
+  final double? locationLatitude;
+  final double? locationLongitude;
 
   const OwnerSettingsDto({
     required this.fullName,
@@ -27,6 +30,9 @@ class OwnerSettingsDto {
     required this.enable2FA,
     required this.notificationsEnabled,
     required this.darkMode,
+    required this.locationAddress,
+    required this.locationLatitude,
+    required this.locationLongitude,
   });
 
   factory OwnerSettingsDto.fromEntity(OwnerSettings settings) {
@@ -43,6 +49,9 @@ class OwnerSettingsDto {
       enable2FA: settings.enable2FA,
       notificationsEnabled: settings.notificationsEnabled,
       darkMode: settings.darkMode,
+      locationAddress: settings.locationAddress,
+      locationLatitude: settings.locationLatitude,
+      locationLongitude: settings.locationLongitude,
     );
   }
 
@@ -60,6 +69,9 @@ class OwnerSettingsDto {
       enable2FA: enable2FA,
       notificationsEnabled: notificationsEnabled,
       darkMode: darkMode,
+      locationAddress: locationAddress,
+      locationLatitude: locationLatitude,
+      locationLongitude: locationLongitude,
     );
   }
 }

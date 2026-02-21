@@ -39,6 +39,7 @@ dependencies:
   go_router: ^17.1.0
   country_picker: ^2.0.27
   firebase_auth: ^6.1.4
+  google_sign_in: ^7.2.0
   cloud_firestore: ^6.1.2
   cloud_functions: ^6.0.6
   uuid: ^4.5.2
@@ -49,6 +50,8 @@ dependencies:
   file_picker: ^8.1.2
   flutter_image_compress: ^2.3.0
   cloudinary_public: ^0.23.1
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
 
 dev_dependencies:
   flutter_test:

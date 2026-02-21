@@ -4,6 +4,7 @@ import 'package:rentdone/features/auth/domain/entities/auth_user.dart';
 class AuthUserDto {
   final String uid;
   final String? name;
+  final String? email;
   final String? phone;
   final String? role;
   final DateTime? createdAt;
@@ -13,6 +14,7 @@ class AuthUserDto {
   const AuthUserDto({
     required this.uid,
     this.name,
+    this.email,
     this.phone,
     this.role,
     this.createdAt,
@@ -24,6 +26,7 @@ class AuthUserDto {
     return AuthUserDto(
       uid: user.uid,
       name: user.displayName,
+      email: user.email,
       phone: user.phoneNumber,
       role: null,
       createdAt: user.metadata.creationTime,
@@ -38,6 +41,7 @@ class AuthUserDto {
     return AuthUser(
       uid: uid,
       name: name,
+      email: email,
       phone: phone,
       role: role,
       createdAt: createdAt,

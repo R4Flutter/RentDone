@@ -84,7 +84,7 @@ class _TransactionHistoryScreenState
                       final tx = data.transactions[index];
                       return _TransactionTile(transaction: tx);
                     },
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    separatorBuilder: (_, _) => const SizedBox(height: 16),
                     itemCount: data.transactions.length + 1,
                   ),
                 ),

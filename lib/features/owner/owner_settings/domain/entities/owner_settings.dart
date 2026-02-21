@@ -11,6 +11,9 @@ class OwnerSettings {
   final bool enable2FA;
   final bool notificationsEnabled;
   final bool darkMode;
+  final String locationAddress;
+  final double? locationLatitude;
+  final double? locationLongitude;
 
   const OwnerSettings({
     required this.fullName,
@@ -25,5 +28,8 @@ class OwnerSettings {
     required this.enable2FA,
     required this.notificationsEnabled,
     required this.darkMode,
+    required this.locationAddress,
+    required this.locationLatitude,
+    required this.locationLongitude,
   });
 }

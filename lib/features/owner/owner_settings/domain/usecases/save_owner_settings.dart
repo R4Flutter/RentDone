@@ -6,7 +6,7 @@ class SaveOwnerSettings {
 
   const SaveOwnerSettings(this._repository);
 
-  void call(OwnerSettings settings) {
-    _repository.saveSettings(settings);
+  Future<void> call(OwnerSettings settings) {
+    return _repository.saveSettings(settings);
   }
 }

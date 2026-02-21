@@ -1,47 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rentdone/core/constants/user_role.dart';
+import 'package:rentdone/features/auth/di/auth_di.dart';
 
-
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage>
+class _SplashPageState extends ConsumerState<SplashPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _logoScale;
 
-@override
-void initState() {
-  super.initState();
+  @override
+  void initState() {
+    super.initState();
 
-  _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1200),
-  );
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
 
-  _logoScale = Tween<double>(
-    begin: 1.2,
-    end: 1.0,
-  ).animate(
-    CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutExpo,
-    ),
-  );
+    _logoScale = Tween<double>(
+      begin: 1.2,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo));
 
-  _controller.forward();
+    _controller.forward();
 
-  // Navigate after 3 seconds
-  Future.delayed(const Duration(seconds: 3), () {
+    _navigateAfterBoot();
+  }
+
+  Future<void> _navigateAfterBoot() async {
+    await Future<void>.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    context.goNamed('roleSelection');
-  });
-}
 
+    final auth = ref.read(firebaseAuthProvider);
+    final user = auth.currentUser;
+    if (user == null) {
+      context.goNamed('roleSelection');
+      return;
+    }
+
+    final role = await ref.read(authRepositoryProvider).getUserRole(user.uid);
+    if (!mounted) return;
+
+    switch (role) {
+      case UserRole.owner:
+        context.goNamed('ownerDashboard');
+        break;
+      case UserRole.tenant:
+        context.goNamed('tenantPayments');
+        break;
+      default:
+        context.goNamed('roleSelection');
+    }
+  }
 
   @override
   void dispose() {

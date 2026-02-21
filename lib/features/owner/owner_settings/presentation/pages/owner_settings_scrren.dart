@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_bank_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_upi_provider.dart';
@@ -32,8 +34,20 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _pageHeader(theme),
+                _pageHeader(theme, settings),
+                if (settings.errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    settings.errorMessage!,
+                    style: const TextStyle(color: AppTheme.errorRed),
+                  ),
+                ],
                 const SizedBox(height: 24),
+                if (settings.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 20),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
                 if (isDesktop)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,6 +113,8 @@ class SettingsScreen extends ConsumerWidget {
                               title: 'Security',
                               subtitle: 'Protect your account access.',
                               child: _securitySection(
+                                context,
+                                ref,
                                 settings,
                                 notifier,
                                 theme,
@@ -111,6 +127,19 @@ class SettingsScreen extends ConsumerWidget {
                               title: 'Preferences',
                               subtitle: 'Notifications and display.',
                               child: _systemSection(settings, notifier, theme),
+                            ),
+                            const SizedBox(height: 24),
+                            _sectionCard(
+                              theme,
+                              icon: Icons.location_on_outlined,
+                              title: 'Location',
+                              subtitle:
+                                  'Current owner location for map features.',
+                              child: _locationSection(
+                                settings,
+                                notifier,
+                                theme,
+                              ),
                             ),
                           ],
                         ),
@@ -161,7 +190,13 @@ class SettingsScreen extends ConsumerWidget {
                     icon: Icons.shield_outlined,
                     title: 'Security',
                     subtitle: 'Protect your account access.',
-                    child: _securitySection(settings, notifier, theme),
+                    child: _securitySection(
+                      context,
+                      ref,
+                      settings,
+                      notifier,
+                      theme,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   _sectionCard(
@@ -170,6 +205,14 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Preferences',
                     subtitle: 'Notifications and display.',
                     child: _systemSection(settings, notifier, theme),
+                  ),
+                  const SizedBox(height: 24),
+                  _sectionCard(
+                    theme,
+                    icon: Icons.location_on_outlined,
+                    title: 'Location',
+                    subtitle: 'Current owner location for map features.',
+                    child: _locationSection(settings, notifier, theme),
                   ),
                 ],
                 const SizedBox(height: 8),
@@ -181,7 +224,7 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _pageHeader(ThemeData theme) {
+  Widget _pageHeader(ThemeData theme, OwnerSettingsState settings) {
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.65);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,9 +243,11 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
         _statusPill(
-          label: 'Auto-saved',
-          icon: Icons.cloud_done,
-          color: AppTheme.successGreen,
+          label: settings.isSaving ? 'Saving...' : 'Auto-saved',
+          icon: settings.isSaving ? Icons.cloud_upload : Icons.cloud_done,
+          color: settings.isSaving
+              ? AppTheme.warningAmber
+              : AppTheme.successGreen,
         ),
       ],
     );
@@ -454,7 +499,7 @@ class SettingsScreen extends ConsumerWidget {
     return Column(
       children: [
         DropdownButtonFormField<String>(
-          value: effectiveMode,
+          initialValue: effectiveMode,
           onChanged: (value) {
             if (value != null) {
               notifier.updateDefaultPaymentMode(value);
@@ -570,6 +615,8 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _securitySection(
+    BuildContext context,
+    WidgetRef ref,
     OwnerSettingsState settings,
     OwnerSettingsNotifier notifier,
     ThemeData theme,
@@ -598,13 +645,13 @@ class SettingsScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
-          onPressed: () {},
+          onPressed: () => _showChangePasswordDialog(context, ref),
           icon: const Icon(Icons.lock_reset),
           label: const Text('Change Password'),
         ),
         const SizedBox(height: 16),
         OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => _logout(context, ref),
           icon: const Icon(Icons.logout),
           label: const Text('Logout'),
         ),
@@ -772,6 +819,221 @@ class SettingsScreen extends ConsumerWidget {
           secondary: Icon(
             Icons.dark_mode_outlined,
             color: theme.colorScheme.onPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showChangePasswordDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Change Password'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Current password',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'New password'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm new password',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final currentPassword = currentController.text.trim();
+                  final newPassword = newController.text.trim();
+                  final confirmPassword = confirmController.text.trim();
+
+                  if (newPassword != confirmPassword) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'New password and confirm password must match.',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+
+                  try {
+                    await ref
+                        .read(authRepositoryProvider)
+                        .changePassword(
+                          currentPassword: currentPassword,
+                          newPassword: newPassword,
+                        );
+
+                    if (!context.mounted) return;
+                    Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Password changed successfully.'),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(error.toString())));
+                  }
+                },
+                child: const Text('Update'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      currentController.dispose();
+      newController.dispose();
+      confirmController.dispose();
+    }
+  }
+
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(signOutUseCaseProvider).call();
+      if (!context.mounted) return;
+      context.goNamed('roleSelection');
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Widget _locationSection(
+    OwnerSettingsState settings,
+    OwnerSettingsNotifier notifier,
+    ThemeData theme,
+  ) {
+    final locationErrorText = settings.errorMessage ?? '';
+    final lowerError = locationErrorText.toLowerCase();
+    final hasLocationIssue = lowerError.contains('location');
+    final serviceDisabled = lowerError.contains('service is disabled');
+    final permissionDenied =
+        lowerError.contains('permission denied') ||
+        lowerError.contains('permanently denied');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Current Location',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  FilledButton.icon(
+                    onPressed: settings.isFetchingLocation
+                        ? null
+                        : () => notifier.captureCurrentLocation(),
+                    icon: settings.isFetchingLocation
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.location_searching),
+                    label: Text(
+                      settings.isFetchingLocation
+                          ? 'Capturing...'
+                          : 'Capture Now',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (settings.locationAddress.isNotEmpty) ...[
+                Text('Address', style: theme.textTheme.labelSmall),
+                const SizedBox(height: 4),
+                Text(
+                  settings.locationAddress,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                Text('Coordinates', style: theme.textTheme.labelSmall),
+                const SizedBox(height: 4),
+                Text(
+                  '${settings.locationLatitude?.toStringAsFixed(6) ?? 'N/A'}, '
+                  '${settings.locationLongitude?.toStringAsFixed(6) ?? 'N/A'}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ] else
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No location captured yet. Tap "Capture Now" to set your location.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.secondary,
+                    ),
+                  ),
+                ),
+              if (hasLocationIssue) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (serviceDisabled)
+                      OutlinedButton.icon(
+                        onPressed: () => notifier.openLocationSettings(),
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Open Location Settings'),
+                      ),
+                    if (permissionDenied)
+                      OutlinedButton.icon(
+                        onPressed: () => notifier.openAppSettings(),
+                        icon: const Icon(Icons.app_settings_alt),
+                        label: const Text('Open App Settings'),
+                      ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ),
       ],

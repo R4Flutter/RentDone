@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rentdone/core/constants/user_role.dart';
+import 'package:rentdone/features/auth/di/auth_di.dart';
 
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart';
@@ -23,8 +27,48 @@ import 'package:rentdone/shared/pages/role_selection_screen.dart';
 import 'package:rentdone/shared/pages/splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final firebaseAuth = ref.watch(firebaseAuthProvider);
+
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: _RouterRefreshNotifier(firebaseAuth.authStateChanges()),
+    redirect: (context, state) async {
+      final isLoggedIn = firebaseAuth.currentUser != null;
+      final path = state.uri.path;
+      final isRoleOrLoginPath = path == '/role' || path == '/login';
+
+      final requiresAuth =
+          path.startsWith('/owner') || path.startsWith('/tenant');
+      if (requiresAuth && !isLoggedIn) {
+        return '/role';
+      }
+
+      if (!isLoggedIn) {
+        return null;
+      }
+
+      final uid = firebaseAuth.currentUser!.uid;
+      final role = await ref.read(authRepositoryProvider).getUserRole(uid);
+
+      if (role == null) {
+        if (path != '/role') return '/role';
+        return null;
+      }
+
+      if (path.startsWith('/owner') && role != UserRole.owner) {
+        return '/tenant/payments';
+      }
+
+      if (path.startsWith('/tenant') && role != UserRole.tenant) {
+        return '/owner/dashboard';
+      }
+
+      if (isRoleOrLoginPath) {
+        return role == UserRole.owner ? '/owner/dashboard' : '/tenant/payments';
+      }
+
+      return null;
+    },
     routes: [
       // ============================================================
       // 🌍 AUTHENTICATION & ONBOARDING ROUTES
@@ -48,7 +92,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginPage(),
+        builder: (context, state) {
+          final role = UserRoleX.tryParse(state.uri.queryParameters['role']);
+          return LoginPage(selectedRole: role ?? UserRole.tenant);
+        },
       ),
 
       /// 👤 Tenant Payments Dashboard
@@ -276,3 +323,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
   );
 });
+
+class _RouterRefreshNotifier extends ChangeNotifier {
+  _RouterRefreshNotifier(Stream<dynamic> stream) {
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}

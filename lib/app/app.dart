@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 
 import 'app_router.dart';
 import 'app_theme.dart';
@@ -23,6 +24,11 @@ class RentDoneApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ownerSettings = ref.watch(ownerSettingsProvider);
+    final themeMode = ownerSettings.isLoading
+        ? ThemeMode.system
+        : (ownerSettings.darkMode ? ThemeMode.dark : ThemeMode.light);
+
     return MaterialApp.router(
       // App identity
       title: 'RentDone',
@@ -33,7 +39,7 @@ class RentDoneApp extends ConsumerWidget {
       // THEME (from app_theme.dart)
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
 
       // ROUTER (from app_router.dart)
       routerConfig: ref.watch(appRouterProvider),
@@ -42,7 +48,9 @@ class RentDoneApp extends ConsumerWidget {
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: const TextScaler.linear(1.0), // prevents font scaling bugs
+            textScaler: const TextScaler.linear(
+              1.0,
+            ), // prevents font scaling bugs
           ),
           child: child ?? const SizedBox.shrink(),
         );

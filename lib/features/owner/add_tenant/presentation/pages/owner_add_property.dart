@@ -50,6 +50,21 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   late String? selectedRoomId;
   late final String tenantDraftId;
 
+  String _normalizeIndianPhoneOrOriginal(String raw) {
+    final input = raw.trim();
+    final digitsOnly = input.replaceAll(RegExp(r'\D'), '');
+
+    if (digitsOnly.length == 12 && digitsOnly.startsWith('91')) {
+      return digitsOnly.substring(2);
+    }
+
+    if (digitsOnly.length == 10) {
+      return digitsOnly;
+    }
+
+    return input;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -434,7 +449,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           Text("Upload Documents", style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(
-            "Upload at least 2 documents for verification (ID, Address Proof, etc.)",
+            "Upload at least 1 document for verification (ID, Address Proof, etc.)",
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -640,9 +655,14 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       return;
     }
 
-    final verifiedUpiId = await ref
-        .read(ownerUpiProvider.notifier)
-        .getVerifiedUpiId();
+    String? verifiedUpiId;
+    try {
+      verifiedUpiId = await ref
+          .read(ownerUpiProvider.notifier)
+          .getVerifiedUpiId();
+    } catch (_) {
+      verifiedUpiId = null;
+    }
     if (verifiedUpiId == null || verifiedUpiId.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -656,12 +676,20 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       return;
     }
 
+    final normalizedPhone = _normalizeIndianPhoneOrOriginal(phoneCtrl.text);
+    final normalizedWhatsapp = _normalizeIndianPhoneOrOriginal(
+      whatsappCtrl.text,
+    );
+    final normalizedEmergencyPhone = _normalizeIndianPhoneOrOriginal(
+      emergencyPhoneCtrl.text,
+    );
+
     final tenant = Tenant(
       id: tenantDraftId,
       ownerId: FirebaseAuth.instance.currentUser?.uid,
       fullName: nameCtrl.text.trim(),
-      phone: phoneCtrl.text.trim(),
-      whatsappPhone: whatsappCtrl.text.trim(),
+      phone: normalizedPhone,
+      whatsappPhone: normalizedWhatsapp,
       email: emailCtrl.text.trim(),
       tenantType: "Individual",
       propertyId: selectedPropertyId!,
@@ -684,7 +712,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           ? double.parse(incomeCtrl.text)
           : null,
       emergencyName: emergencyNameCtrl.text.trim(),
-      emergencyPhone: emergencyPhoneCtrl.text.trim(),
+      emergencyPhone: normalizedEmergencyPhone,
       documentUrls: documentUrls,
     );
 

@@ -151,19 +151,27 @@ class OwnerUpiNotifier extends Notifier<OwnerUpiState> {
     final ownerId = _auth.currentUser?.uid;
     if (ownerId == null) return null;
 
-    final profile = await _service.getOwnerUpiProfile(ownerId);
-    if (profile == null || !profile.isVerified || profile.upiId.isEmpty) {
+    try {
+      final profile = await _service.getOwnerUpiProfile(ownerId);
+      if (profile == null || !profile.isVerified || profile.upiId.isEmpty) {
+        return null;
+      }
+
+      state = state.copyWith(
+        upiId: profile.upiId,
+        isVerified: true,
+        errorMessage: null,
+        successMessage: null,
+      );
+
+      return profile.upiId;
+    } catch (_) {
+      state = state.copyWith(
+        errorMessage: 'Unable to verify owner UPI right now.',
+        successMessage: null,
+      );
       return null;
     }
-
-    state = state.copyWith(
-      upiId: profile.upiId,
-      isVerified: true,
-      errorMessage: null,
-      successMessage: null,
-    );
-
-    return profile.upiId;
   }
 
   bool _isValidUpi(String value) {

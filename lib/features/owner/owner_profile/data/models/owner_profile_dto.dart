@@ -23,14 +23,19 @@ class OwnerProfileDto {
   });
 
   factory OwnerProfileDto.fromFirebaseUser(User? user) {
+    final uid = user?.uid.trim() ?? '';
+    final memberSuffix = uid.isEmpty
+        ? '----'
+        : uid.substring(0, uid.length >= 4 ? 4 : uid.length).toUpperCase();
+
     return OwnerProfileDto(
-      fullName: _resolveValue(user?.displayName, 'Owner Name'),
-      email: _resolveValue(user?.email, 'owner@example.com'),
-      phone: _resolveValue(user?.phoneNumber, '+91 90000 00000'),
+      fullName: _resolveValue(user?.displayName, 'Owner'),
+      email: _resolveValue(user?.email, ''),
+      phone: _resolveValue(user?.phoneNumber, ''),
       role: 'Property Owner',
-      location: 'India',
+      location: '',
       status: 'Active',
-      memberId: '#RD-0001',
+      memberId: '#RD-$memberSuffix',
       avatarCode: 'male',
     );
   }

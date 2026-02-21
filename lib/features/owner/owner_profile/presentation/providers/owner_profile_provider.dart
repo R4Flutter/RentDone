@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_profile/di/owner_profile_di.dart';
 import 'package:rentdone/features/owner/owner_profile/domain/entities/owner_profile.dart';
+import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 
 enum OwnerAvatar { male, female }
 
@@ -97,7 +98,23 @@ class OwnerProfileNotifier extends Notifier<OwnerProfileState> {
   @override
   OwnerProfileState build() {
     final profile = ref.read(getOwnerProfileUseCaseProvider).call();
-    return OwnerProfileState.fromEntity(profile);
+    final settings = ref.watch(ownerSettingsProvider);
+
+    final resolvedFullName = settings.fullName.trim().isNotEmpty
+        ? settings.fullName.trim()
+        : profile.fullName;
+    final resolvedEmail = settings.email.trim().isNotEmpty
+        ? settings.email.trim()
+        : profile.email;
+    final resolvedPhone = settings.phone.trim().isNotEmpty
+        ? settings.phone.trim()
+        : profile.phone;
+
+    return OwnerProfileState.fromEntity(profile).copyWith(
+      fullName: resolvedFullName,
+      email: resolvedEmail,
+      phone: resolvedPhone,
+    );
   }
 
   void setAvatar(OwnerAvatar avatar) {

@@ -1,20 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_settings/data/repositories/owner_settings_repository_impl.dart';
-import 'package:rentdone/features/owner/owner_settings/data/services/owner_settings_local_service.dart';
+import 'package:rentdone/features/owner/owner_settings/data/services/owner_settings_firestore_service.dart';
 import 'package:rentdone/features/owner/owner_settings/domain/repositories/owner_settings_repository.dart';
 import 'package:rentdone/features/owner/owner_settings/domain/usecases/get_owner_settings.dart';
 import 'package:rentdone/features/owner/owner_settings/domain/usecases/save_owner_settings.dart';
 
-final ownerSettingsLocalServiceProvider = Provider<OwnerSettingsLocalService>((
-  ref,
-) {
-  return OwnerSettingsLocalService();
-});
+final ownerSettingsFirestoreServiceProvider =
+    Provider<OwnerSettingsFirestoreService>((ref) {
+      return OwnerSettingsFirestoreService();
+    });
 
 final ownerSettingsRepositoryProvider = Provider<OwnerSettingsRepository>((
   ref,
 ) {
-  final service = ref.watch(ownerSettingsLocalServiceProvider);
+  final service = ref.watch(ownerSettingsFirestoreServiceProvider);
   return OwnerSettingsRepositoryImpl(service);
 });
 

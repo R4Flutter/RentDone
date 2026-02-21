@@ -1,6 +1,7 @@
 class AuthUser {
   final String uid;
   final String? name;
+  final String? email;
   final String? phone;
   final String? role;
   final DateTime? createdAt;
@@ -10,6 +11,7 @@ class AuthUser {
   const AuthUser({
     required this.uid,
     this.name,
+    this.email,
     this.phone,
     this.role,
     this.createdAt,
@@ -21,6 +23,7 @@ class AuthUser {
     return AuthUser(
       uid: (map['uid'] as String?) ?? '',
       name: map['name'] as String?,
+      email: map['email'] as String?,
       phone: map['phone'] as String?,
       role: map['role'] as String?,
       createdAt: _parseDate(map['createdAt']),

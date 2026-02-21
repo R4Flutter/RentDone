@@ -1,15 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rentdone/features/owner/owner_payment/data/models/payment_dto.dart';
 
 class PaymentFirebaseService {
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
   PaymentFirebaseService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = FirebaseAuth.instance;
 
   Stream<List<PaymentDto>> watchPayments() {
+    final ownerId = _auth.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) {
+      return const Stream<List<PaymentDto>>.empty();
+    }
+
     return _firestore
         .collection('payments')
+        .where('ownerId', isEqualTo: ownerId)
         .orderBy('dueDate', descending: true)
         .snapshots()
         .map((snapshot) {

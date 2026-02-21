@@ -6,7 +6,7 @@ class GetOwnerSettings {
 
   const GetOwnerSettings(this._repository);
 
-  OwnerSettings call() {
+  Future<OwnerSettings> call() {
     return _repository.getSettings();
   }
 }

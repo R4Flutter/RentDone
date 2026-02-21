@@ -1,75 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/core/constants/user_role.dart';
 
 @immutable
 class AuthState {
-  final bool otpSent;
   final bool isLoading;
-
-  // 🎯 Field-level errors
-  final String? nameError;
-  final String? phoneError;
-  final String? otpError;
-
-  // 🌍 Other state
-  final int resendSeconds;
-  final String countryCode;
-  final String countryFlag;
+  final bool isRegisterMode;
+  final UserRole? selectedRole;
+  final String? errorMessage;
 
   const AuthState({
-    required this.otpSent,
     required this.isLoading,
-    required this.nameError,
-    required this.phoneError,
-    required this.otpError,
-    required this.resendSeconds,
-    required this.countryCode,
-    required this.countryFlag,
+    required this.isRegisterMode,
+    required this.selectedRole,
+    required this.errorMessage,
   });
 
-  // INITIAL STATE
   factory AuthState.initial() {
     return const AuthState(
-      otpSent: false,
       isLoading: false,
-      nameError: null,
-      phoneError: null,
-      otpError: null,
-      resendSeconds: 0,
-      countryCode: '+91',
-      countryFlag: '🇮🇳',
+      isRegisterMode: false,
+      selectedRole: null,
+      errorMessage: null,
     );
   }
 
   AuthState copyWith({
-    bool? otpSent,
     bool? isLoading,
-
-    String? nameError,
-    bool clearNameError = false,
-
-    String? phoneError,
-    bool clearPhoneError = false,
-
-    String? otpError,
-    bool clearOtpError = false,
-
-    int? resendSeconds,
-    String? countryCode,
-    String? countryFlag,
+    bool? isRegisterMode,
+    UserRole? selectedRole,
+    bool clearSelectedRole = false,
+    String? errorMessage,
+    bool clearError = false,
   }) {
     return AuthState(
-      otpSent: otpSent ?? this.otpSent,
       isLoading: isLoading ?? this.isLoading,
-
-      nameError: clearNameError ? null : nameError ?? this.nameError,
-
-      phoneError: clearPhoneError ? null : phoneError ?? this.phoneError,
-
-      otpError: clearOtpError ? null : otpError ?? this.otpError,
-
-      resendSeconds: resendSeconds ?? this.resendSeconds,
-      countryCode: countryCode ?? this.countryCode,
-      countryFlag: countryFlag ?? this.countryFlag,
+      isRegisterMode: isRegisterMode ?? this.isRegisterMode,
+      selectedRole: clearSelectedRole
+          ? null
+          : selectedRole ?? this.selectedRole,
+      errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
 }

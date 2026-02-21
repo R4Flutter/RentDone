@@ -1,4 +1,18 @@
 class TenantInputValidator {
+  String? _normalizeIndianPhone(String input) {
+    final digitsOnly = input.replaceAll(RegExp(r'\D'), '');
+
+    if (digitsOnly.length == 10) {
+      return digitsOnly;
+    }
+
+    if (digitsOnly.length == 12 && digitsOnly.startsWith('91')) {
+      return digitsOnly.substring(2);
+    }
+
+    return null;
+  }
+
   // ─────────────────────────────
   // NAME VALIDATION
   // ─────────────────────────────
@@ -26,13 +40,8 @@ class TenantInputValidator {
       return 'Phone number is required';
     }
 
-    final phone = input.trim();
-
-    if (!RegExp(r'^\d+$').hasMatch(phone)) {
-      return 'Phone number must contain only digits';
-    }
-
-    if (phone.length != 10) {
+    final phone = _normalizeIndianPhone(input.trim());
+    if (phone == null) {
       return 'Enter a valid 10-digit mobile number';
     }
 
@@ -192,13 +201,8 @@ class TenantInputValidator {
       return null; // Optional
     }
 
-    final phone = input.trim();
-
-    if (!RegExp(r'^\d+$').hasMatch(phone)) {
-      return 'Emergency phone number must contain only digits';
-    }
-
-    if (phone.length != 10) {
+    final phone = _normalizeIndianPhone(input.trim());
+    if (phone == null) {
       return 'Enter a valid 10-digit emergency phone number';
     }
 
@@ -214,8 +218,8 @@ class TenantInputValidator {
   // DOCUMENTS VALIDATION
   // ─────────────────────────────
   String? validateDocuments(List<String> documentUrls) {
-    if (documentUrls.length < 2) {
-      return 'Please upload at least 2 documents';
+    if (documentUrls.isEmpty) {
+      return 'Please upload at least 1 document';
     }
 
     if (documentUrls.length > 5) {

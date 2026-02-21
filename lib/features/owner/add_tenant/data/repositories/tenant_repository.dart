@@ -14,6 +14,8 @@ class TenantDocumentRepository {
 
   final CloudinaryService _cloudinaryService;
 
+  CloudinaryService get cloudinaryService => _cloudinaryService;
+
   Future<String> uploadTenantDocument({
     required File file,
     required String tenantId,

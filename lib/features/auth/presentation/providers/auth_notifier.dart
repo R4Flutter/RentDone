@@ -1,149 +1,108 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/core/constants/user_role.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
-import 'package:rentdone/features/auth/domain/usecases/validate_user_input.dart';
+import 'package:rentdone/features/auth/domain/entities/auth_user.dart';
 
 import 'auth_state.dart';
 
 class AuthNotifier extends Notifier<AuthState> {
-  Timer? _timer;
-  final _validator = AuthInputValidator();
-
   @override
   AuthState build() {
-    ref.onDispose(() {
-      _timer?.cancel();
-    });
     return AuthState.initial();
   }
 
-  Future<void> sendOtp(String phone, {required String name}) async {
-    if (state.isLoading) return;
+  void setSelectedRole(UserRole role) {
+    state = state.copyWith(selectedRole: role, clearError: true);
+  }
 
-    final nameError = _validator.validateName(name);
-    if (nameError != null) {
-      _setNameError(nameError);
-      return;
-    }
+  void setMode({required bool registerMode}) {
+    state = state.copyWith(isRegisterMode: registerMode, clearError: true);
+  }
 
-    final phoneError = _validator.validatePhone(phone);
-    if (phoneError != null) {
-      _setPhoneError(phoneError);
-      return;
-    }
+  void clearError() {
+    state = state.copyWith(clearError: true);
+  }
 
-    clearErrors();
-    state = state.copyWith(isLoading: true);
+  Future<AuthUser> continueWithGoogle({required String phone}) async {
+    final role = _validatedRole();
+    final normalizedPhone = _validatePhone(phone);
+    state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await ref
-          .read(sendOtpUseCaseProvider)
-          .call(phone: '${state.countryCode}${phone.trim()}');
-
-      state = state.copyWith(
-        isLoading: false,
-        otpSent: true,
-        resendSeconds: 30,
-        clearNameError: true,
-        clearPhoneError: true,
-        clearOtpError: true,
-      );
-
-      _startResendTimer();
-    } catch (error) {
-      _setOtpError(error.toString());
+      final user = await ref
+          .read(authRepositoryProvider)
+          .signInWithGoogle(selectedRole: role, phone: normalizedPhone);
       state = state.copyWith(isLoading: false);
+      return user;
+    } catch (error) {
+      state = state.copyWith(isLoading: false, errorMessage: error.toString());
+      rethrow;
     }
   }
 
-  void onPrimaryAction({
-    required String name,
+  Future<AuthUser> continueWithEmail({
+    required String email,
+    required String password,
     required String phone,
-    required String otp,
-  }) {
-    if (!state.otpSent) {
-      sendOtp(phone, name: name);
-    } else {
-      verifyOtp(otp);
-    }
-  }
+  }) async {
+    final role = _validatedRole();
+    final normalizedPhone = _validatePhone(phone);
 
-  Future<void> verifyOtp(String otp) async {
-    if (state.isLoading) return;
-
-    if (!state.otpSent) {
-      _setOtpError('Please request OTP first');
-      return;
+    final emailText = email.trim();
+    if (emailText.isEmpty || !emailText.contains('@')) {
+      final message = 'Enter a valid email address.';
+      state = state.copyWith(errorMessage: message);
+      throw StateError(message);
     }
 
-    final otpError = _validator.validateOtp(otp);
-    if (otpError != null) {
-      _setOtpError(otpError);
-      return;
+    if (password.length < 6) {
+      final message = 'Password should be at least 6 characters.';
+      state = state.copyWith(errorMessage: message);
+      throw StateError(message);
     }
 
-    clearErrors();
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await ref.read(verifyOtpUseCaseProvider).call(otp: otp.trim());
-      state = state.copyWith(isLoading: false, clearOtpError: true);
-    } catch (error) {
-      _setOtpError(error.toString());
+      final repository = ref.read(authRepositoryProvider);
+      final user = state.isRegisterMode
+          ? await repository.registerWithEmail(
+              email: emailText,
+              password: password,
+              selectedRole: role,
+              phone: normalizedPhone,
+            )
+          : await repository.signInWithEmail(
+              email: emailText,
+              password: password,
+              selectedRole: role,
+              phone: normalizedPhone,
+            );
       state = state.copyWith(isLoading: false);
+      return user;
+    } catch (error) {
+      state = state.copyWith(isLoading: false, errorMessage: error.toString());
+      rethrow;
     }
   }
 
-  void _startResendTimer() {
-    _timer?.cancel();
-
-    if (state.resendSeconds <= 0) return;
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!ref.mounted) {
-        timer.cancel();
-        return;
-      }
-
-      if (state.resendSeconds <= 1) {
-        timer.cancel();
-        state = state.copyWith(resendSeconds: 0);
-      } else {
-        state = state.copyWith(resendSeconds: state.resendSeconds - 1);
-      }
-    });
+  UserRole _validatedRole() {
+    final role = state.selectedRole;
+    if (role == null) {
+      const message = 'Please select Owner or Tenant role first.';
+      state = state.copyWith(errorMessage: message);
+      throw StateError(message);
+    }
+    return role;
   }
 
-  void _setNameError(String message) {
-    state = state.copyWith(
-      nameError: message,
-      clearPhoneError: true,
-      clearOtpError: true,
-    );
-  }
-
-  void _setPhoneError(String message) {
-    state = state.copyWith(
-      phoneError: message,
-      clearNameError: true,
-      clearOtpError: true,
-    );
-  }
-
-  void _setOtpError(String message) {
-    state = state.copyWith(
-      otpError: message,
-      clearNameError: true,
-      clearPhoneError: true,
-    );
-  }
-
-  void clearErrors() {
-    state = state.copyWith(
-      clearNameError: true,
-      clearPhoneError: true,
-      clearOtpError: true,
-    );
+  String _validatePhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10 || digits.length > 15) {
+      const message = 'Enter a valid phone number.';
+      state = state.copyWith(errorMessage: message);
+      throw StateError(message);
+    }
+    return digits;
   }
 }

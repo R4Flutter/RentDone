@@ -1,24 +1,39 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/property_dto.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/tenant_dto.dart';
 
 class PropertyFirebaseService {
   final FirebaseFirestore _db;
+  final FirebaseAuth _auth;
 
   PropertyFirebaseService({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+    : _db = firestore ?? FirebaseFirestore.instance,
+      _auth = FirebaseAuth.instance;
+
+  String _requireOwnerId() {
+    final ownerId = _auth.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) {
+      throw StateError('Owner session not found. Please sign in again.');
+    }
+    return ownerId;
+  }
 
   Stream<List<PropertyDto>> watchAllProperties() {
-    return _db.collection('properties').snapshots().map((snapshot) {
-      return snapshot.docs
-          .map(
-            (doc) => PropertyDto.fromMap({
-              'id': doc.id,
-              ...doc.data(),
-            }),
-          )
-          .toList();
-    });
+    final ownerId = _auth.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) {
+      return const Stream<List<PropertyDto>>.empty();
+    }
+
+    return _db
+        .collection('properties')
+        .where('ownerId', isEqualTo: ownerId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => PropertyDto.fromMap({'id': doc.id, ...doc.data()}))
+              .toList();
+        });
   }
 
   Stream<PropertyDto> watchProperty(String propertyId) {
@@ -32,11 +47,22 @@ class PropertyFirebaseService {
   }
 
   Future<void> addProperty(PropertyDto property) async {
-    await _db.collection('properties').doc(property.id).set(property.toMap());
+    final ownerId = _requireOwnerId();
+    await _db.collection('properties').doc(property.id).set({
+      ...property.toMap(),
+      'ownerId': ownerId,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> updateProperty(PropertyDto property) async {
-    await _db.collection('properties').doc(property.id).update(property.toMap());
+    final ownerId = _requireOwnerId();
+    await _db.collection('properties').doc(property.id).update({
+      ...property.toMap(),
+      'ownerId': ownerId,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> deleteProperty(String propertyId) async {
@@ -44,14 +70,29 @@ class PropertyFirebaseService {
   }
 
   Stream<List<TenantDto>> watchAllTenants() {
-    return _db.collection('tenants').snapshots().map((snapshot) {
-      return snapshot.docs.map(TenantDto.fromDoc).toList();
-    });
+    final ownerId = _auth.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) {
+      return const Stream<List<TenantDto>>.empty();
+    }
+
+    return _db
+        .collection('tenants')
+        .where('ownerId', isEqualTo: ownerId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map(TenantDto.fromDoc).toList();
+        });
   }
 
   Stream<List<TenantDto>> watchPropertyTenants(String propertyId) {
+    final ownerId = _auth.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) {
+      return const Stream<List<TenantDto>>.empty();
+    }
+
     return _db
         .collection('tenants')
+        .where('ownerId', isEqualTo: ownerId)
         .where('propertyId', isEqualTo: propertyId)
         .snapshots()
         .map((snapshot) => snapshot.docs.map(TenantDto.fromDoc).toList());
@@ -89,11 +130,7 @@ class PropertyFirebaseService {
         throw StateError('Selected room is already occupied');
       }
 
-      rooms[roomIndex] = {
-        ...room,
-        'isOccupied': true,
-        'tenantId': tenant.id,
-      };
+      rooms[roomIndex] = {...room, 'isOccupied': true, 'tenantId': tenant.id};
 
       txn.set(tenantRef, tenant.toMap());
       txn.update(propertyRef, {'rooms': rooms});
@@ -123,11 +160,7 @@ class PropertyFirebaseService {
       }
 
       final room = rooms[roomIndex];
-      rooms[roomIndex] = {
-        ...room,
-        'isOccupied': false,
-        'tenantId': null,
-      };
+      rooms[roomIndex] = {...room, 'isOccupied': false, 'tenantId': null};
 
       txn.update(propertyRef, {'rooms': rooms});
       txn.delete(tenantRef);

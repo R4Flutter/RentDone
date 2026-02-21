@@ -37,30 +37,45 @@ class DocumentUploadState {
 }
 
 final cloudinaryServiceProvider = Provider<CloudinaryService>((ref) {
-  const cloudName = String.fromEnvironment(
-    'dmvogtrcg',
+  const cloudNamePrimary = String.fromEnvironment(
+    'CLOUDINARY_CLOUD_NAME',
     defaultValue: '',
   );
-  const uploadPreset = String.fromEnvironment(
-    'rentdoneapp',
+  const uploadPresetPrimary = String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_PRESET',
     defaultValue: '',
   );
 
-  // Validate that credentials are actually set
-  if (cloudName.isEmpty || uploadPreset.isEmpty) {
-    throw Exception(
-      'Cloudinary credentials not configured.\n\n'
-              'To fix this:\n'
-              '1. Sign up at cloudinary.com (free tier available)\n'
-              '2. Get your Cloud Name from Dashboard\n'
-              '3. Create an Unsigned upload preset in Settings > Upload\n'
-              '4. Run: flutter run --dart-define=CLOUDINARY_CLOUD_NAME=your_cloud_name --dart-define=CLOUDINARY_UPLOAD_PRESET=your_preset_name\n\n'
-              'Missing: ${cloudName.isEmpty ? 'CLOUDINARY_CLOUD_NAME' : ''} ${uploadPreset.isEmpty ? 'CLOUDINARY_UPLOAD_PRESET' : ''}'
-          .trim(),
-    );
-  }
+  const cloudNameLegacy = String.fromEnvironment(
+    'CLOUDINARY_CLOUD',
+    defaultValue: 'dmvogtrcg',
+  );
+  const uploadPresetLegacy = String.fromEnvironment(
+    'CLOUDINARY_PRESET',
+    defaultValue: 'rentdoneapp',
+  );
+  const apiHostPrimary = String.fromEnvironment(
+    'CLOUDINARY_API_HOST',
+    defaultValue: '',
+  );
+  const apiHostLegacy = String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_API_HOST',
+    defaultValue: '',
+  );
 
-  return CloudinaryService(cloudName: cloudName, uploadPreset: uploadPreset);
+  final cloudName = cloudNamePrimary.isNotEmpty
+      ? cloudNamePrimary
+      : cloudNameLegacy;
+  final uploadPreset = uploadPresetPrimary.isNotEmpty
+      ? uploadPresetPrimary
+      : uploadPresetLegacy;
+  final apiHost = apiHostPrimary.isNotEmpty ? apiHostPrimary : apiHostLegacy;
+
+  return CloudinaryService(
+    cloudName: cloudName.isNotEmpty ? cloudName : '__NOT_CONFIGURED__',
+    uploadPreset: uploadPreset.isNotEmpty ? uploadPreset : '__NOT_CONFIGURED__',
+    apiHost: apiHost,
+  );
 });
 
 final tenantDocumentRepositoryProvider = Provider<TenantDocumentRepository>((
@@ -81,6 +96,20 @@ class DocumentUploadNotifier extends Notifier<DocumentUploadState> {
   }
 
   Future<void> uploadTenantDocument(File file, String tenantId) async {
+    final cloudName = _repository.cloudinaryService.cloudName.trim();
+    final uploadPreset = _repository.cloudinaryService.uploadPreset.trim();
+    if (cloudName.isEmpty ||
+        uploadPreset.isEmpty ||
+        cloudName == '__NOT_CONFIGURED__' ||
+        uploadPreset == '__NOT_CONFIGURED__') {
+      state = state.copyWith(
+        status: DocumentUploadStatus.error,
+        errorMessage:
+            'Cloudinary is not configured. Start app with --dart-define=CLOUDINARY_CLOUD_NAME=... --dart-define=CLOUDINARY_UPLOAD_PRESET=...',
+      );
+      return;
+    }
+
     if (_inFlightPaths.contains(file.path)) {
       // Already uploading this file
       return;
