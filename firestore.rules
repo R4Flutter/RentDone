@@ -47,7 +47,13 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
+      // Allow reading own document
       allow read: if isAuthenticated() && userId == currentUid();
+
+      // Allow list/query operations for email uniqueness checks
+      // Users can query by emailLowercase to check if email exists
+      allow list: if isAuthenticated() && 
+        request.query.limit <= 1;
 
       allow create: if isAuthenticated()
         && userId == currentUid()

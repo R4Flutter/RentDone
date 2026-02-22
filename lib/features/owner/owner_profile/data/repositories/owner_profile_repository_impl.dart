@@ -9,8 +9,15 @@ class OwnerProfileRepositoryImpl implements OwnerProfileRepository {
   OwnerProfileRepositoryImpl(this._authService);
 
   @override
-  OwnerProfile getOwnerProfile() {
-    final dto = OwnerProfileDto.fromFirebaseUser(_authService.getCurrentUser());
+  Future<OwnerProfile> getOwnerProfile() async {
+    final dto = await _authService.getOwnerProfile();
     return dto.toEntity();
+  }
+
+  @override
+  Future<OwnerProfile> saveOwnerProfile(OwnerProfile profile) async {
+    final dto = OwnerProfileDto.fromEntity(profile);
+    final saved = await _authService.saveOwnerProfile(dto);
+    return saved.toEntity();
   }
 }

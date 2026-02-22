@@ -14,7 +14,7 @@ class OwnerMobileDrawer extends ConsumerWidget {
   static final List<SidebarItem> items = [
     SidebarItem('Profile', Icons.person_outline_rounded),
     SidebarItem('Properties', Icons.apartment_rounded),
-    SidebarItem('Tenants', Icons.people_alt_rounded),
+    SidebarItem('Manage Tenants', Icons.people_alt_rounded),
     SidebarItem('Payments', Icons.account_balance_wallet_rounded),
     SidebarItem('Bank Details', Icons.account_balance_outlined),
     SidebarItem('Reports', Icons.bar_chart_rounded),
@@ -81,7 +81,7 @@ class OwnerMobileDrawer extends ConsumerWidget {
                               context.goNamed('ownerProperties');
                               break;
                             case 2:
-                              context.goNamed('addTenant');
+                              context.goNamed('manageTenants');
                               break;
                             case 3:
                               context.goNamed('ownerPayments');

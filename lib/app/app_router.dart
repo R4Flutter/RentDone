@@ -35,26 +35,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final isLoggedIn = firebaseAuth.currentUser != null;
       final path = state.uri.path;
-      final isRoleOrLoginPath = path == '/role' || path == '/login';
 
-      final requiresAuth =
-          path.startsWith('/owner') || path.startsWith('/tenant');
-      if (requiresAuth && !isLoggedIn) {
-        return '/role';
-      }
-
+      // Allow access to role selection and login for unauthenticated users
       if (!isLoggedIn) {
-        return null;
+        final requiresAuth =
+            path.startsWith('/owner') || path.startsWith('/tenant');
+        if (requiresAuth) {
+          return '/role';
+        }
+        return null; // Allow /role and /login
       }
 
+      // User is authenticated - check their role
       final uid = firebaseAuth.currentUser!.uid;
       final role = await ref.read(authRepositoryProvider).getUserRole(uid);
 
+      // If user has no role yet, only allow /role and /login
       if (role == null) {
-        if (path != '/role') return '/role';
-        return null;
+        if (path == '/role' || path == '/login') {
+          return null; // Allow these paths
+        }
+        return '/role'; // Redirect everything else to role selection
       }
 
+      // User has a role - enforce role-based access
       if (path.startsWith('/owner') && role != UserRole.owner) {
         return '/tenant/payments';
       }
@@ -63,7 +67,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return '/owner/dashboard';
       }
 
-      if (isRoleOrLoginPath) {
+      // If user with role tries to access role selection or login, redirect to their dashboard
+      if (path == '/role' || path == '/login' || path == '/') {
         return role == UserRole.owner ? '/owner/dashboard' : '/tenant/payments';
       }
 

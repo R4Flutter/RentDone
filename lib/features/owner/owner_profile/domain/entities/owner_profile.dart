@@ -7,6 +7,7 @@ class OwnerProfile {
   final String status;
   final String memberId;
   final String avatarCode;
+  final String photoUrl;
 
   const OwnerProfile({
     required this.fullName,
@@ -17,5 +18,6 @@ class OwnerProfile {
     required this.status,
     required this.memberId,
     required this.avatarCode,
+    required this.photoUrl,
   });
 }

@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
 
 class OwnerProfileCard extends StatelessWidget {
-  const OwnerProfileCard({
-    super.key,
-    required this.profile,
-  });
+  const OwnerProfileCard({super.key, required this.profile});
 
   final OwnerProfileState profile;
 
@@ -25,11 +22,7 @@ class OwnerProfileCard extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFD3A84),
-              Color(0xFF8B5CF6),
-              Color(0xFF22D3EE),
-            ],
+            colors: [Color(0xFFFD3A84), Color(0xFF8B5CF6), Color(0xFF22D3EE)],
           ),
           boxShadow: [
             BoxShadow(
@@ -45,11 +38,7 @@ class OwnerProfileCard extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF1A1B2F),
-                Color(0xFF2F1D46),
-                Color(0xFF111827),
-              ],
+              colors: [Color(0xFF1A1B2F), Color(0xFF2F1D46), Color(0xFF111827)],
             ),
           ),
           child: Stack(
@@ -138,10 +127,21 @@ class OwnerProfileCard extends StatelessWidget {
                         ),
                       ),
                       child: Center(
-                        child: Image.asset(
-                          profile.avatar.assetPath,
-                          fit: BoxFit.contain,
-                        ),
+                        child: profile.photoUrl.isNotEmpty
+                            ? Image.network(
+                                profile.photoUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Image.asset(
+                                    profile.avatar.assetPath,
+                                    fit: BoxFit.contain,
+                                  );
+                                },
+                              )
+                            : Image.asset(
+                                profile.avatar.assetPath,
+                                fit: BoxFit.contain,
+                              ),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -178,15 +178,9 @@ class OwnerProfileCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _InfoRow(
-                      icon: Icons.phone_outlined,
-                      text: profile.phone,
-                    ),
+                    _InfoRow(icon: Icons.phone_outlined, text: profile.phone),
                     const SizedBox(height: 6),
-                    _InfoRow(
-                      icon: Icons.email_outlined,
-                      text: profile.email,
-                    ),
+                    _InfoRow(icon: Icons.email_outlined, text: profile.email),
                     const SizedBox(height: 6),
                     _InfoRow(
                       icon: Icons.location_on_outlined,
@@ -238,10 +232,7 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _InfoRow({
-    required this.icon,
-    required this.text,
-  });
+  const _InfoRow({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {

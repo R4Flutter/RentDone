@@ -65,10 +65,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   subtitle: 'Pay rent, track payments, stay organised',
                   imagePath: 'assets/images/tenant_final.png',
                   onTap: () {
-                    context.pushNamed(
-                      'login',
-                      queryParameters: const {'role': 'tenant'},
-                    );
+                    context.go('/login?role=tenant');
                   },
                 ),
 
@@ -79,10 +76,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   subtitle: 'Manage properties & collect rent',
                   imagePath: 'assets/images/owner_final.png',
                   onTap: () {
-                    context.pushNamed(
-                      'login',
-                      queryParameters: const {'role': 'owner'},
-                    );
+                    context.go('/login?role=owner');
                   },
                 ),
 

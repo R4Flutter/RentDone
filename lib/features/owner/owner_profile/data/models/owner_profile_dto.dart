@@ -10,6 +10,7 @@ class OwnerProfileDto {
   final String status;
   final String memberId;
   final String avatarCode;
+  final String photoUrl;
 
   const OwnerProfileDto({
     required this.fullName,
@@ -20,7 +21,22 @@ class OwnerProfileDto {
     required this.status,
     required this.memberId,
     required this.avatarCode,
+    required this.photoUrl,
   });
+
+  factory OwnerProfileDto.fromEntity(OwnerProfile profile) {
+    return OwnerProfileDto(
+      fullName: profile.fullName,
+      email: profile.email,
+      phone: profile.phone,
+      role: profile.role,
+      location: profile.location,
+      status: profile.status,
+      memberId: profile.memberId,
+      avatarCode: profile.avatarCode,
+      photoUrl: profile.photoUrl,
+    );
+  }
 
   factory OwnerProfileDto.fromFirebaseUser(User? user) {
     final uid = user?.uid.trim() ?? '';
@@ -37,6 +53,7 @@ class OwnerProfileDto {
       status: 'Active',
       memberId: '#RD-$memberSuffix',
       avatarCode: 'male',
+      photoUrl: _resolveValue(user?.photoURL, ''),
     );
   }
 
@@ -50,6 +67,31 @@ class OwnerProfileDto {
       status: status,
       memberId: memberId,
       avatarCode: avatarCode,
+      photoUrl: photoUrl,
+    );
+  }
+
+  OwnerProfileDto copyWith({
+    String? fullName,
+    String? email,
+    String? phone,
+    String? role,
+    String? location,
+    String? status,
+    String? memberId,
+    String? avatarCode,
+    String? photoUrl,
+  }) {
+    return OwnerProfileDto(
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+      location: location ?? this.location,
+      status: status ?? this.status,
+      memberId: memberId ?? this.memberId,
+      avatarCode: avatarCode ?? this.avatarCode,
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 

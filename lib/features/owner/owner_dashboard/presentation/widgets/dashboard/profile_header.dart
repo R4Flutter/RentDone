@@ -20,9 +20,7 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
     late OverlayEntry entry;
 
     entry = OverlayEntry(
-      builder: (context) => _ProfileOverlay(
-        onClose: () => entry.remove(),
-      ),
+      builder: (context) => _ProfileOverlay(onClose: () => entry.remove()),
     );
 
     overlay.insert(entry);
@@ -55,7 +53,10 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
           ),
           child: Row(
             children: [
-              _AvatarPreview(assetPath: profile.avatar.assetPath),
+              _AvatarPreview(
+                assetPath: profile.avatar.assetPath,
+                photoUrl: profile.photoUrl,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -117,8 +118,9 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
 
 class _AvatarPreview extends StatelessWidget {
   final String assetPath;
+  final String photoUrl;
 
-  const _AvatarPreview({required this.assetPath});
+  const _AvatarPreview({required this.assetPath, required this.photoUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +135,15 @@ class _AvatarPreview extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.asset(assetPath, fit: BoxFit.cover),
+        child: photoUrl.isNotEmpty
+            ? Image.network(
+                photoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Image.asset(assetPath, fit: BoxFit.cover);
+                },
+              )
+            : Image.asset(assetPath, fit: BoxFit.cover),
       ),
     );
   }
@@ -142,9 +152,7 @@ class _AvatarPreview extends StatelessWidget {
 class _ProfileOverlay extends ConsumerStatefulWidget {
   final VoidCallback onClose;
 
-  const _ProfileOverlay({
-    required this.onClose,
-  });
+  const _ProfileOverlay({required this.onClose});
 
   @override
   ConsumerState<_ProfileOverlay> createState() => _ProfileOverlayState();
@@ -165,14 +173,12 @@ class _ProfileOverlayState extends ConsumerState<_ProfileOverlay>
       duration: const Duration(milliseconds: 500),
     );
 
-    _scale = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    );
+    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
 
-    _rotation = Tween(begin: 0.8, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _rotation = Tween(
+      begin: 0.8,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _controller.forward();
   }
@@ -186,28 +192,46 @@ class _ProfileOverlayState extends ConsumerState<_ProfileOverlay>
       child: GestureDetector(
         onTap: widget.onClose,
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: GestureDetector(
-                onTap: () {},
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _scale.value,
-                      child: Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.identity()
-                          ..setEntry(3, 2, 0.001)
-                          ..rotateY(_rotation.value),
-                        child: OwnerProfileCard(profile: profile),
-                      ),
-                    );
-                  },
+          child: Stack(
+            children: [
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: GestureDetector(
+                    onTap: () {},
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _scale.value,
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: Matrix4.identity()
+                              ..setEntry(3, 2, 0.001)
+                              ..rotateY(_rotation.value),
+                            child: OwnerProfileCard(profile: profile),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
-            ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black.withValues(alpha: 0.5),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: widget.onClose,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

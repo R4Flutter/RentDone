@@ -3,6 +3,7 @@ import 'package:rentdone/features/owner/owner_profile/data/repositories/owner_pr
 import 'package:rentdone/features/owner/owner_profile/data/services/owner_profile_auth_service.dart';
 import 'package:rentdone/features/owner/owner_profile/domain/repositories/owner_profile_repository.dart';
 import 'package:rentdone/features/owner/owner_profile/domain/usecases/get_owner_profile.dart';
+import 'package:rentdone/features/owner/owner_profile/domain/usecases/save_owner_profile.dart';
 
 final ownerProfileAuthServiceProvider = Provider<OwnerProfileAuthService>((
   ref,
@@ -18,4 +19,9 @@ final ownerProfileRepositoryProvider = Provider<OwnerProfileRepository>((ref) {
 final getOwnerProfileUseCaseProvider = Provider<GetOwnerProfile>((ref) {
   final repository = ref.watch(ownerProfileRepositoryProvider);
   return GetOwnerProfile(repository);
+});
+
+final saveOwnerProfileUseCaseProvider = Provider<SaveOwnerProfile>((ref) {
+  final repository = ref.watch(ownerProfileRepositoryProvider);
+  return SaveOwnerProfile(repository);
 });

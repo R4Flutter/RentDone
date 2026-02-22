@@ -50,9 +50,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (digits.length < 10) {
       return 'Phone must be at least 10 digits';
     }
-    if (digits.length > 15) {
-      return 'Phone must be at most 15 digits';
-    }
+
     return null;
   }
 
@@ -306,7 +304,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return TextField(
       controller: _phoneController,
       keyboardType: TextInputType.phone,
-      maxLength: 15,
+      maxLength: 10,
       onChanged: (value) {
         setState(() {
           _phoneError = null;
@@ -316,7 +314,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         labelText: 'Phone Number',
-        hintText: 'Enter 10-15 digits',
+        hintText: 'Enter 10 digits',
         prefixIcon: Icon(Icons.phone_rounded, color: accent30Color),
         counterText: '',
         filled: true,

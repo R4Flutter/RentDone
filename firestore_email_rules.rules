@@ -1,0 +1,50 @@
+// Firestore Security Rules to enforce unique emails
+// Add these rules to firestore.rules file
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if email is unique
+    function isEmailUnique(newEmail) {
+      // Allow if email is empty
+      return newEmail == '' || 
+        // Or if no other user has this email
+        !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+        // Or if the email belongs to the current user
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.emailLowercase == newEmail;
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Allow read if authenticated and it's your own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow create only if authenticated and creating own document
+      allow create: if request.auth != null 
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        // Ensure email is unique
+        && isEmailUnique(request.resource.data.emailLowercase);
+      
+      // Allow update only if authenticated and updating own document
+      allow update: if request.auth != null 
+        && request.auth.uid == userId
+        // Can't change uid
+        && request.resource.data.uid == userId
+        // Ensure email remains unique if changed
+        && (
+          request.resource.data.emailLowercase == resource.data.emailLowercase
+          || isEmailUnique(request.resource.data.emailLowercase)
+        );
+      
+      // Allow delete only if authenticated and deleting own document
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Other collections...
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_bank_provider.dart';
+import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
+import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_upi_provider.dart';
 
 class OwnerBankDetailsScreen extends ConsumerWidget {
   const OwnerBankDetailsScreen({super.key});
@@ -10,6 +12,10 @@ class OwnerBankDetailsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final settings = ref.watch(ownerSettingsProvider);
+    final settingsNotifier = ref.read(ownerSettingsProvider.notifier);
+    final ownerUpi = ref.watch(ownerUpiProvider);
+    final ownerUpiNotifier = ref.read(ownerUpiProvider.notifier);
     final bank = ref.watch(ownerBankProvider);
     final notifier = ref.read(ownerBankProvider.notifier);
 
@@ -24,6 +30,20 @@ class OwnerBankDetailsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _pageHeader(theme),
+                const SizedBox(height: 24),
+                _sectionCard(
+                  theme,
+                  icon: Icons.payments_outlined,
+                  title: 'Payments',
+                  subtitle: 'Default modes, rent policies, and owner UPI.',
+                  child: _paymentSection(
+                    settings,
+                    settingsNotifier,
+                    ownerUpi,
+                    ownerUpiNotifier,
+                    theme,
+                  ),
+                ),
                 const SizedBox(height: 24),
                 _sectionCard(
                   theme,
@@ -157,6 +177,7 @@ class OwnerBankDetailsScreen extends ConsumerWidget {
     required String label,
     String? hint,
     String? helper,
+    String? suffixText,
   }) {
     final labelColor = theme.colorScheme.onPrimary.withValues(alpha: 0.85);
     final helperColor = theme.colorScheme.onPrimary.withValues(alpha: 0.6);
@@ -164,6 +185,7 @@ class OwnerBankDetailsScreen extends ConsumerWidget {
       labelText: label,
       hintText: hint,
       helperText: helper,
+      suffixText: suffixText,
       labelStyle: TextStyle(color: labelColor),
       helperStyle: TextStyle(color: helperColor),
       filled: true,
@@ -176,6 +198,139 @@ class OwnerBankDetailsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
       ),
+    );
+  }
+
+  Widget _paymentSection(
+    OwnerSettingsState settings,
+    OwnerSettingsNotifier notifier,
+    OwnerUpiState ownerUpi,
+    OwnerUpiNotifier ownerUpiNotifier,
+    ThemeData theme,
+  ) {
+    final textStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onPrimary,
+    );
+    const paymentModes = ['UPI', 'Cash', 'Bank Transfer'];
+    final effectiveMode = paymentModes.contains(settings.defaultPaymentMode)
+        ? settings.defaultPaymentMode
+        : paymentModes.first;
+
+    return Column(
+      children: [
+        DropdownButtonFormField<String>(
+          initialValue: effectiveMode,
+          onChanged: (value) {
+            if (value != null) {
+              notifier.updateDefaultPaymentMode(value);
+            }
+          },
+          style: textStyle,
+          dropdownColor: theme.colorScheme.surface,
+          decoration: _fieldDecoration(
+            theme,
+            label: 'Default Payment Mode',
+            helper: 'Used when creating new tenant agreements.',
+          ),
+          items: paymentModes
+              .map((mode) => DropdownMenuItem(value: mode, child: Text(mode)))
+              .toList(),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          initialValue: settings.lateFeePercentage,
+          onChanged: notifier.updateLateFeePercentage,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            LengthLimitingTextInputFormatter(5),
+          ],
+          style: textStyle,
+          decoration: _fieldDecoration(
+            theme,
+            label: 'Late Fee Percentage',
+            suffixText: '%',
+            helper: 'Applied after rent due date.',
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          initialValue: settings.rentDueDay,
+          onChanged: notifier.updateRentDueDay,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(2),
+          ],
+          style: textStyle,
+          decoration: _fieldDecoration(
+            theme,
+            label: 'Rent Due Day',
+            helper: '1 to 28 recommended for stable billing.',
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          initialValue: ownerUpi.upiId,
+          enabled: !ownerUpi.isVerified,
+          onChanged: ownerUpiNotifier.updateUpiId,
+          style: textStyle,
+          decoration: _fieldDecoration(
+            theme,
+            label: 'Owner UPI ID (one-time)',
+            helper: ownerUpi.isVerified
+                ? 'Verified once. Locked for future tenant adds.'
+                : 'Set once and verify. It will be reused automatically.',
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _statusPill(
+              label: ownerUpi.isVerified ? 'Verified' : 'Not verified',
+              icon: ownerUpi.isVerified
+                  ? Icons.verified
+                  : Icons.shield_outlined,
+              color: ownerUpi.isVerified
+                  ? AppTheme.successGreen
+                  : AppTheme.warningAmber,
+            ),
+            const Spacer(),
+            FilledButton(
+              onPressed: ownerUpi.isLoading || ownerUpi.isVerified
+                  ? null
+                  : ownerUpiNotifier.verifyAndSaveUpi,
+              child: ownerUpi.isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(ownerUpi.isVerified ? 'Verified' : 'Verify & Save'),
+            ),
+          ],
+        ),
+        if (ownerUpi.errorMessage != null) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              ownerUpi.errorMessage!,
+              style: const TextStyle(color: AppTheme.errorRed),
+            ),
+          ),
+        ],
+        if (ownerUpi.successMessage != null) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              ownerUpi.successMessage!,
+              style: const TextStyle(color: AppTheme.successGreen),
+            ),
+          ),
+        ],
+      ],
     );
   }
 

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:rentdone/core/constants/user_role.dart';
+import 'package:rentdone/core/services/gravatar_service.dart';
 import 'package:rentdone/features/auth/data/models/auth_user_dto.dart';
 import 'package:rentdone/features/auth/domain/entities/auth_user.dart';
 
@@ -116,7 +117,7 @@ class AuthFirebaseService {
         if (googleAuth.idToken == null || googleAuth.idToken!.isEmpty) {
           throw const AuthException(
             message:
-                'Google Sign-In is not fully configured for this app. Add correct SHA fingerprint and Web client ID in Firebase.',
+                'Google Sign-In is not fully configured. Ensure SHA-1 fingerprint is added in Firebase Console and Google Sign-In API is enabled.',
           );
         }
         final authCredential = GoogleAuthProvider.credential(
@@ -291,6 +292,28 @@ class AuthFirebaseService {
     required UserRole selectedRole,
     required String phone,
   }) async {
+    final userEmail = user.email ?? '';
+    final normalizedEmail = userEmail.toLowerCase().trim();
+
+    // Check if this email is already used by a different account
+    if (normalizedEmail.isNotEmpty) {
+      final emailQuery = await _firestore
+          .collection('users')
+          .where('emailLowercase', isEqualTo: normalizedEmail)
+          .limit(1)
+          .get();
+
+      if (emailQuery.docs.isNotEmpty) {
+        final existingUserId = emailQuery.docs.first.id;
+        if (existingUserId != user.uid) {
+          throw AuthException(
+            message:
+                'This email is already registered with another account. Please use a different email or sign in to the existing account.',
+          );
+        }
+      }
+    }
+
     final docRef = _firestore.collection('users').doc(user.uid);
     final snapshot = await docRef.get();
     final data = snapshot.data();
@@ -307,13 +330,22 @@ class AuthFirebaseService {
     final normalizedPhone = phone.trim();
     final now = FieldValue.serverTimestamp();
 
+    // Generate Gravatar URL from email
+    final gravatarUrl = GravatarService.getGravatarUrlWithFallback(
+      userEmail,
+      size: 400,
+      fallbackType: 'identicon',
+    );
+
     await docRef.set({
       'uid': user.uid,
       'name': user.displayName,
       'email': user.email,
+      'emailLowercase': normalizedEmail,
+      'photoUrl': user.photoURL ?? gravatarUrl,
+      'gravatarUrl': gravatarUrl,
       'phone': normalizedPhone,
       'role': roleToPersist.value,
-      'isProfileComplete': true,
       'updatedAt': now,
       if (!snapshot.exists) 'createdAt': now,
       'lastLoginAt': now,

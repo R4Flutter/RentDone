@@ -1,12 +1,12 @@
 import 'package:rentdone/features/owner/owner_profile/domain/entities/owner_profile.dart';
 import 'package:rentdone/features/owner/owner_profile/domain/repositories/owner_profile_repository.dart';
 
-class GetOwnerProfile {
+class SaveOwnerProfile {
   final OwnerProfileRepository _repository;
 
-  const GetOwnerProfile(this._repository);
+  const SaveOwnerProfile(this._repository);
 
-  Future<OwnerProfile> call() {
-    return _repository.getOwnerProfile();
+  Future<OwnerProfile> call(OwnerProfile profile) {
+    return _repository.saveOwnerProfile(profile);
   }
 }

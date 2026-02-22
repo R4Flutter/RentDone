@@ -103,7 +103,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Add Tenant")),
+      appBar: AppBar(title: const Text("Manage Tenants")),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isDesktop = constraints.maxWidth >= 900;
