@@ -30,12 +30,20 @@ class Room {
   }
 }
 
-class Property {
+class Property{
   final String id;
   final String name;
   final String address;
   final int totalRooms;
   final List<Room> rooms;
+
+  /// ✅ Added for tenant map
+  final String city;
+  final double lat;
+  final double lng;
+
+  /// ✅ Controls tenant visibility
+  final bool isPublished;
 
   const Property({
     required this.id,
@@ -43,6 +51,10 @@ class Property {
     required this.address,
     required this.totalRooms,
     required this.rooms,
+    required this.city,
+    required this.lat,
+    required this.lng,
+    this.isPublished = false,
   });
 
   int get occupiedRooms => rooms.where((room) => room.isOccupied).length;
@@ -54,6 +66,10 @@ class Property {
     String? address,
     int? totalRooms,
     List<Room>? rooms,
+    String? city,
+    double? lat,
+    double? lng,
+    bool? isPublished,
   }) {
     return Property(
       id: id ?? this.id,
@@ -61,6 +77,10 @@ class Property {
       address: address ?? this.address,
       totalRooms: totalRooms ?? this.totalRooms,
       rooms: rooms ?? this.rooms,
+      city: city ?? this.city,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      isPublished: isPublished ?? this.isPublished,
     );
   }
 }

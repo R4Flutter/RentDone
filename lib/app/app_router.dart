@@ -25,7 +25,8 @@ import 'package:rentdone/features/payment/presentation/screens/tenant_payment_da
 import 'package:rentdone/features/payment/presentation/screens/transaction_history_screen.dart';
 import 'package:rentdone/shared/pages/role_selection_screen.dart';
 import 'package:rentdone/shared/pages/splash_screen.dart';
-
+import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_city_entry_screen.dart';
+import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_property_map_screen.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   final firebaseAuth = ref.watch(firebaseAuthProvider);
 
@@ -69,7 +70,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // If user with role tries to access role selection or login, redirect to their dashboard
       if (path == '/role' || path == '/login' || path == '/') {
-        return role == UserRole.owner ? '/owner/dashboard' : '/tenant/payments';
+        return role == UserRole.owner ? '/owner/dashboard' : '/tenant/city';
       }
 
       return null;
@@ -105,9 +106,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       /// 👤 Tenant Payments Dashboard
       GoRoute(
+        path: '/tenant/city',
+        name: 'tenantCity',
+        builder: (context, state) => const TenantCityEntryScreen(),
+      ),
+
+      /// 🗺️ Tenant Property Map
+      GoRoute(
+        path: '/tenant/map',
+        name: 'tenantMap',
+        builder: (context, state) {
+          final city = state.uri.queryParameters['city'];
+          return TenantPropertyMapScreen(cityFromRoute: city);
+        },
+      ),
+
+      /// 👤 Tenant Payments Dashboard
+      GoRoute(
         path: '/tenant/payments',
         name: 'tenantPayments',
         builder: (context, state) => const TenantPaymentDashboardScreen(),
+      ),
+
+      /// 🧾 Tenant Transactions
+      GoRoute(
+        path: '/tenant/transactions',
+        name: 'tenantTransactions',
+        builder: (context, state) =>
+            const TransactionHistoryScreen(actor: TransactionActor.tenant),
       ),
 
       /// 🧾 Tenant Transactions

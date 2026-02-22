@@ -47,12 +47,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Allow reading own document
       allow read: if isAuthenticated() && userId == currentUid();
 
-      // Allow list/query operations for email uniqueness checks
-      // Users can query by emailLowercase to check if email exists
-      allow list: if isAuthenticated() && 
+      allow list: if isAuthenticated() &&
         request.query.limit <= 1;
 
       allow create: if isAuthenticated()
@@ -73,7 +70,10 @@ service cloud.firestore {
     }
 
     match /properties/{propertyId} {
-      allow read: if isOwner() && resource.data.ownerId == currentUid();
+      // ✅ Owners: read only their own properties
+      // ✅ Tenants: read only published properties (or if field missing for backward compatibility)
+      allow read: if (isOwner() && resource.data.ownerId == currentUid())
+        || (isTenant() && (!('isPublished' in resource.data) || resource.data.isPublished == true));
 
       allow create: if isOwner()
         && request.resource.data.ownerId == currentUid();
