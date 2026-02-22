@@ -5,8 +5,8 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
 import 'package:rentdone/features/owner/owner_payment/domain/entities/payment.dart';
-import 'package:rentdone/features/owner/owner_payment/presenation/providers/payments_provider.dart';
-import 'package:rentdone/features/owner/owners_properties/presenatation/providers/property_tenant_provider.dart';
+import 'package:rentdone/features/owner/owner_payment/presentation/providers/payments_provider.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
 import 'package:rentdone/features/owner/owners_properties/ui_models/property_model.dart';
 
 class PaymentsScreen extends ConsumerStatefulWidget {

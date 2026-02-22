@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// Helper class for email validation and duplicate detection
 class EmailValidationHelper {
@@ -27,7 +28,7 @@ class EmailValidationHelper {
 
       return querySnapshot.docs.first.id;
     } catch (e) {
-      print('Error checking email: $e');
+      debugPrint('Error checking email: $e');
       return null;
     }
   }
@@ -69,7 +70,7 @@ class EmailValidationHelper {
 
       return duplicates;
     } catch (e) {
-      print('Error finding duplicates: $e');
+      debugPrint('Error finding duplicates: $e');
       return {};
     }
   }

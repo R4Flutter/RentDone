@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
-import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
-import 'package:rentdone/features/owner/owners_properties/presenatation/pages/property_detail_screen.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/pages/add_property_screen.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/pages/property_detail_screen.dart';
 
-import 'package:rentdone/features/owner/owners_properties/presenatation/providers/property_tenant_provider.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
 
 class ManagePropertiesScreen extends ConsumerWidget {
   const ManagePropertiesScreen({super.key});

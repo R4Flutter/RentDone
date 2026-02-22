@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:rentdone/core/constants/user_role.dart';
 import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
+import 'package:rentdone/features/auth/presentation/widgets/forgot_password_dialog.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key, required this.selectedRole});
@@ -265,6 +266,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _buildEmailField(context, authNotifier, isDark, accent30Color),
           const SizedBox(height: 12),
           _buildPasswordField(isDark, accent30Color),
+          const SizedBox(height: 4),
+          _buildForgotPasswordButton(authState),
           if (authState.errorMessage != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -545,6 +548,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           fontWeight: FontWeight.w500,
           color: const Color(0xFF2563EB),
         ),
+      ),
+    );
+  }
+
+  Widget _buildForgotPasswordButton(dynamic authState) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton(
+        onPressed: authState.isLoading || authState.isRegisterMode
+            ? null
+            : () => showForgotPasswordDialog(
+                context: context,
+                ref: ref,
+                initialEmail: _emailController.text,
+                onEmailSynced: (email) => _emailController.text = email,
+              ),
+        child: const Text('Forgot password? Get verification code'),
       ),
     );
   }

@@ -278,6 +278,37 @@ class AuthFirebaseService {
     }
   }
 
+  Future<void> sendPasswordResetCode({String? email}) async {
+    try {
+      final resolvedEmail = (email ?? _auth.currentUser?.email ?? '')
+          .trim()
+          .toLowerCase();
+
+      if (resolvedEmail.isEmpty) {
+        throw const AuthException(
+          message: 'Email is required to send a reset code.',
+        );
+      }
+
+      final emailRegex = RegExp(
+        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+      );
+      if (!emailRegex.hasMatch(resolvedEmail)) {
+        throw const AuthException(message: 'Please enter a valid email.');
+      }
+
+      await _auth.sendPasswordResetEmail(email: resolvedEmail);
+    } on AuthException {
+      rethrow;
+    } on FirebaseAuthException catch (error) {
+      throw _mapFirebaseException(error);
+    } catch (_) {
+      throw const AuthException(
+        message: 'Unable to send reset code right now.',
+      );
+    }
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
     if (!kIsWeb) {
@@ -405,6 +436,11 @@ class AuthFirebaseService {
         );
       case 'invalid-email':
         return const AuthException(message: 'Please enter a valid email.');
+      case 'operation-not-allowed':
+        return const AuthException(
+          message:
+              'Email/password sign-in is disabled in Firebase. Enable it from Firebase Console > Authentication > Sign-in method.',
+        );
       default:
         return AuthException(
           message: error.message ?? 'Authentication failed.',

@@ -8,7 +8,7 @@ import 'package:rentdone/features/owner/add_tenant/domain/usecases/tenant_input_
 import 'package:rentdone/features/owner/add_tenant/presentation/providers/add_tenant_provider.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/providers/document_upload_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_upi_provider.dart';
-import 'package:rentdone/features/owner/owners_properties/presenatation/providers/property_tenant_provider.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 import 'package:go_router/go_router.dart';

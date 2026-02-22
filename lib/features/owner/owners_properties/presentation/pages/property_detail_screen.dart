@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart';
-import 'package:rentdone/features/owner/owners_properties/presenatation/providers/property_tenant_provider.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 
