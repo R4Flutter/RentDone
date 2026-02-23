@@ -5,23 +5,35 @@ import 'package:rentdone/features/tenant/property_map/data/services/nominatim_ge
 import 'package:rentdone/features/tenant/property_map/data/services/tenant_property_firebase_service.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 
-/// Holds the currently selected city in memory.
-final selectedCityProvider = StateProvider<String>((ref) => '');
+/// ✅ Notifier-based city state (avoids StateProvider underline issues)
+class SelectedCityNotifier extends Notifier<String> {
+  @override
+  String build() => '';
 
-final nominatimGeocodingServiceProvider =
-    Provider<NominatimGeocodingService>((ref) {
-  return const NominatimGeocodingService();
-});
+  void setCity(String city) {
+    state = city.trim();
+  }
+
+  void clear() {
+    state = '';
+  }
+}
+
+final selectedCityProvider =
+    NotifierProvider<SelectedCityNotifier, String>(SelectedCityNotifier.new);
+
+final nominatimGeocodingServiceProvider = Provider<NominatimGeocodingService>(
+  (ref) => const NominatimGeocodingService(),
+);
 
 final tenantPropertyFirebaseServiceProvider =
     Provider<TenantPropertyFirebaseService>((ref) {
   return TenantPropertyFirebaseService(ref.watch(firestoreProvider));
 });
 
-/// Converts city name -> LatLng center (FutureProvider)
 final cityCenterProvider = FutureProvider<LatLng>((ref) async {
-  final city = ref.watch(selectedCityProvider);
-  if (city.trim().isEmpty) {
+  final city = ref.watch(selectedCityProvider).trim();
+  if (city.isEmpty) {
     throw Exception('No city selected');
   }
 
@@ -29,10 +41,8 @@ final cityCenterProvider = FutureProvider<LatLng>((ref) async {
   return service.geocodeCity(city: city);
 });
 
-/// Watches Firestore -> list of properties for that city (StreamProvider)
 final tenantCityPropertiesProvider = StreamProvider<List<Property>>((ref) {
-  final city = ref.watch(selectedCityProvider);
+  final city = ref.watch(selectedCityProvider).trim();
   final service = ref.watch(tenantPropertyFirebaseServiceProvider);
-
   return service.watchPublishedPropertiesForCity(city: city);
 });

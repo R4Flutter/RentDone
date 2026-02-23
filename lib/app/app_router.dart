@@ -136,14 +136,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             const TransactionHistoryScreen(actor: TransactionActor.tenant),
       ),
 
-      /// 🧾 Tenant Transactions
-      GoRoute(
-        path: '/tenant/transactions',
-        name: 'tenantTransactions',
-        builder: (context, state) =>
-            const TransactionHistoryScreen(actor: TransactionActor.tenant),
-      ),
-
       // ============================================================
       // 🏠 OWNER DASHBOARD SHELL & ROUTES
       // ============================================================

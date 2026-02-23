@@ -17,20 +17,38 @@ class AddPropertyScreen extends ConsumerStatefulWidget {
 
 class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
   final _formKey = GlobalKey<FormState>();
+
   late TextEditingController nameCtrl;
   late TextEditingController addressCtrl;
   late TextEditingController totalRoomsCtrl;
+
+  // ✅ NEW fields for tenant map
+  late TextEditingController cityCtrl;
+  late TextEditingController latCtrl;
+  late TextEditingController lngCtrl;
+  bool isPublished = false;
 
   List<RoomInput> rooms = [];
 
   @override
   void initState() {
     super.initState();
+
     nameCtrl = TextEditingController(text: widget.property?.name ?? '');
     addressCtrl = TextEditingController(text: widget.property?.address ?? '');
     totalRoomsCtrl = TextEditingController(
       text: (widget.property?.totalRooms ?? 0).toString(),
     );
+
+    // ✅ NEW controllers
+    cityCtrl = TextEditingController(text: widget.property?.city ?? '');
+    latCtrl = TextEditingController(
+      text: (widget.property?.lat ?? 0.0).toString(),
+    );
+    lngCtrl = TextEditingController(
+      text: (widget.property?.lng ?? 0.0).toString(),
+    );
+    isPublished = widget.property?.isPublished ?? false;
 
     if (widget.property != null) {
       rooms = widget.property!.rooms
@@ -48,11 +66,17 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     nameCtrl.dispose();
     addressCtrl.dispose();
     totalRoomsCtrl.dispose();
+
+    cityCtrl.dispose();
+    latCtrl.dispose();
+    lngCtrl.dispose();
+
     super.dispose();
   }
 
   void _updateRoomCount() {
     final count = int.tryParse(totalRoomsCtrl.text) ?? 0;
+
     if (count > rooms.length) {
       for (int i = rooms.length; i < count; i++) {
         rooms.add(
@@ -66,6 +90,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     } else if (count < rooms.length) {
       rooms = rooms.sublist(0, count);
     }
+
     setState(() {});
   }
 
@@ -110,7 +135,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                             ),
                           ),
                           validator: (value) =>
-                              value?.isEmpty ?? true ? "Required" : null,
+                              value?.trim().isEmpty ?? true ? "Required" : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -127,7 +152,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                           ),
                           maxLines: 2,
                           validator: (value) =>
-                              value?.isEmpty ?? true ? "Required" : null,
+                              value?.trim().isEmpty ?? true ? "Required" : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -142,10 +167,107 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (value) =>
-                              value?.isEmpty ?? true ? "Required" : null,
+                          validator: (value) {
+                            final v = value?.trim() ?? '';
+                            if (v.isEmpty) return "Required";
+                            final n = int.tryParse(v);
+                            if (n == null || n <= 0) return "Enter a valid number";
+                            return null;
+                          },
                         ),
                       ]),
+
+                      const SizedBox(height: 24),
+
+                      // ✅ Location (required for tenant map)
+                      _buildCard(theme, "Map Location (Tenant View)", [
+                        TextFormField(
+                          controller: cityCtrl,
+                          decoration: InputDecoration(
+                            labelText: "City",
+                            hintText: "e.g., Mumbai",
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.08),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          validator: (value) =>
+                              value?.trim().isEmpty ?? true ? "Required" : null,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: latCtrl,
+                                keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                  signed: true,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "Latitude",
+                                  hintText: "e.g., 19.115",
+                                  filled: true,
+                                  fillColor: Colors.white.withValues(alpha: 0.08),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                validator: (value) {
+                                  final v = value?.trim() ?? '';
+                                  if (v.isEmpty) return "Required";
+                                  final d = double.tryParse(v);
+                                  if (d == null) return "Invalid latitude";
+                                  if (d < -90 || d > 90) return "Latitude must be -90 to 90";
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: lngCtrl,
+                                keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                  signed: true,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "Longitude",
+                                  hintText: "e.g., 72.867",
+                                  filled: true,
+                                  fillColor: Colors.white.withValues(alpha: 0.08),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                validator: (value) {
+                                  final v = value?.trim() ?? '';
+                                  if (v.isEmpty) return "Required";
+                                  final d = double.tryParse(v);
+                                  if (d == null) return "Invalid longitude";
+                                  if (d < -180 || d > 180) return "Longitude must be -180 to 180";
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SwitchListTile(
+                          value: isPublished,
+                          onChanged: (v) => setState(() => isPublished = v),
+                          title: const Text("Publish (visible to tenants)"),
+                          subtitle: const Text(
+                            "If off, tenants won't see this property on the map.",
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ]),
+
                       const SizedBox(height: 24),
 
                       // Room Details
@@ -273,20 +395,29 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
   void _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (rooms.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Add at least one room")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Add at least one room")),
+      );
       return;
     }
 
+    final lat = double.parse(latCtrl.text.trim());
+    final lng = double.parse(lngCtrl.text.trim());
+
     final property = Property(
       id: widget.property?.id ?? const Uuid().v4(),
-      name: nameCtrl.text,
-      address: addressCtrl.text,
-      totalRooms: int.parse(totalRoomsCtrl.text),
+      name: nameCtrl.text.trim(),
+      address: addressCtrl.text.trim(),
+      totalRooms: int.parse(totalRoomsCtrl.text.trim()),
       rooms: rooms
           .map((r) => Room(id: r.id, roomNumber: r.roomNumber, name: r.name))
           .toList(),
+
+      // ✅ NEW required fields
+      city: cityCtrl.text.trim(),
+      lat: lat,
+      lng: lng,
+      isPublished: isPublished,
     );
 
     try {
@@ -296,30 +427,30 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
         await ref.read(addPropertyUseCaseProvider)(property);
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.property != null
-                  ? "Property updated successfully!"
-                  : "Property created successfully!",
-            ),
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.property != null
+                ? "Property updated successfully!"
+                : "Property created successfully!",
           ),
-        );
-        // Navigate to property detail after creation/update
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PropertyDetailScreen(propertyId: property.id),
-          ),
-        );
-      }
+        ),
+      );
+
+      // Navigate to property detail after creation/update
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PropertyDetailScreen(propertyId: property.id),
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: $e")));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
     }
   }
 }

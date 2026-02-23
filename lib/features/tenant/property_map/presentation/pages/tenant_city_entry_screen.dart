@@ -28,7 +28,7 @@ class _TenantCityEntryScreenState extends ConsumerState<TenantCityEntryScreen> {
       return;
     }
 
-    ref.read(selectedCityProvider.notifier).state = city;
+    ref.read(selectedCityProvider.notifier).setCity(city);
     setState(() => _error = null);
 
     context.go('/tenant/map?city=$city');
