@@ -42,4 +42,50 @@ class OwnerTenantsFirebaseService {
           }).toList();
         });
   }
+
+  Future<int> cleanupOrphanTenants() async {
+    final ownerId = _auth.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) {
+      throw StateError('Owner session not found. Please sign in again.');
+    }
+
+    final propertiesSnapshot = await _db
+        .collection('properties')
+        .where('ownerId', isEqualTo: ownerId)
+        .get();
+    final validPropertyIds = propertiesSnapshot.docs
+        .map((doc) => doc.id)
+        .toSet();
+
+    final tenantsSnapshot = await _db
+        .collection('tenants')
+        .where('ownerId', isEqualTo: ownerId)
+        .get();
+
+    final orphanDocs = tenantsSnapshot.docs.where((doc) {
+      final propertyId = doc.data()['propertyId']?.toString() ?? '';
+      if (propertyId.isEmpty) {
+        return true;
+      }
+      return !validPropertyIds.contains(propertyId);
+    }).toList();
+
+    if (orphanDocs.isEmpty) {
+      return 0;
+    }
+
+    const chunkSize = 400;
+    for (var start = 0; start < orphanDocs.length; start += chunkSize) {
+      final end = (start + chunkSize) > orphanDocs.length
+          ? orphanDocs.length
+          : start + chunkSize;
+      final batch = _db.batch();
+      for (final doc in orphanDocs.sublist(start, end)) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+
+    return orphanDocs.length;
+  }
 }

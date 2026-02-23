@@ -25,11 +25,16 @@ class PropertyDto {
               .toList()
         : <RoomDto>[];
 
+    final parsedTotalRooms = _toInt(map['totalRooms']);
+    final effectiveTotalRooms = parsedTotalRooms > 0
+        ? parsedTotalRooms
+        : roomList.length;
+
     return PropertyDto(
       id: (map['id'] ?? '').toString(),
       name: (map['name'] ?? '').toString(),
       address: (map['address'] ?? '').toString(),
-      totalRooms: _toInt(map['totalRooms']),
+      totalRooms: effectiveTotalRooms,
       rooms: roomList,
     );
   }

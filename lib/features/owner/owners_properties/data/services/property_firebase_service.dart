@@ -1,15 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/property_dto.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/tenant_dto.dart';
 
 class PropertyFirebaseService {
   final FirebaseFirestore _db;
   final FirebaseAuth _auth;
+  final FirebaseFunctions _functions;
 
-  PropertyFirebaseService({FirebaseFirestore? firestore})
-    : _db = firestore ?? FirebaseFirestore.instance,
-      _auth = FirebaseAuth.instance;
+  PropertyFirebaseService({
+    FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
+  }) : _db = firestore ?? FirebaseFirestore.instance,
+       _auth = FirebaseAuth.instance,
+       _functions = functions ?? FirebaseFunctions.instance;
 
   String _requireOwnerId() {
     final ownerId = _auth.currentUser?.uid;
@@ -66,7 +71,62 @@ class PropertyFirebaseService {
   }
 
   Future<void> deleteProperty(String propertyId) async {
-    await _db.collection('properties').doc(propertyId).delete();
+    try {
+      final callable = _functions.httpsCallable('deleteOwnerPropertyCascade');
+      await callable.call(<String, dynamic>{'propertyId': propertyId});
+      return;
+    } on FirebaseFunctionsException catch (error) {
+      const terminalCodes = {
+        'permission-denied',
+        'unauthenticated',
+        'invalid-argument',
+      };
+      if (terminalCodes.contains(error.code)) {
+        throw StateError(error.message ?? 'Property delete not allowed.');
+      }
+    }
+
+    await _deletePropertyClientSide(propertyId);
+  }
+
+  Future<void> _deletePropertyClientSide(String propertyId) async {
+    final ownerId = _requireOwnerId();
+    final propertyRef = _db.collection('properties').doc(propertyId);
+    final propertyDoc = await propertyRef.get();
+
+    if (!propertyDoc.exists) {
+      return;
+    }
+
+    final propertyOwnerId = propertyDoc.data()?['ownerId']?.toString();
+    if (propertyOwnerId != null &&
+        propertyOwnerId.isNotEmpty &&
+        propertyOwnerId != ownerId) {
+      throw StateError('You are not allowed to delete this property.');
+    }
+
+    final tenantsSnapshot = await _db
+        .collection('tenants')
+        .where('propertyId', isEqualTo: propertyId)
+        .get();
+
+    const chunkSize = 400;
+    for (
+      var start = 0;
+      start < tenantsSnapshot.docs.length;
+      start += chunkSize
+    ) {
+      final end = (start + chunkSize) > tenantsSnapshot.docs.length
+          ? tenantsSnapshot.docs.length
+          : start + chunkSize;
+      final batch = _db.batch();
+      for (final doc in tenantsSnapshot.docs.sublist(start, end)) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+
+    await propertyRef.delete();
   }
 
   Stream<List<TenantDto>> watchAllTenants() {
@@ -163,8 +223,16 @@ class PropertyFirebaseService {
       rooms[roomIndex] = {...room, 'isOccupied': false, 'tenantId': null};
 
       txn.update(propertyRef, {'rooms': rooms});
-      txn.delete(tenantRef);
     });
+
+    try {
+      await tenantRef.delete();
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied' || error.code == 'not-found') {
+        return;
+      }
+      rethrow;
+    }
   }
 
   List<Map<String, dynamic>> _normalizeRooms(dynamic roomsRaw) {

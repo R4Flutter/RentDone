@@ -83,6 +83,25 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function deleteQueryInChunks(query, chunkSize = 400) {
+  while (true) {
+    const snapshot = await query.limit(chunkSize).get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    if (snapshot.size < chunkSize) {
+      break;
+    }
+  }
+}
+
 async function postWhatsAppMessage({ token, phoneNumberId, apiVersion, payload }) {
   return fetch(
     `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`,
@@ -1023,6 +1042,81 @@ exports.confirmRazorpayPayment = functions.https.onCall(
     return { ok: true };
   },
 );
+
+exports.deleteOwnerPropertyCascade = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Authentication required',
+    );
+  }
+
+  const ownerId = context.auth.uid;
+  const propertyId = String(data?.propertyId || '').trim();
+  if (!propertyId) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'propertyId is required',
+    );
+  }
+
+  const ownerDoc = await db.collection('users').doc(ownerId).get();
+  const role = ownerDoc.data()?.role;
+  if (role !== 'owner') {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Only owners can delete properties',
+    );
+  }
+
+  const propertyRef = db.collection('properties').doc(propertyId);
+  const propertyDoc = await propertyRef.get();
+  if (!propertyDoc.exists) {
+    return { ok: true, deleted: false, reason: 'not-found' };
+  }
+
+  const propertyData = propertyDoc.data() || {};
+  const propertyOwnerId = String(propertyData.ownerId || '').trim();
+
+  if (propertyOwnerId && propertyOwnerId !== ownerId) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Property does not belong to current owner',
+    );
+  }
+
+  if (!propertyOwnerId) {
+    const ownershipProbe = await db
+      .collection('tenants')
+      .where('propertyId', '==', propertyId)
+      .where('ownerId', '==', ownerId)
+      .limit(1)
+      .get();
+
+    if (ownershipProbe.empty) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Unable to verify property ownership',
+      );
+    }
+  }
+
+  await deleteQueryInChunks(
+    db.collection('tenants').where('propertyId', '==', propertyId),
+  );
+
+  await deleteQueryInChunks(
+    db.collection('payments').where('propertyId', '==', propertyId),
+  );
+
+  await deleteQueryInChunks(
+    db.collection('leases').where('propertyId', '==', propertyId),
+  );
+
+  await propertyRef.delete();
+
+  return { ok: true, deleted: true };
+});
 
 exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {
   const { webhookSecret } = getRazorpayConfig();

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
-import 'package:rentdone/features/owner/owners_properties/presentation/pages/property_detail_screen.dart';
 
 class AddPropertyScreen extends ConsumerStatefulWidget {
   final Property? property;
@@ -306,29 +304,21 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
       return;
     }
 
-    final property = Property(
-      id: widget.property?.id ?? const Uuid().v4(),
-      name: nameCtrl.text,
-      address: addressCtrl.text,
-      totalRooms: int.parse(totalRoomsCtrl.text),
-      rooms: rooms
-          .map(
-            (r) => Room(
-              id: r.id,
-              roomNumber: r.roomNumber,
-              name: r.name,
-              isOccupied: r.isOccupied,
-              tenantId: r.tenantId,
-            ),
-          )
-          .toList(),
-    );
+    // final property = Property(
+    //   id: widget.property?.id ?? const Uuid().v4(),
+    //   name: nameCtrl.text,
+    //   address: addressCtrl.text,
+    //   totalRooms: int.parse(totalRoomsCtrl.text),
+    //   rooms: rooms,
+    // );
 
     try {
       if (widget.property != null) {
-        await ref.read(updatePropertyUseCaseProvider)(property);
+        // Update property
+        // await properties_repo.update(property);
       } else {
-        await ref.read(addPropertyUseCaseProvider)(property);
+        // Add property
+        // await properties_repo.add(property);
       }
 
       if (mounted) {
@@ -344,9 +334,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
         // Navigate to property detail after creation/update
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => PropertyDetailScreen(propertyId: property.id),
-          ),
+          MaterialPageRoute(builder: (_) => const SizedBox()),
         );
       }
     } catch (e) {

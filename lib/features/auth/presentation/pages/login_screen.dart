@@ -610,6 +610,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       context.goNamed('ownerDashboard');
       return;
     }
-    context.goNamed('tenantPayments');
+    context.goNamed('tenantDashboard');
   }
 }

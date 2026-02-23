@@ -89,8 +89,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       appBar: AppBar(
         title: Text(
           (widget.initialTenantName?.trim().isNotEmpty ?? false)
-              ? 'Rent Payments - ${widget.initialTenantName!.trim()}'
-              : 'Rent Payments',
+              ? 'Payments - ${widget.initialTenantName!.trim()}'
+              : 'Payments',
         ),
         actions: [
           TextButton(

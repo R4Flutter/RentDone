@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_tenants/data/repositories/owner_tenants_repository_impl.dart';
 import 'package:rentdone/features/owner/owner_tenants/data/services/owner_tenants_firebase_service.dart';
 import 'package:rentdone/features/owner/owner_tenants/domain/repositories/owner_tenants_repository.dart';
+import 'package:rentdone/features/owner/owner_tenants/domain/usecases/cleanup_orphan_tenants.dart';
 import 'package:rentdone/features/owner/owner_tenants/domain/usecases/watch_owner_tenant_properties.dart';
 import 'package:rentdone/features/owner/owner_tenants/domain/usecases/watch_owner_tenants.dart';
 
@@ -25,3 +26,10 @@ final watchOwnerTenantPropertiesUseCaseProvider =
       final repository = ref.watch(ownerTenantsRepositoryProvider);
       return WatchOwnerTenantProperties(repository);
     });
+
+final cleanupOrphanTenantsUseCaseProvider = Provider<CleanupOrphanTenants>((
+  ref,
+) {
+  final repository = ref.watch(ownerTenantsRepositoryProvider);
+  return CleanupOrphanTenants(repository);
+});

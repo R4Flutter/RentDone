@@ -21,4 +21,9 @@ class OwnerTenantsRepositoryImpl implements OwnerTenantsRepository {
       (items) => items.map((item) => item.toEntity()).toList(),
     );
   }
+
+  @override
+  Future<int> cleanupOrphanTenants() {
+    return _service.cleanupOrphanTenants();
+  }
 }

@@ -54,7 +54,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
         context.goNamed('ownerDashboard');
         break;
       case UserRole.tenant:
-        context.goNamed('tenantPayments');
+        context.goNamed('tenantDashboard');
         break;
       default:
         context.goNamed('roleSelection');
