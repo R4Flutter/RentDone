@@ -35,7 +35,12 @@ class TenantStatCard extends StatelessWidget {
       ),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(gradient: AppTheme.blueSurfaceGradient),
+        decoration: BoxDecoration(
+          color: color,
+          gradient: color == AppTheme.primaryBlue
+              ? AppTheme.blueSurfaceGradient
+              : null,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

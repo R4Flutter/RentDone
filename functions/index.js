@@ -37,6 +37,15 @@ function getWhatsAppConfig() {
   };
 }
 
+function getCloudinaryConfig() {
+  const cfg = functions.config().cloudinary || {};
+  return {
+    cloudName: cfg.cloud_name,
+    apiKey: cfg.api_key,
+    apiSecret: cfg.api_secret,
+  };
+}
+
 function monthKey(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   return `${date.getFullYear()}-${m}`;
@@ -571,6 +580,106 @@ exports.sendRentDueWhatsAppReminders = functions.pubsub
         paymentId: paymentDoc.id,
         providerMessageId: sent.providerMessageId,
         providerStatus: sent.status,
+        createdAt: FieldValue.serverTimestamp(),
+        read: false,
+      });
+    }
+  });
+
+exports.sendTenantPreDueReminders = functions.pubsub
+  .schedule('0 9 * * *')
+  .timeZone('Asia/Kolkata')
+  .onRun(async () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const tenantsSnap = await db.collection('tenants').get();
+    if (tenantsSnap.empty) {
+      return;
+    }
+
+    for (const tenantDoc of tenantsSnap.docs) {
+      const tenant = tenantDoc.data() || {};
+      const tenantId = tenantDoc.id;
+
+      let dueDay = Number(tenant.rentDueDay || 1);
+      let monthlyRent = Number(tenant.rentAmount || 0);
+
+      const roomDetailsDoc = await db
+        .collection('tenants')
+        .doc(tenantId)
+        .collection('room_details')
+        .doc('current')
+        .get();
+      if (roomDetailsDoc.exists) {
+        const roomDetails = roomDetailsDoc.data() || {};
+        dueDay = Number(roomDetails.rentDueDay || dueDay);
+        monthlyRent = Number(roomDetails.monthlyRent || monthlyRent);
+      }
+
+      if (!Number.isFinite(dueDay) || dueDay < 1 || dueDay > 31) {
+        continue;
+      }
+
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const safeDueDay = Math.min(Math.max(Math.trunc(dueDay), 1), lastDay);
+      const dueDate = new Date(now.getFullYear(), now.getMonth(), safeDueDay);
+      const daysUntilDue = Math.floor((dueDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+
+      if (daysUntilDue !== 3) {
+        continue;
+      }
+
+      const periodKey = monthKey(dueDate);
+      const paymentDoc = await db
+        .collection('tenants')
+        .doc(tenantId)
+        .collection('payments')
+        .doc(periodKey)
+        .get();
+
+      const paymentStatus = String((paymentDoc.data() || {}).status || '').toLowerCase();
+      if (paymentDoc.exists && paymentStatus === 'paid') {
+        continue;
+      }
+
+      const reminderDocId = `${periodKey}_dminus3`;
+      const reminderRef = db
+        .collection('tenants')
+        .doc(tenantId)
+        .collection('reminders')
+        .doc(reminderDocId);
+      const reminderSnapshot = await reminderRef.get();
+      if (reminderSnapshot.exists) {
+        continue;
+      }
+
+      const amount = Number.isFinite(monthlyRent) && monthlyRent > 0 ? monthlyRent : Number(tenant.dueAmount || 0);
+      const body =
+        `Your rent is due in 3 days (due day ${safeDueDay}).` +
+        (amount > 0 ? ` Amount: Rs ${amount}.` : '');
+
+      await reminderRef.set({
+        type: 'rent_due_pre_reminder',
+        periodKey,
+        title: 'Rent Payment Reminder',
+        body,
+        dueDay: safeDueDay,
+        daysBeforeDue: 3,
+        status: 'pending',
+        tenantId,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      await db.collection('messages').doc(`${tenantId}_${reminderDocId}`).set({
+        type: 'reminder',
+        channel: 'inapp',
+        title: 'Rent Payment Reminder',
+        body,
+        severity: 'info',
+        ownerId: tenant.ownerId || null,
+        tenantId,
+        periodKey,
         createdAt: FieldValue.serverTimestamp(),
         read: false,
       });
@@ -1116,6 +1225,206 @@ exports.deleteOwnerPropertyCascade = functions.https.onCall(async (data, context
   await propertyRef.delete();
 
   return { ok: true, deleted: true };
+});
+
+exports.linkTenantAccount = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const uid = context.auth.uid;
+  const email = String(context.auth.token.email || '').trim();
+  const emailLowercase = email.toLowerCase();
+
+  if (!email) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Authenticated tenant must have an email',
+    );
+  }
+
+  const userRef = db.collection('users').doc(uid);
+  const userDoc = await userRef.get();
+  const userData = userDoc.data() || {};
+  const role = userData.role || null;
+
+  if (!userDoc.exists || !role) {
+    await userRef.set(
+      {
+        uid,
+        email,
+        emailLowercase,
+        role: 'tenant',
+        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: userData.createdAt || FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  } else if (role !== 'tenant') {
+    throw new functions.https.HttpsError('permission-denied', 'Only tenant accounts can link tenant profile');
+  }
+
+  let tenantRef = db.collection('tenants').doc(uid);
+  let tenantDoc = await tenantRef.get();
+
+  if (!tenantDoc.exists) {
+    const byAuthUid = await db
+      .collection('tenants')
+      .where('authUid', '==', uid)
+      .limit(1)
+      .get();
+
+    if (!byAuthUid.empty) {
+      tenantDoc = byAuthUid.docs[0];
+      tenantRef = tenantDoc.ref;
+    }
+  }
+
+  if (!tenantDoc.exists) {
+    const byEmailLower = await db
+      .collection('tenants')
+      .where('emailLowercase', '==', emailLowercase)
+      .limit(1)
+      .get();
+
+    if (!byEmailLower.empty) {
+      tenantDoc = byEmailLower.docs[0];
+      tenantRef = tenantDoc.ref;
+    }
+  }
+
+  if (!tenantDoc.exists) {
+    const byEmail = await db
+      .collection('tenants')
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+
+    if (!byEmail.empty) {
+      tenantDoc = byEmail.docs[0];
+      tenantRef = tenantDoc.ref;
+    }
+  }
+
+  let autoCreatedTenant = false;
+  if (!tenantDoc.exists) {
+    autoCreatedTenant = true;
+    const fallbackName = String(context.auth.token.name || '').trim() || email.split('@')[0] || 'Tenant';
+    tenantRef = db.collection('tenants').doc(uid);
+
+    await tenantRef.set(
+      {
+        authUid: uid,
+        email,
+        emailLowercase,
+        name: fallbackName,
+        phoneNumber: String(context.auth.token.phone_number || '').trim(),
+        ownerId: '',
+        roomNumber: '-',
+        dueAmount: 0,
+        totalPaid: 0,
+        isActive: false,
+        onboardingStatus: 'pending_assignment',
+        source: 'self_onboarding',
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    tenantDoc = await tenantRef.get();
+  }
+
+  await db.runTransaction(async (tx) => {
+    tx.set(
+      tenantRef,
+      {
+        authUid: uid,
+        email,
+        emailLowercase,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    tx.set(
+      userRef,
+      {
+        tenantId: tenantRef.id,
+        email,
+        emailLowercase,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
+
+  return {
+    linked: true,
+    tenantId: tenantRef.id,
+    email,
+    autoCreatedTenant,
+  };
+});
+
+exports.createTenantImageUploadSignature = functions.https.onRequest(async (req, res) => {
+  if (req.method === 'OPTIONS') {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.status(204).send('');
+    return;
+  }
+
+  res.set('Access-Control-Allow-Origin', '*');
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  try {
+    const authHeader = req.get('Authorization') || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Missing Authorization bearer token' });
+      return;
+    }
+
+    const idToken = authHeader.replace('Bearer ', '').trim();
+    if (!idToken) {
+      res.status(401).json({ error: 'Invalid bearer token' });
+      return;
+    }
+
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const uid = decoded.uid;
+
+    const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
+    if (!cloudName || !apiKey || !apiSecret) {
+      res.status(500).json({ error: 'Cloudinary config missing on server' });
+      return;
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const folder = `tenants/${uid}`;
+    const publicId = `tenant_image_${Date.now()}`;
+    const toSign = `folder=${folder}&public_id=${publicId}&timestamp=${timestamp}`;
+    const signature = crypto
+      .createHash('sha1')
+      .update(`${toSign}${apiSecret}`)
+      .digest('hex');
+
+    res.status(200).json({
+      cloudName,
+      apiKey,
+      timestamp,
+      folder,
+      publicId,
+      signature,
+    });
+  } catch (error) {
+    functions.logger.error('Failed to create Cloudinary upload signature', { error: String(error) });
+    res.status(401).json({ error: 'Unauthorized' });
+  }
 });
 
 exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {

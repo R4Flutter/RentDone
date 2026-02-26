@@ -9,7 +9,7 @@ import 'package:rentdone/features/auth/di/auth_di.dart';
 /// Tenant Analytics Dashboard
 /// Shows comprehensive statistics about tenants and payments
 class TenantAnalyticsScreen extends ConsumerWidget {
-  const TenantAnalyticsScreen({Key? key}) : super(key: key);
+  const TenantAnalyticsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -245,7 +245,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

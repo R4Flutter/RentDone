@@ -12,7 +12,7 @@ import 'package:rentdone/features/tenant_management/data/services/cloudinary_ser
 class EditTenantScreen extends ConsumerStatefulWidget {
   final String tenantId;
 
-  const EditTenantScreen({Key? key, required this.tenantId}) : super(key: key);
+  const EditTenantScreen({super.key, required this.tenantId});
 
   @override
   ConsumerState<EditTenantScreen> createState() => _EditTenantScreenState();

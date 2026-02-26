@@ -1,135 +1,337 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/entities/tenant_dashboard_summary.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_complaint.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_document.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_owner_details.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_payment.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_reminder.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_room_details.dart';
+import 'package:rentdone/features/tenant/data/repositories/tenant_dashboard_repository_impl.dart';
+import 'package:rentdone/features/tenant/data/services/cloudinary_document_service.dart';
+import 'package:rentdone/features/tenant/data/services/tenant_firestore_service.dart';
+import 'package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart';
+import 'package:rentdone/features/tenant/domain/repositories/tenant_dashboard_repository.dart';
 
-final tenantDashboardProvider = FutureProvider<TenantDashboardSummary>((
-  ref,
-) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null || user.email == null) {
-    return TenantDashboardSummary.empty;
-  }
+final dioProvider = Provider<Dio>((ref) => Dio());
 
-  final db = FirebaseFirestore.instance;
+final tenantFirestoreServiceProvider = Provider<TenantFirestoreService>(
+  (ref) => TenantFirestoreService(),
+);
 
-  try {
-    // Find tenant document by email
-    final tenantQuery = await db
-        .collection('tenants')
-        .where('email', isEqualTo: user.email)
-        .where('isActive', isEqualTo: true)
-        .limit(1)
-        .get();
+final cloudinaryDocumentServiceProvider = Provider<CloudinaryDocumentService>(
+  (ref) => CloudinaryDocumentService(dio: ref.read(dioProvider)),
+);
 
-    if (tenantQuery.docs.isEmpty) {
-      return TenantDashboardSummary.empty;
-    }
+final tenantDashboardRepositoryProvider = Provider<TenantDashboardRepository>(
+  (ref) => TenantDashboardRepositoryImpl(
+    auth: FirebaseAuth.instance,
+    firestoreService: ref.read(tenantFirestoreServiceProvider),
+    cloudinaryService: ref.read(cloudinaryDocumentServiceProvider),
+  ),
+);
 
-    final tenantDoc = tenantQuery.docs.first;
-    final tenantData = tenantDoc.data();
+final tenantDashboardProvider =
+    FutureProvider.autoDispose<TenantDashboardSummary>((ref) async {
+      final repository = ref.read(tenantDashboardRepositoryProvider);
+      const retryDelays = <Duration>[
+        Duration.zero,
+        Duration(milliseconds: 700),
+        Duration(milliseconds: 1200),
+        Duration(milliseconds: 2000),
+      ];
 
-    // Get property details
-    final propertyId = tenantData['propertyId'] as String?;
-    String? propertyName;
-    String? ownerName;
-    String? ownerPhone;
-    String? roomNumber;
+      TenantDashboardSummary? lastSummary;
+      Object? lastError;
+      StackTrace? lastStackTrace;
 
-    if (propertyId != null) {
-      try {
-        final propertyDoc = await db
-            .collection('properties')
-            .doc(propertyId)
-            .get();
-        if (propertyDoc.exists) {
-          final propertyData = propertyDoc.data();
-          propertyName = propertyData?['name'] as String?;
+      for (final delay in retryDelays) {
+        if (delay > Duration.zero) {
+          await Future<void>.delayed(delay);
+        }
 
-          // Find room number
-          final rooms = propertyData?['rooms'] as List?;
-          final roomId = tenantData['roomId'] as String?;
-          if (rooms != null && roomId != null) {
-            final room = rooms.firstWhere(
-              (r) => r['id'] == roomId,
-              orElse: () => null,
-            );
-            roomNumber = room?['roomNumber'] as String?;
+        try {
+          final summary = await repository.getDashboardSummary();
+          lastSummary = summary;
+          if (summary.tenantId.isNotEmpty) {
+            return summary;
           }
-
-          // Try to get owner details from property document if stored there
-          ownerName = propertyData?['ownerName'] as String?;
-          ownerPhone = propertyData?['ownerPhone'] as String?;
-        }
-      } catch (e) {
-        // Property read might fail, continue with partial data
-      }
-    }
-
-    // Get payment transactions
-    final transactionsQuery = await db
-        .collection('payments')
-        .where('tenantId', isEqualTo: tenantDoc.id)
-        .orderBy('createdAt', descending: true)
-        .get();
-
-    int totalTransactions = transactionsQuery.docs.length;
-    int successfulPayments = 0;
-    int paidAmount = 0;
-    int pendingAmount = 0;
-    DateTime? nextDueDate;
-
-    final now = DateTime.now();
-
-    for (final doc in transactionsQuery.docs) {
-      final data = doc.data();
-      final status = data['status'] as String?;
-      final amount = data['amount'] as int? ?? 0;
-
-      if (status == 'success' || status == 'completed') {
-        successfulPayments++;
-        paidAmount += amount;
-      } else if (status == 'pending' || status == 'due') {
-        pendingAmount += amount;
-        final dueDate = (data['dueDate'] as Timestamp?)?.toDate();
-        if (dueDate != null &&
-            (nextDueDate == null || dueDate.isBefore(nextDueDate))) {
-          nextDueDate = dueDate;
+        } catch (error, stackTrace) {
+          lastError = error;
+          lastStackTrace = stackTrace;
         }
       }
-    }
 
-    // Calculate pending amount based on rent due day if no pending transactions
-    final rentAmount = tenantData['rentAmount'] as int? ?? 0;
-    final rentDueDay = tenantData['rentDueDay'] as int? ?? 1;
-
-    if (pendingAmount == 0 && rentAmount > 0) {
-      final dueDate = DateTime(now.year, now.month, rentDueDay);
-      if (now.isAfter(dueDate)) {
-        pendingAmount = rentAmount;
-        nextDueDate = dueDate;
-      } else {
-        nextDueDate = dueDate;
+      if (lastSummary != null) {
+        return lastSummary;
       }
-    }
 
-    return TenantDashboardSummary(
-      totalDueAmount: pendingAmount,
-      paidAmount: paidAmount,
-      pendingAmount: pendingAmount,
-      nextDueDate: nextDueDate,
-      propertyName: propertyName,
-      roomNumber: roomNumber,
-      ownerName: ownerName,
-      ownerPhone: ownerPhone,
-      rentAmount: rentAmount,
-      leaseStartDate: (tenantData['moveInDate'] as Timestamp?)?.toDate(),
-      leaseEndDate: (tenantData['agreementEndDate'] as Timestamp?)?.toDate(),
-      totalTransactions: totalTransactions,
-      successfulPayments: successfulPayments,
+      if (lastError != null && lastStackTrace != null) {
+        Error.throwWithStackTrace(lastError, lastStackTrace);
+      }
+
+      return TenantDashboardSummary.empty;
+    });
+
+final currentMonthPaymentProvider = StreamProvider.autoDispose
+    .family<TenantPayment?, String>((ref, tenantId) {
+      return ref
+          .read(tenantDashboardRepositoryProvider)
+          .watchCurrentMonthPayment(tenantId);
+    });
+
+final recentTenantDocumentsProvider = FutureProvider.autoDispose
+    .family<List<TenantDocument>, String>((ref, tenantId) {
+      if (tenantId.isEmpty) {
+        return Future.value(const <TenantDocument>[]);
+      }
+
+      return ref
+          .read(tenantDashboardRepositoryProvider)
+          .getDocumentsPage(tenantId, limit: 3);
+    });
+
+final tenantRoomDetailsProvider = FutureProvider.autoDispose
+    .family<TenantRoomDetails?, String>((ref, tenantId) {
+      if (tenantId.isEmpty) {
+        return Future.value(null);
+      }
+      return ref
+          .read(tenantDashboardRepositoryProvider)
+          .getRoomDetails(tenantId);
+    });
+
+final tenantOwnerDetailsProvider = FutureProvider.autoDispose
+    .family<TenantOwnerDetails?, String>((ref, tenantId) {
+      if (tenantId.isEmpty) {
+        return Future.value(null);
+      }
+      return ref
+          .read(tenantDashboardRepositoryProvider)
+          .getOwnerDetails(tenantId);
+    });
+
+final recentTenantRemindersProvider = FutureProvider.autoDispose
+    .family<List<TenantReminder>, String>((ref, tenantId) {
+      if (tenantId.isEmpty) {
+        return Future.value(const <TenantReminder>[]);
+      }
+
+      return ref
+          .read(tenantDashboardRepositoryProvider)
+          .getRecentReminders(tenantId);
+    });
+
+class TenantDocumentsState {
+  final AsyncValue<List<TenantDocument>> documents;
+  final String? lastDocumentId;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  const TenantDocumentsState({
+    required this.documents,
+    required this.lastDocumentId,
+    required this.hasMore,
+    required this.isLoadingMore,
+  });
+
+  factory TenantDocumentsState.initial() {
+    return const TenantDocumentsState(
+      documents: AsyncValue.data(<TenantDocument>[]),
+      lastDocumentId: null,
+      hasMore: true,
+      isLoadingMore: false,
     );
-  } catch (e) {
-    // Return empty on error - could also log this
-    return TenantDashboardSummary.empty;
   }
-});
+
+  TenantDocumentsState copyWith({
+    AsyncValue<List<TenantDocument>>? documents,
+    String? lastDocumentId,
+    bool? hasMore,
+    bool? isLoadingMore,
+  }) {
+    return TenantDocumentsState(
+      documents: documents ?? this.documents,
+      lastDocumentId: lastDocumentId ?? this.lastDocumentId,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
+}
+
+final tenantDocumentsProvider =
+    NotifierProvider<TenantDocumentsNotifier, TenantDocumentsState>(
+      TenantDocumentsNotifier.new,
+    );
+
+class TenantDocumentsNotifier extends Notifier<TenantDocumentsState> {
+  TenantDashboardRepository get _repository =>
+      ref.read(tenantDashboardRepositoryProvider);
+
+  @override
+  TenantDocumentsState build() {
+    return TenantDocumentsState.initial();
+  }
+
+  Future<void> loadInitial(String tenantId) async {
+    state = state.copyWith(
+      documents: const AsyncValue.loading(),
+      lastDocumentId: null,
+      hasMore: true,
+      isLoadingMore: false,
+    );
+
+    try {
+      final page = await _repository.getDocumentsPage(tenantId);
+      state = state.copyWith(
+        documents: AsyncValue.data(page),
+        lastDocumentId: page.isEmpty ? null : page.last.id,
+        hasMore: page.length >= 20,
+      );
+    } catch (e, st) {
+      state = state.copyWith(documents: AsyncValue.error(e, st));
+    }
+  }
+
+  Future<void> loadMore(String tenantId) async {
+    if (!state.hasMore || state.isLoadingMore) {
+      return;
+    }
+
+    final current = state.documents is AsyncData<List<TenantDocument>>
+        ? (state.documents as AsyncData<List<TenantDocument>>).value
+        : <TenantDocument>[];
+    state = state.copyWith(isLoadingMore: true);
+
+    try {
+      final page = await _repository.getDocumentsPage(
+        tenantId,
+        lastDocumentId: state.lastDocumentId,
+      );
+      final merged = [...current, ...page];
+      state = state.copyWith(
+        documents: AsyncValue.data(merged),
+        lastDocumentId: page.isEmpty ? state.lastDocumentId : page.last.id,
+        hasMore: page.length >= 20,
+        isLoadingMore: false,
+      );
+    } catch (e, st) {
+      state = state.copyWith(
+        documents: AsyncValue.error(e, st),
+        isLoadingMore: false,
+      );
+    }
+  }
+
+  Future<void> upload({
+    required String tenantId,
+    required PlatformFile picked,
+    required String description,
+  }) async {
+    final path = picked.path;
+    if (path == null || path.isEmpty) {
+      throw Exception('Invalid file path');
+    }
+
+    await _repository.uploadDocument(
+      tenantId: tenantId,
+      file: File(path),
+      fileName: picked.name,
+      description: description,
+      fileSizeBytes: picked.size,
+    );
+
+    await loadInitial(tenantId);
+  }
+
+  Future<void> delete(String tenantId, TenantDocument document) async {
+    await _repository.deleteDocument(tenantId: tenantId, document: document);
+    await loadInitial(tenantId);
+  }
+}
+
+final complaintSubmittingProvider =
+    NotifierProvider<ComplaintSubmittingNotifier, bool>(
+      ComplaintSubmittingNotifier.new,
+    );
+
+class ComplaintSubmittingNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setSubmitting(bool value) {
+    state = value;
+  }
+}
+
+Future<void> submitComplaint(
+  WidgetRef ref, {
+  required TenantDashboardSummary summary,
+  required String description,
+  required String category,
+}) async {
+  ref.read(complaintSubmittingProvider.notifier).setSubmitting(true);
+  try {
+    await ref
+        .read(tenantDashboardRepositoryProvider)
+        .submitComplaintAndOpenWhatsApp(
+          summary: summary,
+          complaint: TenantComplaint(
+            description: description,
+            category: category,
+          ),
+        );
+  } finally {
+    ref.read(complaintSubmittingProvider.notifier).setSubmitting(false);
+  }
+}
+
+Future<void> saveTenantRoomDetails(
+  WidgetRef ref, {
+  required String tenantId,
+  required TenantRoomDetails details,
+}) async {
+  await ref
+      .read(tenantDashboardRepositoryProvider)
+      .saveRoomDetails(tenantId: tenantId, details: details);
+  ref.invalidate(tenantRoomDetailsProvider(tenantId));
+  ref.invalidate(tenantDashboardProvider);
+}
+
+Future<void> saveTenantOwnerDetails(
+  WidgetRef ref, {
+  required String tenantId,
+  required TenantOwnerDetails details,
+}) async {
+  await ref
+      .read(tenantDashboardRepositoryProvider)
+      .saveOwnerDetails(tenantId: tenantId, details: details);
+  ref.invalidate(tenantOwnerDetailsProvider(tenantId));
+  ref.invalidate(tenantDashboardProvider);
+}
+
+Future<void> markTenantPaymentAsPaid(
+  WidgetRef ref, {
+  required String tenantId,
+  required int amountPaid,
+  required DateTime paymentDate,
+  required String paymentMethod,
+  required int monthlyRent,
+}) async {
+  await ref
+      .read(tenantDashboardRepositoryProvider)
+      .markPaymentAsPaid(
+        tenantId: tenantId,
+        amountPaid: amountPaid,
+        paymentDate: paymentDate,
+        paymentMethod: paymentMethod,
+        monthlyRent: monthlyRent,
+      );
+
+  ref.invalidate(currentMonthPaymentProvider(tenantId));
+  ref.invalidate(recentTenantRemindersProvider(tenantId));
+  ref.invalidate(tenantDashboardProvider);
+}

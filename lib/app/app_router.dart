@@ -24,7 +24,9 @@ import 'package:rentdone/features/owner/reports/presentation/pages/report_screen
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/presentation/screens/transaction_history_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_dashboard_screen.dart';
+import 'package:rentdone/features/tenant/presentation/pages/tenant_documents_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_dashboard_shell.dart';
+import 'package:rentdone/features/tenant/presentation/pages/tenant_complaint_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_profile_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/add_tenant_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/edit_tenant_screen.dart';
@@ -36,13 +38,24 @@ import 'package:rentdone/shared/pages/splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final firebaseAuth = ref.watch(firebaseAuthProvider);
+  var hasHandledInitialRouteGuard = false;
 
   return GoRouter(
     initialLocation: '/',
+    overridePlatformDefaultLocation: true,
     refreshListenable: _RouterRefreshNotifier(firebaseAuth.authStateChanges()),
     redirect: (context, state) async {
       final isLoggedIn = firebaseAuth.currentUser != null;
       final path = state.uri.path;
+
+      if (!hasHandledInitialRouteGuard) {
+        hasHandledInitialRouteGuard = true;
+        final isProtectedRoute =
+            path.startsWith('/owner') || path.startsWith('/tenant');
+        if (isProtectedRoute && path != '/') {
+          return '/';
+        }
+      }
 
       // Allow access to role selection and login for unauthenticated users
       if (!isLoggedIn) {
@@ -128,15 +141,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const TenantDashboardScreen(),
           ),
           GoRoute(
-            path: '/tenant/transactions',
-            name: 'tenantTransactions',
-            builder: (context, state) =>
-                const TransactionHistoryScreen(actor: TransactionActor.tenant),
+            path: '/tenant/documents',
+            name: 'tenantDocuments',
+            builder: (context, state) => const TenantDocumentsScreen(),
+          ),
+          GoRoute(
+            path: '/tenant/complaints',
+            name: 'tenantComplaints',
+            builder: (context, state) => const TenantComplaintScreen(),
           ),
           GoRoute(
             path: '/tenant/profile',
             name: 'tenantProfile',
             builder: (context, state) => const TenantProfileScreen(),
+          ),
+          GoRoute(
+            path: '/tenant/transactions',
+            name: 'tenantTransactions',
+            builder: (context, state) =>
+                const TransactionHistoryScreen(actor: TransactionActor.tenant),
           ),
         ],
       ),

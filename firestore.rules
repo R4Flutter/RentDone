@@ -46,6 +46,49 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/properties/$(propertyId)).data.ownerId == currentUid();
     }
 
+    function tenantOwnsDocByIdOrEmail(tenantId, tenantData) {
+      return isTenant() && (
+        tenantId == currentUid()
+        || (('authUid' in tenantData) && tenantData.authUid == currentUid())
+        || (('email' in tenantData) && tenantData.email == request.auth.token.email)
+      );
+    }
+
+    function tenantCanSelfCreateProfile(tenantId) {
+      return isTenant()
+        && tenantId == currentUid()
+        && request.resource.data.authUid == currentUid()
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.emailLowercase is string
+        && request.resource.data.name is string
+        && request.resource.data.phoneNumber is string
+        && request.resource.data.ownerId == ''
+        && request.resource.data.roomNumber is string
+        && request.resource.data.dueAmount == 0
+        && request.resource.data.totalPaid == 0
+        && request.resource.data.isActive == false
+        && request.resource.data.onboardingStatus == 'pending_assignment';
+    }
+
+    function tenantParentData(tenantId) {
+      return get(/databases/$(database)/documents/tenants/$(tenantId)).data;
+    }
+
+    function ownerCanAccessTenantByParent(tenantId) {
+      return isOwner() && (
+        tenantParentData(tenantId).ownerId == currentUid()
+        || (
+          ('propertyId' in tenantParentData(tenantId))
+          && ownerOwnsProperty(tenantParentData(tenantId).propertyId)
+        )
+      );
+    }
+
+    function validIndianPhone(value) {
+      return value is string
+        && value.matches('^[6-9][0-9]{9}$');
+    }
+
     match /users/{userId} {
       // Allow reading own document
       allow read: if isAuthenticated() && userId == currentUid();
@@ -95,19 +138,25 @@ service cloud.firestore {
             && ownerOwnsProperty(resource.data.propertyId)
           )
         ))
-        || (isTenant() && (
-          tenantId == currentUid()
-          || resource.data.email == request.auth.token.email
-        ));
+        || tenantOwnsDocByIdOrEmail(tenantId, resource.data);
 
       allow create: if isOwner()
         && request.resource.data.ownerId == currentUid()
-        && ownerOwnsProperty(request.resource.data.propertyId);
+        && ownerOwnsProperty(request.resource.data.propertyId)
+        || tenantCanSelfCreateProfile(tenantId);
 
-      allow update: if isOwner()
-        && resource.data.ownerId == currentUid()
-        && request.resource.data.ownerId == resource.data.ownerId
-        && ownerOwnsProperty(request.resource.data.propertyId);
+      allow update: if (
+          isOwner()
+          && resource.data.ownerId == currentUid()
+          && request.resource.data.ownerId == resource.data.ownerId
+          && ownerOwnsProperty(request.resource.data.propertyId)
+        )
+        || (
+          tenantOwnsDocByIdOrEmail(tenantId, resource.data)
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.authUid == resource.data.authUid
+        );
 
       allow delete: if isOwner() && (
         resource.data.ownerId == currentUid()
@@ -116,6 +165,100 @@ service cloud.firestore {
           && ownerOwnsProperty(resource.data.propertyId)
         )
       );
+    }
+
+    match /tenants/{tenantId}/payments/{paymentId} {
+      allow read: if ownerCanAccessTenantByParent(tenantId)
+        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+
+      allow create: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+        && paymentId.matches('^[0-9]{4}-[0-9]{2}$')
+        && request.resource.data.paymentMonth == paymentId
+        && request.resource.data.amount is int
+        && request.resource.data.amount > 0
+        && request.resource.data.paymentMethod in ['UPI', 'Cash', 'Bank Transfer']
+        && request.resource.data.status == 'paid';
+
+      allow update: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+        && resource.data.paymentMonth == request.resource.data.paymentMonth
+        && request.resource.data.paymentMonth == paymentId
+        && request.resource.data.amount is int
+        && request.resource.data.amount > 0
+        && request.resource.data.paymentMethod in ['UPI', 'Cash', 'Bank Transfer']
+        && request.resource.data.status == 'paid';
+
+      allow delete: if false;
+    }
+
+    match /tenants/{tenantId}/room_details/{docId} {
+      allow read: if ownerCanAccessTenantByParent(tenantId)
+        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+
+      allow create, update: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+        && docId == 'current'
+        && request.resource.data.propertyName is string
+        && request.resource.data.roomNumber is string
+        && request.resource.data.monthlyRent is int
+        && request.resource.data.monthlyRent > 0
+        && request.resource.data.rentDueDay is int
+        && request.resource.data.rentDueDay >= 1
+        && request.resource.data.rentDueDay <= 31;
+
+      allow delete: if false;
+    }
+
+    match /tenants/{tenantId}/owner_details/{docId} {
+      allow read: if ownerCanAccessTenantByParent(tenantId)
+        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+
+      allow create, update: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+        && docId == 'current'
+        && validIndianPhone(request.resource.data.ownerPhoneNumber);
+
+      allow delete: if false;
+    }
+
+    match /tenants/{tenantId}/reminders/{reminderId} {
+      allow read: if ownerCanAccessTenantByParent(tenantId)
+        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+
+      allow create, update, delete: if false;
+    }
+
+    match /tenants/{tenantId}/documents/{docId} {
+      allow read: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+
+      allow create: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+        && request.resource.data.fileUrl is string
+        && request.resource.data.publicId is string
+        && request.resource.data.fileType in ['image', 'pdf', 'video', 'other']
+        && request.resource.data.fileSizeBytes is int
+        && request.resource.data.fileSizeBytes <= 50 * 1024 * 1024;
+
+      allow update: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+        && request.resource.data.fileUrl == resource.data.fileUrl
+        && request.resource.data.publicId == resource.data.publicId
+        && request.resource.data.fileSizeBytes == resource.data.fileSizeBytes;
+
+      allow delete: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+    }
+
+    match /tenants/{tenantId}/complaints/{complaintId} {
+      allow read: if ownerCanAccessTenantByParent(tenantId)
+        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+
+      allow create: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+        && request.resource.data.description is string
+        && request.resource.data.category is string
+        && request.resource.data.status in ['pending', 'resolved'];
+
+      allow update: if ownerCanAccessTenantByParent(tenantId)
+        && request.resource.data.description == resource.data.description
+        && request.resource.data.category == resource.data.category
+        && request.resource.data.timestamp == resource.data.timestamp
+        && request.resource.data.status in ['pending', 'resolved'];
+
+      allow delete: if false;
     }
 
     match /payments/{paymentId} {

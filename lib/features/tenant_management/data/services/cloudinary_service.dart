@@ -5,16 +5,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Service for uploading documents to Cloudinary
 /// Uses unsigned uploads (no API secret needed in app)
 class CloudinaryService {
-  // Cloudinary configuration - get from your Cloudinary dashboard
-  static const String _cloudinaryUrl =
-      'https://api.cloudinary.com/v1_1/rentdone/image/upload';
+  static const String _cloudNamePrimary = String.fromEnvironment(
+    'CLOUDINARY_CLOUD_NAME',
+    defaultValue: '',
+  );
+  static const String _uploadPresetPrimary = String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: '',
+  );
+  static const String _cloudNameLegacy = String.fromEnvironment(
+    'CLOUDINARY_CLOUD',
+    defaultValue: 'dmvogtrcg',
+  );
+  static const String _uploadPresetLegacy = String.fromEnvironment(
+    'CLOUDINARY_PRESET',
+    defaultValue: 'rentdoneapp',
+  );
 
-  // Unsigned upload preset (create in Cloudinary dashboard)
-  static const String _uploadPreset = 'rentdone_unsigned';
+  final String _cloudinaryUrl;
+  final String _uploadPreset;
 
   // Folder structure in Cloudinary
   static const String _tenantFolder = 'rentdone/tenants';
   static const String _documentsFolder = '$_tenantFolder/documents';
+
+  CloudinaryService({String? cloudName, String? uploadPreset})
+    : _cloudinaryUrl =
+          'https://api.cloudinary.com/v1_1/${(cloudName ?? (_cloudNamePrimary.isNotEmpty ? _cloudNamePrimary : _cloudNameLegacy)).trim()}/auto/upload',
+      _uploadPreset =
+          (uploadPreset ??
+                  (_uploadPresetPrimary.isNotEmpty
+                      ? _uploadPresetPrimary
+                      : _uploadPresetLegacy))
+              .trim();
 
   /// Upload profile image to Cloudinary
   /// Returns the secure URL of uploaded image
@@ -40,7 +63,7 @@ class CloudinaryService {
     return _uploadFile(
       file: documentFile,
       folder: _documentsFolder,
-      publicId: '${idType}_${tenantId}',
+      publicId: '${idType}_$tenantId',
       resourceType: 'auto',
     );
   }

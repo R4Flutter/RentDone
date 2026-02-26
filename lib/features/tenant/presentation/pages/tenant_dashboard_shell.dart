@@ -4,33 +4,44 @@ import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 
-class TenantDashboardShell extends ConsumerWidget {
+class TenantDashboardShell extends ConsumerStatefulWidget {
   final Widget child;
 
   const TenantDashboardShell({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scaffoldKey = GlobalKey<ScaffoldState>();
+  ConsumerState<TenantDashboardShell> createState() =>
+      _TenantDashboardShellState();
+}
+
+class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 1024;
+    final user = ref.watch(firebaseAuthProvider).currentUser;
+    final displayEmail = (user?.email ?? '').trim().isNotEmpty
+        ? user!.email!
+        : 'Tenant';
 
     int calculateIndex(BuildContext context) {
       final location = GoRouterState.of(context).uri.toString();
-      if (location.contains('/tenant/transactions')) return 1;
-      if (location.contains('/tenant/profile')) return 2;
+      if (location.contains('/tenant/documents')) return 1;
+      if (location.contains('/tenant/transactions')) return 2;
       return 0;
     }
 
     return Scaffold(
-      key: scaffoldKey,
+      key: _scaffoldKey,
       backgroundColor: AppTheme.pureWhite,
       extendBody: true,
-      drawer: _buildDrawer(context, ref),
+      drawer: _buildDrawer(context, ref, displayEmail),
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(context, scaffoldKey),
-            Expanded(child: child),
+            _buildTopBar(context, user?.photoURL),
+            Expanded(child: widget.child),
           ],
         ),
       ),
@@ -40,10 +51,13 @@ class TenantDashboardShell extends ConsumerWidget {
     );
   }
 
-  Widget _buildDrawer(BuildContext context, WidgetRef ref) {
+  Widget _buildDrawer(
+    BuildContext context,
+    WidgetRef ref,
+    String displayEmail,
+  ) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final user = ref.watch(firebaseAuthProvider).currentUser;
 
     return Drawer(
       child: Column(
@@ -68,7 +82,7 @@ class TenantDashboardShell extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  user?.email ?? 'Tenant',
+                  displayEmail,
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -94,8 +108,26 @@ class TenantDashboardShell extends ConsumerWidget {
                 }),
                 _drawerItem(
                   context,
+                  Icons.description_outlined,
+                  'Documents',
+                  () {
+                    Navigator.pop(context);
+                    context.go('/tenant/documents');
+                  },
+                ),
+                _drawerItem(
+                  context,
+                  Icons.report_problem_outlined,
+                  'Complaints',
+                  () {
+                    Navigator.pop(context);
+                    context.go('/tenant/complaints');
+                  },
+                ),
+                _drawerItem(
+                  context,
                   Icons.receipt_long_rounded,
-                  'Payment History',
+                  'Payments',
                   () {
                     Navigator.pop(context);
                     context.go('/tenant/transactions');
@@ -108,26 +140,6 @@ class TenantDashboardShell extends ConsumerWidget {
                   () {
                     Navigator.pop(context);
                     context.go('/tenant/profile');
-                  },
-                ),
-                const Divider(height: 24, indent: 16, endIndent: 16),
-                _drawerItem(context, Icons.settings_outlined, 'Settings', () {
-                  Navigator.pop(context);
-                  // TODO: Add settings page
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Settings coming soon!')),
-                  );
-                }),
-                _drawerItem(
-                  context,
-                  Icons.help_outline_rounded,
-                  'Help & Support',
-                  () {
-                    Navigator.pop(context);
-                    // TODO: Add support page
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Support coming soon!')),
-                    );
                   },
                 ),
               ],
@@ -194,7 +206,7 @@ class TenantDashboardShell extends ConsumerWidget {
       try {
         await ref.read(signOutUseCaseProvider).call();
         if (context.mounted) {
-          context.go('/roleSelection');
+          context.go('/role');
         }
       } catch (e) {
         if (context.mounted) {
@@ -209,13 +221,10 @@ class TenantDashboardShell extends ConsumerWidget {
     }
   }
 
-  Widget _buildTopBar(
-    BuildContext context,
-    GlobalKey<ScaffoldState> scaffoldKey,
-  ) {
+  Widget _buildTopBar(BuildContext context, String? avatarUrl) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         boxShadow: [
@@ -230,19 +239,37 @@ class TenantDashboardShell extends ConsumerWidget {
         children: [
           Image.asset('assets/images/rentdone_logo.png', height: 32),
           const SizedBox(width: 12),
-          Text(
-            'RentDone',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
+          Flexible(
+            child: Text(
+              'RentDone',
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const Spacer(),
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () => context.go('/tenant/transactions'),
+            icon: const Icon(Icons.receipt_long_rounded),
+            tooltip: 'Payments',
           ),
+          InkWell(
+            onTap: () => context.go('/tenant/profile'),
+            borderRadius: BorderRadius.circular(30),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundImage: (avatarUrl ?? '').isNotEmpty
+                  ? NetworkImage(avatarUrl!)
+                  : null,
+              child: (avatarUrl ?? '').isEmpty
+                  ? const Icon(Icons.person_outline_rounded)
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 6),
           IconButton(
-            onPressed: () => scaffoldKey.currentState?.openDrawer(),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
             icon: const Icon(Icons.menu),
             tooltip: 'Menu',
           ),
@@ -268,19 +295,19 @@ class TenantDashboardShell extends ConsumerWidget {
           ),
           _navIcon(
             context,
-            Icons.receipt_long_rounded,
-            'Payments',
+            Icons.description_outlined,
+            'Documents',
             1,
             currentIndex,
-            () => context.go('/tenant/transactions'),
+            () => context.go('/tenant/documents'),
           ),
           _navIcon(
             context,
-            Icons.person_outline_rounded,
-            'Profile',
+            Icons.receipt_long_rounded,
+            'Payments',
             2,
             currentIndex,
-            () => context.go('/tenant/profile'),
+            () => context.go('/tenant/transactions'),
           ),
         ],
       ),

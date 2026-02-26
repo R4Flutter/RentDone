@@ -13,10 +13,10 @@ class RecordPaymentScreen extends ConsumerStatefulWidget {
   final String propertyId;
 
   const RecordPaymentScreen({
-    Key? key,
+    super.key,
     required this.tenantId,
     required this.propertyId,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<RecordPaymentScreen> createState() =>
@@ -490,7 +490,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.blueSurfaceGradient.colors.first.withOpacity(0.1),
+        color: AppTheme.blueSurfaceGradient.colors.first.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTheme.blueSurfaceGradient.colors.first),
       ),
@@ -608,7 +608,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           items: items
               .map((item) => DropdownMenuItem(value: item, child: Text(item)))
               .toList(),

@@ -48,9 +48,11 @@ dependencies:
   image_picker: ^1.1.2
   http: ^1.2.2
   file_picker: ^8.1.2
+  dio: ^5.9.0
   intl: ^0.19.0
   flutter_image_compress: ^2.3.0
   cloudinary_public: ^0.23.1
+  url_launcher: ^6.3.1
   geolocator: ^14.0.2
   geocoding: ^4.0.0
   crypto: ^3.0.3

@@ -14,7 +14,7 @@ import 'package:rentdone/features/auth/di/auth_di.dart';
 class AddTenantScreen extends ConsumerStatefulWidget {
   final String propertyId;
 
-  const AddTenantScreen({Key? key, required this.propertyId}) : super(key: key);
+  const AddTenantScreen({super.key, required this.propertyId});
 
   @override
   ConsumerState<AddTenantScreen> createState() => _AddTenantScreenState();
@@ -657,7 +657,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           items: items
               .map((item) => DropdownMenuItem(value: item, child: Text(item)))
               .toList(),
