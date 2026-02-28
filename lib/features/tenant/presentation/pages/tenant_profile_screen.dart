@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_room_details.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
 import 'package:rentdone/features/tenant/presentation/widgets/tenant_glass.dart';
 
@@ -18,10 +19,24 @@ class TenantProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
+  final _profileFormKey = GlobalKey<FormState>();
+  final _propertyFormKey = GlobalKey<FormState>();
+  final _tenantNameController = TextEditingController();
+  final _tenantEmailController = TextEditingController();
+  final _tenantPhoneController = TextEditingController();
+  final _propertyNameController = TextEditingController();
+  final _roomNumberController = TextEditingController();
+  final _monthlyRentController = TextEditingController();
+  final _rentDueDayController = TextEditingController();
+
   Timer? _syncRetryTimer;
   int _syncAttempts = 0;
   bool _biometricEnabled = true;
   bool _darkAppearanceEnabled = true;
+  bool _isSavingProfile = false;
+  bool _isSavingProperty = false;
+  String? _activeTenantId;
+  DateTime? _allocationDate;
 
   static const _maxSyncAttempts = 10;
   static const _syncRetryInterval = Duration(seconds: 2);
@@ -29,6 +44,13 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
   @override
   void dispose() {
     _stopAutoSync();
+    _tenantNameController.dispose();
+    _tenantEmailController.dispose();
+    _tenantPhoneController.dispose();
+    _propertyNameController.dispose();
+    _roomNumberController.dispose();
+    _monthlyRentController.dispose();
+    _rentDueDayController.dispose();
     super.dispose();
   }
 
@@ -72,6 +94,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
         }
 
         _stopAutoSync();
+        _hydrateProfileFormIfNeeded(summary);
 
         return _profileScaffold(
           Stack(
@@ -81,7 +104,6 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                 children: [
                   _HeroIdentityCard(
                         tenantName: summary.tenantName,
-                        tenantId: summary.tenantId,
                         profileImageUrl: summary.profileImageUrl,
                         trustScore: 742,
                       )
@@ -95,43 +117,29 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                   const SizedBox(height: 28),
                   const _SectionTitle(title: 'Personal Details'),
                   const SizedBox(height: 10),
-                  _InfoSectionCard(
-                        items: [
-                          _InfoItemData(
-                            icon: Icons.email_outlined,
-                            label: 'Email',
-                            value: summary.tenantEmail,
-                          ),
-                          _InfoItemData(
-                            icon: Icons.phone_outlined,
-                            label: 'Phone Number',
-                            value: summary.tenantPhone,
-                          ),
-                        ],
+                  _EditablePersonalDetailsCard(
+                        formKey: _profileFormKey,
+                        tenantNameController: _tenantNameController,
+                        tenantEmailController: _tenantEmailController,
+                        tenantPhoneController: _tenantPhoneController,
+                        isSaving: _isSavingProfile,
+                        onSave: () => _saveProfile(summary),
                       )
                       .animate(delay: const Duration(milliseconds: 90))
                       .fadeIn(duration: const Duration(milliseconds: 300)),
                   const SizedBox(height: 28),
                   const _SectionTitle(title: 'Property Allocation'),
                   const SizedBox(height: 10),
-                  _InfoSectionCard(
-                        items: [
-                          _InfoItemData(
-                            icon: Icons.home_work_outlined,
-                            label: 'Property Name',
-                            value: summary.propertyName,
-                          ),
-                          _InfoItemData(
-                            icon: Icons.meeting_room_outlined,
-                            label: 'Room Number',
-                            value: summary.roomNumber,
-                          ),
-                          _InfoItemData(
-                            icon: Icons.payments_outlined,
-                            label: 'Rent Due Day',
-                            value: 'Day ${summary.rentDueDay}',
-                          ),
-                        ],
+                  _EditablePropertyAllocationCard(
+                        formKey: _propertyFormKey,
+                        propertyNameController: _propertyNameController,
+                        roomNumberController: _roomNumberController,
+                        monthlyRentController: _monthlyRentController,
+                        rentDueDayController: _rentDueDayController,
+                        allocationDate: _allocationDate,
+                        isSaving: _isSavingProperty,
+                        onSelectDate: _pickAllocationDate,
+                        onSave: () => _saveProperty(summary),
                       )
                       .animate(delay: const Duration(milliseconds: 140))
                       .fadeIn(duration: const Duration(milliseconds: 300)),
@@ -337,6 +345,135 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
     _syncRetryTimer = null;
   }
 
+  void _hydrateProfileFormIfNeeded(dynamic summary) {
+    if (_activeTenantId != summary.tenantId) {
+      _activeTenantId = summary.tenantId;
+      _tenantNameController.text = summary.tenantName;
+      _tenantEmailController.text = summary.tenantEmail;
+      _tenantPhoneController.text = summary.tenantPhone;
+      _propertyNameController.text = summary.propertyName;
+      _roomNumberController.text = summary.roomNumber;
+      _monthlyRentController.text = summary.monthlyRent.toString();
+      _rentDueDayController.text = summary.rentDueDay.toString();
+      _allocationDate = summary.allocationDate;
+      return;
+    }
+
+    if (_tenantNameController.text.trim().isEmpty &&
+        summary.tenantName.trim().isNotEmpty) {
+      _tenantNameController.text = summary.tenantName;
+    }
+    if (_tenantEmailController.text.trim().isEmpty &&
+        summary.tenantEmail.trim().isNotEmpty) {
+      _tenantEmailController.text = summary.tenantEmail;
+    }
+    if (_tenantPhoneController.text.trim().isEmpty &&
+        summary.tenantPhone.trim().isNotEmpty) {
+      _tenantPhoneController.text = summary.tenantPhone;
+    }
+    if (_propertyNameController.text.trim().isEmpty &&
+        summary.propertyName.trim().isNotEmpty) {
+      _propertyNameController.text = summary.propertyName;
+    }
+    if (_roomNumberController.text.trim().isEmpty &&
+        summary.roomNumber.trim().isNotEmpty &&
+        summary.roomNumber.trim() != '-') {
+      _roomNumberController.text = summary.roomNumber;
+    }
+    if (_monthlyRentController.text.trim().isEmpty && summary.monthlyRent > 0) {
+      _monthlyRentController.text = summary.monthlyRent.toString();
+    }
+    if (_rentDueDayController.text.trim().isEmpty && summary.rentDueDay > 0) {
+      _rentDueDayController.text = summary.rentDueDay.toString();
+    }
+    _allocationDate ??= summary.allocationDate;
+  }
+
+  Future<void> _saveProfile(dynamic summary) async {
+    if (!(_profileFormKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    setState(() => _isSavingProfile = true);
+
+    try {
+      await saveTenantBasicDetails(
+        ref,
+        tenantId: summary.tenantId,
+        tenantName: _tenantNameController.text.trim(),
+        tenantEmail: _tenantEmailController.text.trim(),
+        tenantPhone: _tenantPhoneController.text.trim(),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile details saved successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save profile: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingProfile = false);
+      }
+    }
+  }
+
+  Future<void> _pickAllocationDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _allocationDate ?? DateTime.now(),
+      firstDate: DateTime(2010),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+
+    if (picked != null && mounted) {
+      setState(() => _allocationDate = picked);
+    }
+  }
+
+  Future<void> _saveProperty(dynamic summary) async {
+    if (!(_propertyFormKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    final monthlyRent = int.tryParse(_monthlyRentController.text.trim()) ?? 0;
+    final rentDueDay = int.tryParse(_rentDueDayController.text.trim()) ?? 1;
+
+    setState(() => _isSavingProperty = true);
+
+    try {
+      await saveTenantRoomDetails(
+        ref,
+        tenantId: summary.tenantId,
+        details: TenantRoomDetails(
+          propertyName: _propertyNameController.text.trim(),
+          roomNumber: _roomNumberController.text.trim(),
+          monthlyRent: monthlyRent,
+          allocationDate: _allocationDate ?? DateTime.now(),
+          rentDueDay: rentDueDay,
+          depositAmount: summary.depositAmount,
+        ),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Property details updated successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update property: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingProperty = false);
+      }
+    }
+  }
+
   Future<void> _logout() async {
     try {
       await ref.read(signOutUseCaseProvider).call();
@@ -384,112 +521,369 @@ class _ProfileGlowOrb extends StatelessWidget {
 
 class _HeroIdentityCard extends StatelessWidget {
   final String tenantName;
-  final String tenantId;
   final String? profileImageUrl;
   final int trustScore;
 
   const _HeroIdentityCard({
     required this.tenantName,
-    required this.tenantId,
     required this.profileImageUrl,
     required this.trustScore,
   });
 
   @override
   Widget build(BuildContext context) {
-    final displayId = tenantId.isEmpty
-        ? '-'
-        : tenantId.substring(0, tenantId.length > 10 ? 10 : tenantId.length);
-
     return TenantGlassCard(
       accent: true,
       borderRadius: BorderRadius.circular(24),
       padding: const EdgeInsets.all(18),
-      child: Stack(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Positioned(
-            top: 10,
-            right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                color: Colors.white.withValues(alpha: 0.14),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.verified_rounded, color: Colors.white, size: 13),
-                  SizedBox(width: 4),
-                  Text(
-                    'Verified',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: _ProfileTokens.highlightAccent.withValues(alpha: 0.32),
+                  blurRadius: 18,
+                  spreadRadius: -6,
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 36,
+              backgroundImage: (profileImageUrl ?? '').isNotEmpty
+                  ? NetworkImage(profileImageUrl!)
+                  : null,
+              backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.28),
+              child: (profileImageUrl ?? '').isEmpty
+                  ? const Icon(Icons.person, color: Colors.white, size: 30)
+                  : null,
             ),
           ),
-          Row(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: _ProfileTokens.highlightAccent.withValues(
-                        alpha: 0.38,
-                      ),
-                      blurRadius: 20,
-                      spreadRadius: -6,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  tenantName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: Colors.white.withValues(alpha: 0.14),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.28),
                     ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 38,
-                  backgroundImage: (profileImageUrl ?? '').isNotEmpty
-                      ? NetworkImage(profileImageUrl!)
-                      : null,
-                  backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.28),
-                  child: (profileImageUrl ?? '').isEmpty
-                      ? const Icon(Icons.person, color: Colors.white, size: 32)
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tenantName,
-                      style: const TextStyle(
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.verified_rounded,
                         color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.25,
+                        size: 14,
                       ),
+                      SizedBox(width: 5),
+                      Text(
+                        'Verified Tenant',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          _TrustScoreRing(score: trustScore),
+        ],
+      ),
+    );
+  }
+}
+
+class _EditablePersonalDetailsCard extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController tenantNameController;
+  final TextEditingController tenantEmailController;
+  final TextEditingController tenantPhoneController;
+  final bool isSaving;
+  final VoidCallback onSave;
+
+  const _EditablePersonalDetailsCard({
+    required this.formKey,
+    required this.tenantNameController,
+    required this.tenantEmailController,
+    required this.tenantPhoneController,
+    required this.isSaving,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TenantGlassCard(
+      borderRadius: BorderRadius.circular(20),
+      child: Form(
+        key: formKey,
+        child: Column(
+          children: [
+            _ProfileInputField(
+              controller: tenantNameController,
+              icon: Icons.person_outline,
+              label: 'Full Name',
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Name is required' : null,
+            ),
+            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            _ProfileInputField(
+              controller: tenantEmailController,
+              icon: Icons.email_outlined,
+              label: 'Email',
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                final email = (value ?? '').trim();
+                if (email.isEmpty) return 'Email is required';
+                if (!email.contains('@')) return 'Enter a valid email';
+                return null;
+              },
+            ),
+            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            _ProfileInputField(
+              controller: tenantPhoneController,
+              icon: Icons.phone_outlined,
+              label: 'Phone Number',
+              keyboardType: TextInputType.phone,
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Phone is required' : null,
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: FilledButton.icon(
+                onPressed: isSaving ? null : onSave,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.7),
+                  foregroundColor: Colors.white,
+                ),
+                icon: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_rounded),
+                label: Text(isSaving ? 'Saving...' : 'Save Profile'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileInputField extends StatelessWidget {
+  final TextEditingController controller;
+  final IconData icon;
+  final String label;
+  final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
+
+  const _ProfileInputField({
+    required this.controller,
+    required this.icon,
+    required this.label,
+    this.keyboardType,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.08),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white.withValues(alpha: 0.85),
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            validator: validator,
+            style: const TextStyle(color: Colors.white),
+            decoration: tenantGlassInputDecoration(context, label: label),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditablePropertyAllocationCard extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController propertyNameController;
+  final TextEditingController roomNumberController;
+  final TextEditingController monthlyRentController;
+  final TextEditingController rentDueDayController;
+  final DateTime? allocationDate;
+  final bool isSaving;
+  final VoidCallback onSelectDate;
+  final VoidCallback onSave;
+
+  const _EditablePropertyAllocationCard({
+    required this.formKey,
+    required this.propertyNameController,
+    required this.roomNumberController,
+    required this.monthlyRentController,
+    required this.rentDueDayController,
+    required this.allocationDate,
+    required this.isSaving,
+    required this.onSelectDate,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final allocationText = allocationDate == null
+        ? 'Select allocation date'
+        : '${allocationDate!.day.toString().padLeft(2, '0')}/${allocationDate!.month.toString().padLeft(2, '0')}/${allocationDate!.year}';
+
+    return TenantGlassCard(
+      borderRadius: BorderRadius.circular(20),
+      child: Form(
+        key: formKey,
+        child: Column(
+          children: [
+            _ProfileInputField(
+              controller: propertyNameController,
+              icon: Icons.home_work_outlined,
+              label: 'Property Name',
+              validator: (value) => (value ?? '').trim().isEmpty
+                  ? 'Property name is required'
+                  : null,
+            ),
+            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            _ProfileInputField(
+              controller: roomNumberController,
+              icon: Icons.meeting_room_outlined,
+              label: 'Room Number',
+              validator: (value) => (value ?? '').trim().isEmpty
+                  ? 'Room number is required'
+                  : null,
+            ),
+            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            _ProfileInputField(
+              controller: monthlyRentController,
+              icon: Icons.currency_rupee,
+              label: 'Monthly Rent',
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                final rent = int.tryParse((value ?? '').trim()) ?? 0;
+                if (rent <= 0) return 'Rent must be greater than 0';
+                return null;
+              },
+            ),
+            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            _ProfileInputField(
+              controller: rentDueDayController,
+              icon: Icons.payments_outlined,
+              label: 'Rent Due Day (1-31)',
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                final day = int.tryParse((value ?? '').trim()) ?? 0;
+                if (day < 1 || day > 31) {
+                  return 'Enter a day between 1 and 31';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: onSelectDate,
+              borderRadius: BorderRadius.circular(12),
+              child: Ink(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.event_outlined,
+                      color: Colors.white.withValues(alpha: 0.82),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tenant ID • $displayId',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.72),
-                        fontSize: 12,
-                        letterSpacing: 0.3,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        allocationText,
+                        style: const TextStyle(color: Colors.white),
                       ),
                     ),
                   ],
                 ),
               ),
-              _TrustScoreRing(score: trustScore),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: FilledButton.icon(
+                onPressed: isSaving ? null : onSave,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.7),
+                  foregroundColor: Colors.white,
+                ),
+                icon: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.home_work_rounded),
+                label: Text(isSaving ? 'Saving...' : 'Save Property'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -583,90 +977,6 @@ class _SectionTitle extends StatelessWidget {
         fontWeight: FontWeight.w700,
         letterSpacing: 0.2,
       ),
-    );
-  }
-}
-
-class _InfoItemData {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoItemData({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-}
-
-class _InfoSectionCard extends StatelessWidget {
-  final List<_InfoItemData> items;
-
-  const _InfoSectionCard({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return TenantGlassCard(
-      borderRadius: BorderRadius.circular(20),
-      child: Column(
-        children: [
-          for (var index = 0; index < items.length; index++) ...[
-            _InfoRow(item: items[index]),
-            if (index != items.length - 1)
-              Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final _InfoItemData item;
-
-  const _InfoRow({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.08),
-          ),
-          child: Icon(
-            item.icon,
-            color: Colors.white.withValues(alpha: 0.85),
-            size: 18,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.label,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.68),
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                item.value.isEmpty ? 'Not available' : item.value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

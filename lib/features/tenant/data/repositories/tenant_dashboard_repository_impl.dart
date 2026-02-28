@@ -354,9 +354,21 @@ class TenantDashboardRepositoryImpl implements TenantDashboardRepository {
       complaint: complaint,
     );
 
-    final ownerPhone = await _firestoreService.getOwnerPhoneNumber(
-      summary.ownerId,
-    );
+    String ownerPhone = summary.ownerPhoneNumber.trim();
+
+    if (ownerPhone.isEmpty && summary.tenantId.isNotEmpty) {
+      final ownerDetails = await _firestoreService.getOwnerDetails(
+        summary.tenantId,
+      );
+      ownerPhone = ownerDetails?.ownerPhoneNumber.trim() ?? '';
+    }
+
+    if (ownerPhone.isEmpty && summary.ownerId.isNotEmpty) {
+      ownerPhone = (await _firestoreService.getOwnerPhoneNumber(
+        summary.ownerId,
+      )).trim();
+    }
+
     if (ownerPhone.isEmpty) {
       throw Exception('Owner phone number is not available');
     }

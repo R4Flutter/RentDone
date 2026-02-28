@@ -14,16 +14,10 @@ class TenantDashboardShell extends ConsumerStatefulWidget {
 }
 
 class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
     final user = ref.watch(firebaseAuthProvider).currentUser;
-    final displayEmail = (user?.email ?? '').trim().isNotEmpty
-        ? user!.email!
-        : 'Tenant';
-    final scheme = Theme.of(context).colorScheme;
 
     int calculateIndex(BuildContext context) {
       final location = GoRouterState.of(context).uri.toString();
@@ -34,10 +28,8 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
     }
 
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: AppTheme.nearBlack,
       extendBody: true,
-      drawer: _buildDrawer(context, ref, displayEmail),
       body: SafeArea(
         child: Container(color: AppTheme.nearBlack, child: widget.child),
       ),
@@ -47,195 +39,14 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
               context,
               calculateIndex(context),
               avatarUrl: user?.photoURL,
-              onOpenMenu: () => _scaffoldKey.currentState?.openDrawer(),
-            ),
-      floatingActionButton: isDesktop
-          ? null
-          : FloatingActionButton(
-              backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.45),
-              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-              child: Icon(Icons.add, color: scheme.onPrimary),
             ),
     );
-  }
-
-  Widget _buildDrawer(
-    BuildContext context,
-    WidgetRef ref,
-    String displayEmail,
-  ) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Drawer(
-      backgroundColor: AppTheme.nearBlack,
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 56, 24, 24),
-            decoration: const BoxDecoration(
-              gradient: AppTheme.blueSurfaceGradient,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                  child: Icon(Icons.person, size: 40, color: scheme.onPrimary),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  displayEmail,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: scheme.onPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Tenant Account',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onPrimary.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                _drawerItem(context, Icons.dashboard_rounded, 'Dashboard', () {
-                  Navigator.pop(context);
-                  context.go('/tenant/dashboard');
-                }),
-                _drawerItem(context, Icons.wallet_outlined, 'Vault', () {
-                  Navigator.pop(context);
-                  context.go('/tenant/documents');
-                }),
-                _drawerItem(
-                  context,
-                  Icons.report_problem_outlined,
-                  'Complaints',
-                  () {
-                    Navigator.pop(context);
-                    context.go('/tenant/complaints');
-                  },
-                ),
-                _drawerItem(
-                  context,
-                  Icons.receipt_long_rounded,
-                  'Payments',
-                  () {
-                    Navigator.pop(context);
-                    context.go('/tenant/transactions');
-                  },
-                ),
-                _drawerItem(
-                  context,
-                  Icons.home_work_outlined,
-                  'Tenancy Details',
-                  () {
-                    Navigator.pop(context);
-                    context.go('/tenant/tenancy-details');
-                  },
-                ),
-                _drawerItem(
-                  context,
-                  Icons.person_outline_rounded,
-                  'Profile',
-                  () {
-                    Navigator.pop(context);
-                    context.go('/tenant/profile');
-                  },
-                ),
-                const SizedBox(height: 8),
-                const Divider(height: 1),
-                _drawerItem(context, Icons.settings_outlined, 'Settings', () {
-                  Navigator.pop(context);
-                }),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          _drawerItem(
-            context,
-            Icons.logout_rounded,
-            'Logout',
-            () => _handleLogout(context, ref),
-            isDestructive: true,
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _drawerItem(
-    BuildContext context,
-    IconData icon,
-    String title,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
-    final theme = Theme.of(context);
-    final color = isDestructive
-        ? AppTheme.errorRed
-        : theme.colorScheme.onPrimary;
-
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: color,
-          fontWeight: isDestructive ? FontWeight.w600 : FontWeight.w500,
-        ),
-      ),
-      onTap: onTap,
-    );
-  }
-
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorRed),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && context.mounted) {
-      try {
-        await ref.read(signOutUseCaseProvider).call();
-      } catch (e) {
-        await ref.read(firebaseAuthProvider).signOut();
-      }
-
-      if (context.mounted) {
-        context.go('/role');
-      }
-    }
   }
 
   Widget _buildBottomNav(
     BuildContext context,
     int currentIndex, {
     required String? avatarUrl,
-    required VoidCallback onOpenMenu,
   }) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
@@ -275,7 +86,6 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
           ),
           GestureDetector(
             onTap: () => context.go('/tenant/profile'),
-            onLongPress: onOpenMenu,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

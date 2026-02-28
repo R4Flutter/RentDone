@@ -1228,11 +1228,12 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                             widget.document.fileUrl,
                             fit: BoxFit.cover,
                             width: double.infinity,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.broken_image_outlined,
-                              color: Colors.white70,
-                              size: 34,
-                            ),
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.broken_image_outlined,
+                                  color: Colors.white70,
+                                  size: 34,
+                                ),
                           )
                         : Icon(
                             isPdf
