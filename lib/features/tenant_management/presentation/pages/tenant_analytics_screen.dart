@@ -13,6 +13,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
     final userId = ref.watch(firebaseAuthProvider).currentUser?.uid ?? '';
 
     final analyticsAsync = ref.watch(tenantAnalyticsProvider(userId));
@@ -32,20 +33,20 @@ class TenantAnalyticsScreen extends ConsumerWidget {
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'back',
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_back, color: Colors.black87),
+                    Icon(Icons.arrow_back, color: scheme.onSurface),
                     SizedBox(width: 12),
                     Text('Back'),
                   ],
                 ),
               ),
             ],
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.more_vert, color: Colors.white),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Icon(Icons.more_vert, color: scheme.onPrimary),
             ),
           ),
         ],
@@ -57,7 +58,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Tenant Statistics
-              _buildSectionTitle('Tenant Statistics'),
+              _buildSectionTitle(context, 'Tenant Statistics'),
               const SizedBox(height: 12),
               analyticsAsync.when(
                 data: (analytics) {
@@ -70,28 +71,32 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                     childAspectRatio: 1,
                     children: [
                       _buildStatCard(
+                        context: context,
                         title: 'Active Tenants',
                         value: '${analytics.activeTenants}',
                         icon: Icons.people,
-                        color: Colors.blue,
+                        color: AppTheme.primaryBlue,
                       ),
                       _buildStatCard(
+                        context: context,
                         title: 'Overdue Payments',
                         value: '${analytics.overdueCount}',
                         icon: Icons.warning,
-                        color: Colors.red,
+                        color: AppTheme.errorRed,
                       ),
                       _buildStatCard(
+                        context: context,
                         title: 'Monthly Income',
                         value: '₹${analytics.monthlyIncome}',
                         icon: Icons.trending_up,
-                        color: Colors.green,
+                        color: AppTheme.successGreen,
                       ),
                       _buildStatCard(
+                        context: context,
                         title: 'Pending Amount',
                         value: '₹${analytics.pending}',
                         icon: Icons.hourglass_empty,
-                        color: Colors.orange,
+                        color: AppTheme.warningAmber,
                       ),
                     ],
                   );
@@ -106,7 +111,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                     4,
                     (index) => Container(
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: scheme.onSurface.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Center(child: CircularProgressIndicator()),
@@ -119,7 +124,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // Payment Analytics
-              _buildSectionTitle('Payment Analytics'),
+              _buildSectionTitle(context, 'Payment Analytics'),
               const SizedBox(height: 12),
               paymentAnalyticsAsync.when(
                 data: (paymentAnalytics) {
@@ -128,27 +133,30 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _buildDetailCard(
+                        context: context,
                         title: 'Monthly Revenue',
                         value: '₹${paymentAnalytics.monthlyRevenue}',
                         subtitle: 'Total received this month',
                         icon: Icons.attach_money,
-                        color: Colors.green,
+                        color: AppTheme.successGreen,
                       ),
                       const SizedBox(height: 12),
                       _buildDetailCard(
+                        context: context,
                         title: 'Pending Collections',
                         value: '₹${paymentAnalytics.pending}',
                         subtitle: 'Awaiting payment',
                         icon: Icons.pending,
-                        color: Colors.orange,
+                        color: AppTheme.warningAmber,
                       ),
                       const SizedBox(height: 12),
                       _buildDetailCard(
+                        context: context,
                         title: 'Overdue Amount',
                         value: '₹${paymentAnalytics.overdue}',
                         subtitle: 'Overdue payments',
                         icon: Icons.error,
-                        color: Colors.red,
+                        color: AppTheme.errorRed,
                       ),
                     ],
                   );
@@ -156,7 +164,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                 loading: () => Container(
                   height: 200,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: scheme.onSurface.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Center(child: CircularProgressIndicator()),
@@ -167,7 +175,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // Pending Payments List
-              _buildSectionTitle('Pending Payments'),
+              _buildSectionTitle(context, 'Pending Payments'),
               const SizedBox(height: 12),
               pendingPaymentsAsync.when(
                 data: (pendingPayments) {
@@ -175,16 +183,18 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                     return Container(
                       padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
-                        color: Colors.green[50],
+                        color: AppTheme.successGreen.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green[200]!),
+                        border: Border.all(
+                          color: AppTheme.successGreen.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Column(
                         children: [
                           Icon(
                             Icons.check_circle,
                             size: 48,
-                            color: Colors.green[600],
+                            color: AppTheme.successGreen,
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -192,7 +202,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Colors.green[600],
+                              color: AppTheme.successGreen,
                             ),
                           ),
                         ],
@@ -206,7 +216,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                     itemCount: pendingPayments.length,
                     itemBuilder: (context, index) {
                       final payment = pendingPayments[index];
-                      return _buildPendingPaymentCard(payment);
+                      return _buildPendingPaymentCard(context, payment);
                     },
                   );
                 },
@@ -222,30 +232,33 @@ class TenantAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    final scheme = Theme.of(context).colorScheme;
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        color: AppTheme.nearBlack,
+        color: scheme.onSurface,
       ),
     );
   }
 
   Widget _buildStatCard({
+    required BuildContext context,
     required String title,
     required String value,
     required IconData icon,
     required Color color,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: scheme.onSurface.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -277,7 +290,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
               title,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: scheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 2,
@@ -290,21 +303,23 @@ class TenantAnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _buildDetailCard({
+    required BuildContext context,
     required String title,
     required String value,
     required String subtitle,
     required IconData icon,
     required Color color,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: scheme.onSurface.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -327,9 +342,9 @@ class TenantAnalyticsScreen extends ConsumerWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Colors.grey,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -344,7 +359,10 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: scheme.onSurface.withValues(alpha: 0.5),
+                  ),
                 ),
               ],
             ),
@@ -354,7 +372,8 @@ class TenantAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPendingPaymentCard(dynamic payment) {
+  Widget _buildPendingPaymentCard(BuildContext context, dynamic payment) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 1,
@@ -366,12 +385,12 @@ class TenantAnalyticsScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
+                color: AppTheme.warningAmber.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.hourglass_empty,
-                color: Colors.orange,
+                color: AppTheme.warningAmber,
                 size: 20,
               ),
             ),
@@ -390,7 +409,10 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     'Amount: ₹${payment.amount}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
                 ],
               ),
@@ -398,15 +420,15 @@ class TenantAnalyticsScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.2),
+                color: AppTheme.warningAmber.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
+              child: Text(
                 'Pending',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Colors.orange,
+                  color: AppTheme.warningAmber,
                 ),
               ),
             ),
@@ -420,18 +442,18 @@ class TenantAnalyticsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.red[50],
+        color: AppTheme.errorRed.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red[200]!),
+        border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red[600]),
+          const Icon(Icons.error_outline, color: AppTheme.errorRed),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: Colors.red[600], fontSize: 13),
+              style: const TextStyle(color: AppTheme.errorRed, fontSize: 13),
             ),
           ),
         ],

@@ -313,6 +313,25 @@ Future<void> saveTenantOwnerDetails(
   ref.invalidate(tenantDashboardProvider);
 }
 
+Future<void> saveTenantBasicDetails(
+  WidgetRef ref, {
+  required String tenantId,
+  required String tenantName,
+  required String tenantEmail,
+  required String tenantPhone,
+}) async {
+  await ref
+      .read(tenantDashboardRepositoryProvider)
+      .saveTenantBasicDetails(
+        tenantId: tenantId,
+        tenantName: tenantName,
+        tenantEmail: tenantEmail,
+        tenantPhone: tenantPhone,
+      );
+
+  ref.invalidate(tenantDashboardProvider);
+}
+
 Future<void> markTenantPaymentAsPaid(
   WidgetRef ref, {
   required String tenantId,

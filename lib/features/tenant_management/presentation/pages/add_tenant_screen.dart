@@ -312,7 +312,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Tenant added successfully'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppTheme.successGreen,
         ),
       );
 
@@ -329,12 +329,13 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: AppTheme.errorRed),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add New Tenant'),
@@ -348,20 +349,20 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'back',
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_back, color: Colors.black87),
+                    Icon(Icons.arrow_back, color: scheme.onSurface),
                     SizedBox(width: 12),
                     Text('Back'),
                   ],
                 ),
               ),
             ],
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.more_vert, color: Colors.white),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Icon(Icons.more_vert, color: scheme.onPrimary),
             ),
           ),
         ],
@@ -538,25 +539,27 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                   onPressed: _isLoading ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryBlue,
-                    disabledBackgroundColor: Colors.grey[400],
+                    disabledBackgroundColor: scheme.onSurface.withValues(
+                      alpha: 0.3,
+                    ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                              scheme.onPrimary,
                             ),
                           ),
                         )
-                      : const Text(
+                      : Text(
                           'Add Tenant',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: scheme.onPrimary,
                           ),
                         ),
                 ),
@@ -570,12 +573,13 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
+    final scheme = Theme.of(context).colorScheme;
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: AppTheme.nearBlack,
+        color: scheme.onSurface,
       ),
     );
   }
@@ -588,15 +592,16 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     int maxLines = 1,
     String? error,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -607,17 +612,17 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.grey[100],
+            fillColor: scheme.onSurface.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             contentPadding: const EdgeInsets.symmetric(
@@ -631,7 +636,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error,
-              style: const TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(fontSize: 12, color: scheme.error),
             ),
           ),
       ],
@@ -644,15 +649,16 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     required List<String> items,
     required Function(String?) onChanged,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -664,7 +670,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.grey[100],
+            fillColor: scheme.onSurface.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -685,15 +691,16 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     required VoidCallback onTap,
     String? error,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -702,10 +709,10 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: scheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             child: Text(
@@ -714,7 +721,9 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                   : 'Select date',
               style: TextStyle(
                 fontSize: 14,
-                color: value != null ? Colors.black : Colors.grey[600],
+                color: value != null
+                    ? scheme.onSurface
+                    : scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -724,7 +733,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error,
-              style: const TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(fontSize: 12, color: scheme.error),
             ),
           ),
       ],
@@ -732,24 +741,32 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   }
 
   Widget _buildImagePickerCard() {
+    final scheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: _pickProfileImage,
       child: Container(
         height: 150,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: scheme.onSurface.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(color: scheme.onSurface.withValues(alpha: 0.18)),
         ),
         child: _profileImage == null
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.image_outlined, size: 48, color: Colors.grey[600]),
+                  Icon(
+                    Icons.image_outlined,
+                    size: 48,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Tap to select profile picture',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    style: TextStyle(
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               )
@@ -762,13 +779,13 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                     right: 8,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.blue,
+                        color: AppTheme.primaryBlue,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       padding: const EdgeInsets.all(8),
-                      child: const Icon(
+                      child: Icon(
                         Icons.edit,
-                        color: Colors.white,
+                        color: scheme.onPrimary,
                         size: 16,
                       ),
                     ),
@@ -785,15 +802,16 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     required VoidCallback onTap,
     String? error,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -802,15 +820,21 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: scheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: error != null ? Colors.red : Colors.grey[300]!,
+                color: error != null
+                    ? scheme.error
+                    : scheme.onSurface.withValues(alpha: 0.18),
               ),
             ),
             child: Row(
               children: [
-                Icon(Icons.file_present, color: Colors.grey[600], size: 24),
+                Icon(
+                  Icons.file_present,
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                  size: 24,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -822,7 +846,9 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                             : 'Select document',
                         style: TextStyle(
                           fontSize: 14,
-                          color: file != null ? Colors.black : Colors.grey[600],
+                          color: file != null
+                              ? scheme.onSurface
+                              : scheme.onSurface.withValues(alpha: 0.6),
                           fontWeight: file != null ? FontWeight.w500 : null,
                         ),
                         maxLines: 1,
@@ -835,7 +861,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                             'Tap to replace',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[500],
+                              color: scheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ),
@@ -844,7 +870,9 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                 ),
                 Icon(
                   file != null ? Icons.check_circle : Icons.upload_file,
-                  color: file != null ? Colors.green : Colors.grey[400],
+                  color: file != null
+                      ? AppTheme.successGreen
+                      : scheme.onSurface.withValues(alpha: 0.4),
                 ),
               ],
             ),
@@ -855,7 +883,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error,
-              style: const TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(fontSize: 12, color: scheme.error),
             ),
           ),
       ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
+import 'package:rentdone/app/theme_mode_provider.dart';
 
 import 'app_router.dart';
 import 'app_theme.dart';
@@ -25,9 +26,11 @@ class RentDoneApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ownerSettings = ref.watch(ownerSettingsProvider);
-    final themeMode = ownerSettings.isLoading
+    final themeOverride = ref.watch(appThemeModeProvider);
+    final persistedTheme = ownerSettings.isLoading
         ? ThemeMode.system
         : (ownerSettings.darkMode ? ThemeMode.dark : ThemeMode.light);
+    final themeMode = themeOverride ?? persistedTheme;
 
     return MaterialApp.router(
       // App identity

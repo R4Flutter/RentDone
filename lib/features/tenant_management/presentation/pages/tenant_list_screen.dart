@@ -33,6 +33,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final tenantsAsync = ref.watch(
       tenantsProvider((
         ownerId: _userId,
@@ -58,11 +59,11 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
+                PopupMenuItem<String>(
                   value: 'analytics',
                   child: Row(
                     children: [
-                      Icon(Icons.analytics, color: Colors.black87),
+                      Icon(Icons.analytics, color: scheme.onSurface),
                       SizedBox(width: 12),
                       Text('Analytics'),
                     ],
@@ -73,7 +74,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                   value: 'logout',
                   child: Row(
                     children: [
-                      Icon(Icons.logout, color: Colors.red),
+                      Icon(Icons.logout, color: AppTheme.errorRed),
                       SizedBox(width: 12),
                       Text('Logout'),
                     ],
@@ -82,7 +83,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
               ],
               child: Padding(
                 padding: const EdgeInsets.all(8),
-                child: Icon(Icons.more_vert, color: Colors.white),
+                child: Icon(Icons.more_vert, color: scheme.onPrimary),
               ),
             ),
           ),
@@ -124,7 +125,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                     hintText: 'Search tenants by name or phone',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
-                    fillColor: Colors.grey[100],
+                    fillColor: scheme.onSurface.withValues(alpha: 0.05),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide.none,
@@ -156,14 +157,14 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                         Icon(
                           Icons.people_outline,
                           size: 64,
-                          color: Colors.grey[400],
+                          color: scheme.onSurface.withValues(alpha: 0.4),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No tenants found',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.grey[600],
+                            color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -173,7 +174,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                               : 'Try adjusting your search filters',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[500],
+                            color: scheme.onSurface.withValues(alpha: 0.5),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -243,16 +244,26 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: AppTheme.errorRed.withValues(alpha: 0.8),
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Error loading tenants',
-                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       error.toString(),
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.5),
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
@@ -276,12 +287,13 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
           // Navigate to add tenant screen
           context.push('/tenant-management/add-tenant');
         },
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: scheme.onPrimary),
       ),
     );
   }
 
   Widget _buildFilterChip(String label, String value, String key) {
+    final scheme = Theme.of(context).colorScheme;
     final isSelected = _filterStatus == value;
 
     return FilterChip(
@@ -293,10 +305,10 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
           _currentPage = 1;
         });
       },
-      backgroundColor: Colors.grey[200],
+      backgroundColor: scheme.onSurface.withValues(alpha: 0.1),
       selectedColor: AppTheme.primaryBlue,
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.black,
+        color: isSelected ? scheme.onPrimary : scheme.onSurface,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
     );
@@ -345,7 +357,9 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                           tenant.phone,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey[600],
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -426,8 +440,8 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                       label: const Text('Deactivate'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                        foregroundColor: AppTheme.errorRed,
+                        side: const BorderSide(color: AppTheme.errorRed),
                       ),
                     ),
                   ),
@@ -441,6 +455,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
   }
 
   Widget _buildDetailItem(String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -448,7 +463,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: Colors.grey[500],
+            color: scheme.onSurface.withValues(alpha: 0.5),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -464,15 +479,15 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'active':
-        return Colors.green;
+        return AppTheme.successGreen;
       case 'inactive':
-        return Colors.grey;
+        return AppTheme.nearBlack.withValues(alpha: 0.45);
       case 'notice_period':
-        return Colors.orange;
+        return AppTheme.warningAmber;
       case 'suspended':
-        return Colors.red;
+        return AppTheme.errorRed;
       default:
-        return Colors.grey;
+        return AppTheme.nearBlack.withValues(alpha: 0.45);
     }
   }
 
@@ -509,7 +524,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
               Navigator.pop(context);
               _deactivateTenant(tenant.id);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
             child: const Text('Deactivate'),
           ),
         ],
@@ -533,12 +548,15 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Tenant deactivated successfully'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppTheme.successGreen,
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: AppTheme.errorRed,
+        ),
       );
     }
   }
@@ -558,7 +576,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
               children: [
                 CircleAvatar(
                   radius: 32,
-                  backgroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
                   child: Icon(
                     Icons.person,
                     size: 32,
@@ -568,8 +586,8 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                 const SizedBox(height: 12),
                 Text(
                   user?.email ?? 'User',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -620,8 +638,11 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            leading: const Icon(Icons.logout, color: AppTheme.errorRed),
+            title: const Text(
+              'Logout',
+              style: TextStyle(color: AppTheme.errorRed),
+            ),
             onTap: () {
               Navigator.pop(context);
               ref.read(firebaseAuthProvider).signOut();

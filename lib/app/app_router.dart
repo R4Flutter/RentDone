@@ -28,6 +28,7 @@ import 'package:rentdone/features/tenant/presentation/pages/tenant_documents_scr
 import 'package:rentdone/features/tenant/presentation/pages/tenant_dashboard_shell.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_complaint_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_profile_screen.dart';
+import 'package:rentdone/features/tenant/presentation/pages/tenant_tenancy_details_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/add_tenant_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/edit_tenant_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/record_payment_screen.dart';
@@ -160,6 +161,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'tenantTransactions',
             builder: (context, state) =>
                 const TransactionHistoryScreen(actor: TransactionActor.tenant),
+          ),
+          GoRoute(
+            path: '/tenant/tenancy-details',
+            name: 'tenantTenancyDetails',
+            builder: (context, state) => const TenantTenancyDetailsScreen(),
           ),
         ],
       ),

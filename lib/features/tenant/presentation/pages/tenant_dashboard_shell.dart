@@ -6,7 +6,6 @@ import 'package:rentdone/features/auth/di/auth_di.dart';
 
 class TenantDashboardShell extends ConsumerStatefulWidget {
   final Widget child;
-
   const TenantDashboardShell({super.key, required this.child});
 
   @override
@@ -19,35 +18,44 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width >= 1024;
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
     final user = ref.watch(firebaseAuthProvider).currentUser;
     final displayEmail = (user?.email ?? '').trim().isNotEmpty
         ? user!.email!
         : 'Tenant';
+    final scheme = Theme.of(context).colorScheme;
 
     int calculateIndex(BuildContext context) {
       final location = GoRouterState.of(context).uri.toString();
-      if (location.contains('/tenant/documents')) return 1;
-      if (location.contains('/tenant/transactions')) return 2;
+      if (location.contains('/tenant/transactions')) return 1;
+      if (location.contains('/tenant/documents')) return 2;
+      if (location.contains('/tenant/profile')) return 3;
       return 0;
     }
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: AppTheme.pureWhite,
+      backgroundColor: AppTheme.nearBlack,
       extendBody: true,
       drawer: _buildDrawer(context, ref, displayEmail),
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(context, user?.photoURL),
-            Expanded(child: widget.child),
-          ],
-        ),
+        child: Container(color: AppTheme.nearBlack, child: widget.child),
       ),
       bottomNavigationBar: isDesktop
           ? null
-          : _buildBottomNav(context, calculateIndex(context)),
+          : _buildBottomNav(
+              context,
+              calculateIndex(context),
+              avatarUrl: user?.photoURL,
+              onOpenMenu: () => _scaffoldKey.currentState?.openDrawer(),
+            ),
+      floatingActionButton: isDesktop
+          ? null
+          : FloatingActionButton(
+              backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.45),
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+              child: Icon(Icons.add, color: scheme.onPrimary),
+            ),
     );
   }
 
@@ -60,31 +68,28 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
     final scheme = theme.colorScheme;
 
     return Drawer(
+      backgroundColor: AppTheme.nearBlack,
       child: Column(
         children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 56, 24, 24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [scheme.primary, scheme.primary.withValues(alpha: 0.8)],
-              ),
+            decoration: const BoxDecoration(
+              gradient: AppTheme.blueSurfaceGradient,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 40, color: scheme.primary),
+                  backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                  child: Icon(Icons.person, size: 40, color: scheme.onPrimary),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   displayEmail,
                   style: theme.textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
+                    color: scheme.onPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -92,7 +97,7 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
                 Text(
                   'Tenant Account',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: scheme.onPrimary.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -106,15 +111,10 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
                   Navigator.pop(context);
                   context.go('/tenant/dashboard');
                 }),
-                _drawerItem(
-                  context,
-                  Icons.description_outlined,
-                  'Documents',
-                  () {
-                    Navigator.pop(context);
-                    context.go('/tenant/documents');
-                  },
-                ),
+                _drawerItem(context, Icons.wallet_outlined, 'Vault', () {
+                  Navigator.pop(context);
+                  context.go('/tenant/documents');
+                }),
                 _drawerItem(
                   context,
                   Icons.report_problem_outlined,
@@ -135,6 +135,15 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
                 ),
                 _drawerItem(
                   context,
+                  Icons.home_work_outlined,
+                  'Tenancy Details',
+                  () {
+                    Navigator.pop(context);
+                    context.go('/tenant/tenancy-details');
+                  },
+                ),
+                _drawerItem(
+                  context,
                   Icons.person_outline_rounded,
                   'Profile',
                   () {
@@ -142,6 +151,11 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
                     context.go('/tenant/profile');
                   },
                 ),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                _drawerItem(context, Icons.settings_outlined, 'Settings', () {
+                  Navigator.pop(context);
+                }),
               ],
             ),
           ),
@@ -167,7 +181,9 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
     bool isDestructive = false,
   }) {
     final theme = Theme.of(context);
-    final color = isDestructive ? Colors.red : theme.colorScheme.onSurface;
+    final color = isDestructive
+        ? AppTheme.errorRed
+        : theme.colorScheme.onPrimary;
 
     return ListTile(
       leading: Icon(icon, color: color),
@@ -195,7 +211,7 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorRed),
             child: const Text('Logout'),
           ),
         ],
@@ -205,89 +221,37 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
     if (confirmed == true && context.mounted) {
       try {
         await ref.read(signOutUseCaseProvider).call();
-        if (context.mounted) {
-          context.go('/role');
-        }
       } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Logout failed: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        await ref.read(firebaseAuthProvider).signOut();
+      }
+
+      if (context.mounted) {
+        context.go('/role');
       }
     }
   }
 
-  Widget _buildTopBar(BuildContext context, String? avatarUrl) {
-    final theme = Theme.of(context);
+  Widget _buildBottomNav(
+    BuildContext context,
+    int currentIndex, {
+    required String? avatarUrl,
+    required VoidCallback onOpenMenu,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppTheme.nearBlack,
+        border: Border(
+          top: BorderSide(color: scheme.onPrimary.withValues(alpha: 0.08)),
+        ),
       ),
-      child: Row(
-        children: [
-          Image.asset('assets/images/rentdone_logo.png', height: 32),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              'RentDone',
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: () => context.go('/tenant/transactions'),
-            icon: const Icon(Icons.receipt_long_rounded),
-            tooltip: 'Payments',
-          ),
-          InkWell(
-            onTap: () => context.go('/tenant/profile'),
-            borderRadius: BorderRadius.circular(30),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundImage: (avatarUrl ?? '').isNotEmpty
-                  ? NetworkImage(avatarUrl!)
-                  : null,
-              child: (avatarUrl ?? '').isEmpty
-                  ? const Icon(Icons.person_outline_rounded)
-                  : null,
-            ),
-          ),
-          const SizedBox(width: 6),
-          IconButton(
-            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-            icon: const Icon(Icons.menu),
-            tooltip: 'Menu',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context, int currentIndex) {
-    return Container(
-      height: 85,
-      decoration: const BoxDecoration(gradient: AppTheme.blueSurfaceGradient),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _navIcon(
             context,
-            Icons.dashboard_rounded,
+            Icons.home_outlined,
             'Home',
             0,
             currentIndex,
@@ -295,19 +259,56 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
           ),
           _navIcon(
             context,
-            Icons.description_outlined,
-            'Documents',
+            Icons.receipt_long_rounded,
+            'Payments',
             1,
             currentIndex,
-            () => context.go('/tenant/documents'),
+            () => context.go('/tenant/transactions'),
           ),
           _navIcon(
             context,
-            Icons.receipt_long_rounded,
-            'Payments',
+            Icons.wallet_outlined,
+            'Vault',
             2,
             currentIndex,
-            () => context.go('/tenant/transactions'),
+            () => context.go('/tenant/documents'),
+          ),
+          GestureDetector(
+            onTap: () => context.go('/tenant/profile'),
+            onLongPress: onOpenMenu,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 11,
+                  backgroundColor: currentIndex == 3
+                      ? AppTheme.primaryBlue
+                      : scheme.onPrimary.withValues(alpha: 0.2),
+                  backgroundImage: (avatarUrl ?? '').isNotEmpty
+                      ? NetworkImage(avatarUrl!)
+                      : null,
+                  child: (avatarUrl ?? '').isEmpty
+                      ? Icon(
+                          Icons.person,
+                          size: 12,
+                          color: currentIndex == 3
+                              ? scheme.onPrimary
+                              : scheme.onPrimary.withValues(alpha: 0.85),
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Profile',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: currentIndex == 3
+                        ? scheme.onPrimary
+                        : scheme.onPrimary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -322,39 +323,32 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
     int currentIndex,
     VoidCallback onTap,
   ) {
-    final isSelected = currentIndex == index;
     final scheme = Theme.of(context).colorScheme;
-
+    final isSelected = currentIndex == index;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(16),
-              )
-            : null,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 26,
+              size: 20,
               color: isSelected
-                  ? scheme.primary
-                  : scheme.onSurface.withValues(alpha: 0.7),
+                  ? scheme.onPrimary
+                  : scheme.onPrimary.withValues(alpha: 0.65),
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected
-                    ? scheme.primary
-                    : scheme.onSurface.withValues(alpha: 0.7),
+                    ? scheme.onPrimary
+                    : scheme.onPrimary.withValues(alpha: 0.65),
               ),
             ),
           ],

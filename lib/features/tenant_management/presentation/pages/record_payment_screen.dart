@@ -82,6 +82,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
   }
 
   Widget _buildMonthPickerDialog() {
+    final scheme = Theme.of(context).colorScheme;
     final months = [
       'Jan',
       'Feb',
@@ -155,15 +156,17 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.primaryBlue
-                            : Colors.grey[200],
+                            ? scheme.primary
+                            : scheme.onSurface.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
                         child: Text(
                           month,
                           style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black,
+                            color: isSelected
+                                ? scheme.onPrimary
+                                : scheme.onSurface,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -269,7 +272,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Payment recorded successfully'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppTheme.successGreen,
         ),
       );
 
@@ -286,12 +289,13 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: AppTheme.errorRed),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final tenantAsync = ref.watch(tenantProvider(widget.tenantId));
 
     return Scaffold(
@@ -307,20 +311,20 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'back',
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_back, color: Colors.black87),
+                    Icon(Icons.arrow_back, color: scheme.onSurface),
                     SizedBox(width: 12),
                     Text('Back'),
                   ],
                 ),
               ),
             ],
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.more_vert, color: Colors.white),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Icon(Icons.more_vert, color: scheme.onPrimary),
             ),
           ),
         ],
@@ -395,11 +399,11 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: scheme.onSurface.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: _fieldErrors.containsKey('month')
-                              ? Colors.red
+                              ? scheme.error
                               : Colors.transparent,
                         ),
                       ),
@@ -415,7 +419,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                           ),
                           Icon(
                             Icons.calendar_today,
-                            color: Colors.grey[600],
+                            color: scheme.onSurface.withValues(alpha: 0.6),
                             size: 20,
                           ),
                         ],
@@ -427,7 +431,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         _fieldErrors['month']!,
-                        style: const TextStyle(fontSize: 12, color: Colors.red),
+                        style: TextStyle(fontSize: 12, color: scheme.error),
                       ),
                     ),
                   const SizedBox(height: 24),
@@ -451,25 +455,27 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                       onPressed: _isLoading ? null : _submitForm,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryBlue,
-                        disabledBackgroundColor: Colors.grey[400],
+                        disabledBackgroundColor: scheme.onSurface.withValues(
+                          alpha: 0.3,
+                        ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
+                                  scheme.onPrimary,
                                 ),
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'Record Payment',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: scheme.onPrimary,
                               ),
                             ),
                     ),
@@ -487,6 +493,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
   }
 
   Widget _buildTenantInfoCard(dynamic tenant) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -507,11 +514,17 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
             children: [
               Text(
                 'Room: ${tenant.roomNumber}',
-                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
               Text(
                 'Rent: ₹${tenant.rentAmount}',
-                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
             ],
           ),
@@ -521,12 +534,13 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
+    final scheme = Theme.of(context).colorScheme;
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: AppTheme.nearBlack,
+        color: scheme.onSurface,
       ),
     );
   }
@@ -539,15 +553,16 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     int maxLines = 1,
     String? error,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -558,17 +573,17 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.grey[100],
+            fillColor: scheme.onSurface.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             contentPadding: const EdgeInsets.symmetric(
@@ -582,7 +597,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error,
-              style: const TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(fontSize: 12, color: scheme.error),
             ),
           ),
       ],
@@ -595,15 +610,16 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     required List<String> items,
     required Function(String?) onChanged,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -615,7 +631,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
           onChanged: onChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.grey[100],
+            fillColor: scheme.onSurface.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -636,15 +652,16 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     required VoidCallback onTap,
     String? error,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -653,10 +670,10 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: scheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             child: Row(
@@ -668,10 +685,16 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                       : 'Select date',
                   style: TextStyle(
                     fontSize: 14,
-                    color: value != null ? Colors.black : Colors.grey[600],
+                    color: value != null
+                        ? scheme.onSurface
+                        : scheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
-                Icon(Icons.calendar_today, color: Colors.grey[600], size: 20),
+                Icon(
+                  Icons.calendar_today,
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                  size: 20,
+                ),
               ],
             ),
           ),
@@ -681,7 +704,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error,
-              style: const TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(fontSize: 12, color: scheme.error),
             ),
           ),
       ],

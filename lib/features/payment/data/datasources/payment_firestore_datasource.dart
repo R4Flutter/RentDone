@@ -57,12 +57,12 @@ class PaymentFirestoreDataSource {
     String? status,
     DateTime? startAfterCreatedAt,
     String? startAfterDocId,
-  }) {
+  }) async {
     Query<Map<String, dynamic>> query = _firestore
         .collection('transactions')
         .where(field, isEqualTo: value)
         .orderBy('createdAt', descending: true)
-        .orderBy(FieldPath.documentId);
+        .orderBy(FieldPath.documentId, descending: true);
 
     if (year != null) {
       final start = DateTime(year, 1, 1);
@@ -80,6 +80,19 @@ class PaymentFirestoreDataSource {
       query = query.startAfter([startAfterCreatedAt, startAfterDocId]);
     }
 
-    return query.limit(limit).get();
+    try {
+      return await query.limit(limit).get();
+    } on FirebaseException catch (error) {
+      if (error.code != 'failed-precondition') {
+        rethrow;
+      }
+
+      Query<Map<String, dynamic>> fallback = _firestore
+          .collection('transactions')
+          .where(field, isEqualTo: value);
+
+      final expandedLimit = limit * 8;
+      return fallback.limit(expandedLimit).get();
+    }
   }
 }

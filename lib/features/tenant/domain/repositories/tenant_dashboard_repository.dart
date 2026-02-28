@@ -27,6 +27,13 @@ abstract class TenantDashboardRepository {
     required TenantOwnerDetails details,
   });
 
+  Future<void> saveTenantBasicDetails({
+    required String tenantId,
+    required String tenantName,
+    required String tenantEmail,
+    required String tenantPhone,
+  });
+
   Future<void> markPaymentAsPaid({
     required String tenantId,
     required int amountPaid,

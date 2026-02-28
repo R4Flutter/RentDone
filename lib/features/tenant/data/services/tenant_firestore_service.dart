@@ -169,7 +169,10 @@ class TenantFirestoreService {
           tenantData['email'] as String? ??
           tenantData['emailLowercase'] as String? ??
           (email ?? ''),
-      tenantPhone: tenantData['phoneNumber'] as String? ?? '',
+      tenantPhone: _extractTenantPhone(
+        tenantData: tenantData,
+        userData: userData,
+      ),
       ownerId: tenantData['ownerId'] as String? ?? '',
       roomNumber:
           roomDetails?.roomNumber ??
@@ -195,6 +198,29 @@ class TenantFirestoreService {
       currentMonthName: monthName,
       profileImageUrl: tenantData['profileImageUrl'] as String?,
     );
+  }
+
+  String _extractTenantPhone({
+    required Map<String, dynamic> tenantData,
+    required Map<String, dynamic> userData,
+  }) {
+    final candidates = <String?>[
+      tenantData['phoneNumber'] as String?,
+      tenantData['phone'] as String?,
+      tenantData['mobile'] as String?,
+      userData['phoneNumber'] as String?,
+      userData['phone'] as String?,
+      userData['mobile'] as String?,
+    ];
+
+    for (final candidate in candidates) {
+      final normalized = (candidate ?? '').trim();
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    return '';
   }
 
   Stream<TenantPayment?> watchCurrentMonthPayment(String tenantId) {
@@ -415,6 +441,7 @@ class TenantFirestoreService {
   }
 
   Future<TenantOwnerDetails?> getOwnerDetails(String tenantId) async {
+    Map<String, dynamic> ownerDetailsData = const <String, dynamic>{};
     try {
       final doc = await _firestore
           .collection('tenants')
@@ -425,7 +452,7 @@ class TenantFirestoreService {
 
       final data = doc.data();
       if (data != null) {
-        return TenantOwnerDetails.fromMap(data);
+        ownerDetailsData = data;
       }
     } on FirebaseException catch (e) {
       if (e.code != 'permission-denied') {
@@ -437,12 +464,68 @@ class TenantFirestoreService {
         .collection('tenants')
         .doc(tenantId)
         .get();
-    final fallbackPhone =
-        (tenantDoc.data()?['ownerPhoneNumber'] as String? ?? '').trim();
-    if (fallbackPhone.isEmpty) {
+
+    final tenantData = tenantDoc.data() ?? const <String, dynamic>{};
+    final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
+
+    Map<String, dynamic> ownerProfileData = const <String, dynamic>{};
+    if (ownerId.isNotEmpty) {
+      try {
+        final ownerProfileDoc = await _firestore
+            .collection('owners')
+            .doc(ownerId)
+            .get();
+        ownerProfileData = ownerProfileDoc.data() ?? const <String, dynamic>{};
+      } on FirebaseException {
+        ownerProfileData = const <String, dynamic>{};
+      }
+    }
+
+    String pickFirstNonEmpty(List<String?> values) {
+      for (final value in values) {
+        final normalized = (value ?? '').trim();
+        if (normalized.isNotEmpty) {
+          return normalized;
+        }
+      }
+      return '';
+    }
+
+    final resolvedPhone = pickFirstNonEmpty([
+      ownerDetailsData['ownerPhoneNumber'] as String?,
+      tenantData['ownerPhoneNumber'] as String?,
+      ownerProfileData['phoneNumber'] as String?,
+      ownerProfileData['phone'] as String?,
+    ]);
+
+    final resolvedUpiId = pickFirstNonEmpty([
+      ownerDetailsData['ownerUpiId'] as String?,
+      ownerDetailsData['upiId'] as String?,
+      tenantData['ownerUpiId'] as String?,
+      tenantData['upiId'] as String?,
+      ownerProfileData['ownerUpiId'] as String?,
+      ownerProfileData['upiId'] as String?,
+      ownerProfileData['upi'] as String?,
+    ]);
+
+    final resolvedOwnerName = pickFirstNonEmpty([
+      ownerDetailsData['ownerName'] as String?,
+      tenantData['ownerName'] as String?,
+      ownerProfileData['name'] as String?,
+      ownerProfileData['fullName'] as String?,
+    ]);
+
+    if (resolvedPhone.isEmpty &&
+        resolvedUpiId.isEmpty &&
+        resolvedOwnerName.isEmpty) {
       return null;
     }
-    return TenantOwnerDetails(ownerPhoneNumber: fallbackPhone);
+
+    return TenantOwnerDetails(
+      ownerPhoneNumber: resolvedPhone,
+      ownerUpiId: resolvedUpiId,
+      ownerName: resolvedOwnerName,
+    );
   }
 
   Future<void> saveOwnerDetails({
@@ -464,6 +547,36 @@ class TenantFirestoreService {
 
     await _firestore.collection('tenants').doc(tenantId).set({
       'ownerPhoneNumber': details.ownerPhoneNumber,
+      if (details.ownerUpiId.isNotEmpty) 'ownerUpiId': details.ownerUpiId,
+      if (details.ownerName.isNotEmpty) 'ownerName': details.ownerName,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> saveTenantBasicDetails({
+    required String tenantId,
+    required String tenantName,
+    required String tenantEmail,
+    required String tenantPhone,
+  }) async {
+    final normalizedName = tenantName.trim();
+    final normalizedEmail = tenantEmail.trim();
+    final normalizedEmailLower = normalizedEmail.toLowerCase();
+    final normalizedPhone = tenantPhone.trim();
+
+    await _firestore.collection('tenants').doc(tenantId).set({
+      'name': normalizedName,
+      'email': normalizedEmail,
+      'emailLowercase': normalizedEmailLower,
+      'phoneNumber': normalizedPhone,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await _firestore.collection('users').doc(tenantId).set({
+      'name': normalizedName,
+      'email': normalizedEmail,
+      'emailLowercase': normalizedEmailLower,
+      'phoneNumber': normalizedPhone,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

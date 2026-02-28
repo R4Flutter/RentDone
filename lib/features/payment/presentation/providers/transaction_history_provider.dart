@@ -55,6 +55,7 @@ class TransactionHistoryNotifier
   String? actorId;
   DateTime? _cursorCreatedAt;
   String? _cursorDocId;
+  bool _hasLoadedInitial = false;
 
   @override
   Future<TransactionHistoryState> build() async {
@@ -64,9 +65,23 @@ class TransactionHistoryNotifier
   Future<void> loadInitial({
     required TransactionActor actor,
     String? actorId,
+    bool force = false,
   }) async {
+    final resolvedActorId = actorId ?? FirebaseAuth.instance.currentUser?.uid;
+
+    if (!force && state.isLoading) {
+      return;
+    }
+
+    if (!force &&
+        _hasLoadedInitial &&
+        this.actor == actor &&
+        this.actorId == resolvedActorId) {
+      return;
+    }
+
     this.actor = actor;
-    this.actorId = actorId ?? FirebaseAuth.instance.currentUser?.uid;
+    this.actorId = resolvedActorId;
 
     final current = state.value ?? TransactionHistoryState.initial();
     final selectedYear = current.selectedYear;
@@ -91,6 +106,7 @@ class TransactionHistoryNotifier
 
       _cursorCreatedAt = page.nextCreatedAt;
       _cursorDocId = page.nextDocId;
+      _hasLoadedInitial = true;
 
       return TransactionHistoryState.initial().copyWith(
         transactions: page.items,
@@ -102,7 +118,7 @@ class TransactionHistoryNotifier
   }
 
   Future<void> refresh() async {
-    await loadInitial(actor: actor, actorId: actorId);
+    await loadInitial(actor: actor, actorId: actorId, force: true);
   }
 
   Future<void> loadMore() async {
@@ -150,7 +166,7 @@ class TransactionHistoryNotifier
     );
 
     state = AsyncValue.data(updated);
-    await loadInitial(actor: actor, actorId: actorId);
+    await loadInitial(actor: actor, actorId: actorId, force: true);
   }
 }
 

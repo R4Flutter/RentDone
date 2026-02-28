@@ -68,7 +68,10 @@ class TenantDashboardRepositoryImpl implements TenantDashboardRepository {
         tenantId: resolvedSummary.tenantId,
         tenantName: resolvedSummary.tenantName,
         tenantEmail: effectiveEmail,
-        tenantPhone: resolvedSummary.tenantPhone,
+        tenantPhone: _resolveTenantPhone(
+          summaryPhone: resolvedSummary.tenantPhone,
+          authPhone: user.phoneNumber,
+        ),
         ownerId: resolvedSummary.ownerId,
         roomNumber: resolvedSummary.roomNumber,
         propertyName: resolvedSummary.propertyName,
@@ -105,6 +108,20 @@ class TenantDashboardRepositoryImpl implements TenantDashboardRepository {
       }
       rethrow;
     }
+  }
+
+  String _resolveTenantPhone({String? summaryPhone, String? authPhone}) {
+    final normalizedSummary = (summaryPhone ?? '').trim();
+    if (normalizedSummary.isNotEmpty) {
+      return normalizedSummary;
+    }
+
+    final normalizedAuthPhone = (authPhone ?? '').trim();
+    if (normalizedAuthPhone.isNotEmpty) {
+      return normalizedAuthPhone;
+    }
+
+    return '';
   }
 
   Future<TenantDashboardSummary> _resolveSummaryWithAutoLink({
@@ -206,6 +223,21 @@ class TenantDashboardRepositoryImpl implements TenantDashboardRepository {
     return _firestoreService.saveOwnerDetails(
       tenantId: tenantId,
       details: details,
+    );
+  }
+
+  @override
+  Future<void> saveTenantBasicDetails({
+    required String tenantId,
+    required String tenantName,
+    required String tenantEmail,
+    required String tenantPhone,
+  }) {
+    return _firestoreService.saveTenantBasicDetails(
+      tenantId: tenantId,
+      tenantName: tenantName,
+      tenantEmail: tenantEmail,
+      tenantPhone: tenantPhone,
     );
   }
 

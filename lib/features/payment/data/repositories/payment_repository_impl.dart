@@ -146,7 +146,58 @@ class PaymentRepositoryImpl implements PaymentRepository {
         startAfterDocId: startAfterDocId,
       );
 
-      final items = snap.docs
+      final filteredDocs =
+          snap.docs.where((doc) {
+            final data = doc.data();
+
+            if (year != null) {
+              final createdAt = _toDate(data['createdAt']);
+              if (createdAt == null || createdAt.year != year) {
+                return false;
+              }
+            }
+
+            if (status != null && status.isNotEmpty && status != 'all') {
+              final recordStatus = (data['status'] as String? ?? '').trim();
+              if (recordStatus != status) {
+                return false;
+              }
+            }
+
+            return true;
+          }).toList()..sort((left, right) {
+            final leftDate =
+                _toDate(left.data()['createdAt']) ?? DateTime(1970);
+            final rightDate =
+                _toDate(right.data()['createdAt']) ?? DateTime(1970);
+            final dateCompare = rightDate.compareTo(leftDate);
+            if (dateCompare != 0) {
+              return dateCompare;
+            }
+            return right.id.compareTo(left.id);
+          });
+
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> pagedDocs =
+          filteredDocs;
+      if (startAfterCreatedAt != null && startAfterDocId != null) {
+        pagedDocs = filteredDocs.where((doc) {
+          final createdAt = _toDate(doc.data()['createdAt']);
+          if (createdAt == null) {
+            return false;
+          }
+          if (createdAt.isBefore(startAfterCreatedAt)) {
+            return true;
+          }
+          if (createdAt.isAtSameMomentAs(startAfterCreatedAt)) {
+            return doc.id.compareTo(startAfterDocId) < 0;
+          }
+          return false;
+        }).toList();
+      }
+
+      final limitedDocs = pagedDocs.take(limit).toList();
+
+      final items = limitedDocs
           .map(
             (doc) => TransactionRecordDto.fromFirestore(
               doc.id,
@@ -163,7 +214,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
         items: items,
         nextCreatedAt: lastDate,
         nextDocId: lastDoc?.id,
-        hasMore: items.length >= limit,
+        hasMore: pagedDocs.length > limit,
       );
     } on FirebaseException catch (error) {
       throw _mapFirebaseFailure(error);

@@ -248,7 +248,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Tenant updated successfully'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppTheme.successGreen,
         ),
       );
 
@@ -265,12 +265,13 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: AppTheme.errorRed),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final tenantAsync = ref.watch(tenantProvider(widget.tenantId));
 
     return Scaffold(
@@ -286,20 +287,20 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'back',
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_back, color: Colors.black87),
+                    Icon(Icons.arrow_back, color: scheme.onSurface),
                     SizedBox(width: 12),
                     Text('Back'),
                   ],
                 ),
               ),
             ],
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.more_vert, color: Colors.white),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Icon(Icons.more_vert, color: scheme.onPrimary),
             ),
           ),
         ],
@@ -408,25 +409,27 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
                       onPressed: _isLoading ? null : _submitForm,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryBlue,
-                        disabledBackgroundColor: Colors.grey[400],
+                        disabledBackgroundColor: scheme.onSurface.withValues(
+                          alpha: 0.3,
+                        ),
                       ),
                       child: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
+                                  scheme.onPrimary,
                                 ),
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'Save Changes',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: scheme.onPrimary,
                               ),
                             ),
                     ),
@@ -447,19 +450,19 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue[50],
+        color: AppTheme.primaryBlue.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue[200]!),
+        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Immutable Information (Cannot be changed)',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.blue,
+              color: AppTheme.primaryBlue,
             ),
           ),
           const SizedBox(height: 12),
@@ -482,23 +485,24 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
   }
 
   Widget _buildReadOnlyField(String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
-            color: Colors.grey,
+            color: scheme.onSurface.withValues(alpha: 0.6),
             fontWeight: FontWeight.w500,
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: scheme.onSurface,
           ),
         ),
       ],
@@ -506,12 +510,13 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
+    final scheme = Theme.of(context).colorScheme;
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
-        color: AppTheme.nearBlack,
+        color: scheme.onSurface,
       ),
     );
   }
@@ -524,15 +529,16 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
     int maxLines = 1,
     String? error,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -543,17 +549,17 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.grey[100],
+            fillColor: scheme.onSurface.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             contentPadding: const EdgeInsets.symmetric(
@@ -567,7 +573,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error,
-              style: const TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(fontSize: 12, color: scheme.error),
             ),
           ),
       ],
@@ -580,15 +586,16 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
     required VoidCallback onTap,
     String? error,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -597,10 +604,10 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: scheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: error != null ? Colors.red : Colors.transparent,
+                color: error != null ? scheme.error : Colors.transparent,
               ),
             ),
             child: Text(
@@ -609,7 +616,9 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
                   : 'Select date',
               style: TextStyle(
                 fontSize: 14,
-                color: value != null ? Colors.black : Colors.grey[600],
+                color: value != null
+                    ? scheme.onSurface
+                    : scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -619,7 +628,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error,
-              style: const TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(fontSize: 12, color: scheme.error),
             ),
           ),
       ],
@@ -632,15 +641,16 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
     required File? newFile,
     required VoidCallback onPickNew,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.nearBlack,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -648,13 +658,18 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: scheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
+              border: Border.all(
+                color: scheme.onSurface.withValues(alpha: 0.18),
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.file_present, color: Colors.grey[600]),
+                Icon(
+                  Icons.file_present,
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -669,7 +684,10 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
                       ),
                       Text(
                         'Tap button below to replace',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.onSurface.withValues(alpha: 0.5),
+                        ),
                       ),
                     ],
                   ),
@@ -683,13 +701,15 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: AppTheme.successGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[300]!),
+                border: Border.all(
+                  color: AppTheme.successGreen.withValues(alpha: 0.35),
+                ),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green[600]),
+                  Icon(Icons.check_circle, color: AppTheme.successGreen),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
