@@ -18,6 +18,7 @@ import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_
 import 'package:rentdone/features/owner/owner_support/presentation/pages/support_screen.dart';
 import 'package:rentdone/features/owner/owner_notifications/presentation/pages/owner_notifications_screen.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/pages/manage_tenants_screen.dart';
+import 'package:rentdone/features/owner/owner_tenants/presentation/pages/tenant_trust_search_screen.dart';
 import 'package:rentdone/features/owner/owners_properties/presentation/pages/manage_property_screen.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/reports/presentation/pages/report_screen.dart';
@@ -250,6 +251,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/owner/tenants/manage',
             name: 'manageTenants',
             builder: (context, state) => const ManageTenantsScreen(),
+          ),
+
+          /// 🔎 Tenant Trust Search
+          GoRoute(
+            path: '/owner/tenants/trust-search',
+            name: 'tenantTrustSearch',
+            builder: (context, state) => const TenantTrustSearchScreen(),
           ),
 
           /// ✏️ Edit Tenant Information

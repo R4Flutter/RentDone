@@ -55,6 +55,8 @@ class TenantEntity {
 
   // System Fields
   final String status; // active, inactive, notice_period, suspended
+  final int trustScore;
+  final String? phoneHash;
   final String? notes;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -97,6 +99,8 @@ class TenantEntity {
     this.previousLandlordPhone,
     this.previousAddress,
     this.status = 'active',
+    this.trustScore = 50,
+    this.phoneHash,
     this.notes,
     this.updatedAt,
   });
@@ -168,6 +172,8 @@ class TenantEntity {
     bool? policeVerified,
     bool? backgroundChecked,
     String? status,
+    int? trustScore,
+    String? phoneHash,
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -211,6 +217,8 @@ class TenantEntity {
       policeVerified: policeVerified ?? this.policeVerified,
       backgroundChecked: backgroundChecked ?? this.backgroundChecked,
       status: status ?? this.status,
+      trustScore: trustScore ?? this.trustScore,
+      phoneHash: phoneHash ?? this.phoneHash,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

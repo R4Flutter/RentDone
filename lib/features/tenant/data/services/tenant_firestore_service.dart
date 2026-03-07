@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:intl/intl.dart';
+import 'package:rentdone/core/trust/tenant_trust_score.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_complaint.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_document.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_owner_details.dart';
@@ -125,6 +128,13 @@ class TenantFirestoreService {
         lifetimePaid: 0,
         currentMonthName: DateFormat.MMMM().format(DateTime.now()),
         profileImageUrl: userData['photoUrl'] as String?,
+        trustScore: TenantTrustScore.defaultScore,
+        trustBadge: TenantTrustScore.badgeFor(
+          TenantTrustScore.defaultScore,
+        ).label,
+        onTimePaymentRate: 0,
+        latePaymentRate: 0,
+        tenureYears: 0,
       );
     }
 
@@ -148,6 +158,30 @@ class TenantFirestoreService {
           runningTotal + ((doc.data()['amount'] as num?)?.toInt() ?? 0),
     );
 
+    final trustScore = TenantTrustScore.clamp(
+      (tenantData['trustScore'] as num?)?.toInt() ??
+          TenantTrustScore.defaultScore,
+    );
+    final trustBadge =
+        (tenantData['trustBadge'] as String?)?.trim().isNotEmpty == true
+        ? (tenantData['trustBadge'] as String).trim()
+        : TenantTrustScore.badgeFor(trustScore).label;
+
+    final dueDay =
+        (tenantData['rentDueDay'] as num?)?.toInt() ??
+        (tenantData['rentDueDate'] as num?)?.toInt() ??
+        1;
+
+    final onTimePayments = (tenantData['onTimePayments'] as num?)?.toInt();
+    final latePayments = (tenantData['latePayments'] as num?)?.toInt();
+
+    final computedRates = _resolvePaymentRates(
+      paymentDocs: paymentDocs,
+      dueDay: dueDay,
+      onTimePayments: onTimePayments,
+      latePayments: latePayments,
+    );
+
     final monthName = DateFormat.MMMM().format(DateTime.now());
     TenantRoomDetails? roomDetails;
     TenantOwnerDetails? ownerDetails;
@@ -161,6 +195,11 @@ class TenantFirestoreService {
     } on FirebaseException {
       ownerDetails = null;
     }
+
+    final tenureYears = _resolveTenureYears(
+      tenantData: tenantData,
+      roomDetails: roomDetails,
+    );
 
     return TenantDashboardSummary(
       tenantId: tenantId,
@@ -197,7 +236,94 @@ class TenantFirestoreService {
       lifetimePaid: (tenantData['totalPaid'] as num?)?.toInt() ?? dynamicTotal,
       currentMonthName: monthName,
       profileImageUrl: tenantData['profileImageUrl'] as String?,
+      trustScore: trustScore,
+      trustBadge: trustBadge,
+      onTimePaymentRate: computedRates.onTimeRate,
+      latePaymentRate: computedRates.lateRate,
+      tenureYears: tenureYears,
     );
+  }
+
+  ({double onTimeRate, double lateRate}) _resolvePaymentRates({
+    required List<QueryDocumentSnapshot<Map<String, dynamic>>> paymentDocs,
+    required int dueDay,
+    required int? onTimePayments,
+    required int? latePayments,
+  }) {
+    final storedOnTime = onTimePayments;
+    final storedLate = latePayments;
+    if (storedOnTime != null && storedLate != null) {
+      final total = storedOnTime + storedLate;
+      if (total <= 0) {
+        return (onTimeRate: 0, lateRate: 0);
+      }
+
+      final onTimeRate = (storedOnTime * 100) / total;
+      final lateRate = (storedLate * 100) / total;
+      return (
+        onTimeRate: double.parse(onTimeRate.toStringAsFixed(1)),
+        lateRate: double.parse(lateRate.toStringAsFixed(1)),
+      );
+    }
+
+    var computedOnTime = 0;
+    var computedLate = 0;
+
+    for (final paymentDoc in paymentDocs) {
+      final data = paymentDoc.data();
+      final paymentDate =
+          (data['paymentDate'] as Timestamp?)?.toDate() ??
+          (data['paidDate'] as Timestamp?)?.toDate();
+      if (paymentDate == null) {
+        continue;
+      }
+
+      final dueDate = DateTime(
+        paymentDate.year,
+        paymentDate.month,
+        dueDay.clamp(1, 31).toInt(),
+      );
+      if (paymentDate.isAfter(dueDate)) {
+        computedLate++;
+      } else {
+        computedOnTime++;
+      }
+    }
+
+    final total = computedOnTime + computedLate;
+    if (total <= 0) {
+      return (onTimeRate: 0, lateRate: 0);
+    }
+
+    final onTimeRate = (computedOnTime * 100) / total;
+    final lateRate = (computedLate * 100) / total;
+    return (
+      onTimeRate: double.parse(onTimeRate.toStringAsFixed(1)),
+      lateRate: double.parse(lateRate.toStringAsFixed(1)),
+    );
+  }
+
+  double _resolveTenureYears({
+    required Map<String, dynamic> tenantData,
+    required TenantRoomDetails? roomDetails,
+  }) {
+    final allocationDate = roomDetails?.allocationDate;
+    final moveInDate = (tenantData['moveInDate'] as Timestamp?)?.toDate();
+    final leaseStart = (tenantData['leaseStartDate'] as Timestamp?)?.toDate();
+    final createdAt = (tenantData['createdAt'] as Timestamp?)?.toDate();
+
+    final baseline = allocationDate ?? moveInDate ?? leaseStart ?? createdAt;
+    if (baseline == null) {
+      return 0;
+    }
+
+    final totalDays = DateTime.now().difference(baseline).inDays;
+    if (totalDays <= 0) {
+      return 0;
+    }
+
+    final years = totalDays / 365;
+    return double.parse(years.toStringAsFixed(1));
   }
 
   String _extractTenantPhone({
@@ -563,12 +689,14 @@ class TenantFirestoreService {
     final normalizedEmail = tenantEmail.trim();
     final normalizedEmailLower = normalizedEmail.toLowerCase();
     final normalizedPhone = tenantPhone.trim();
+    final phoneHash = _hashPhone(_normalizePhone(normalizedPhone));
 
     await _firestore.collection('tenants').doc(tenantId).set({
       'name': normalizedName,
       'email': normalizedEmail,
       'emailLowercase': normalizedEmailLower,
       'phoneNumber': normalizedPhone,
+      'phoneHash': phoneHash,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -577,6 +705,61 @@ class TenantFirestoreService {
       'email': normalizedEmail,
       'emailLowercase': normalizedEmailLower,
       'phoneNumber': normalizedPhone,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<Map<String, bool>> getTenantAppSettings(String tenantId) async {
+    bool? darkAppearanceEnabled;
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(tenantId).get();
+      final userData = userDoc.data() ?? const <String, dynamic>{};
+      final settings = userData['tenantSettings'];
+
+      if (settings is Map<String, dynamic>) {
+        darkAppearanceEnabled = settings['darkAppearanceEnabled'] as bool?;
+      }
+    } on FirebaseException {
+      // Continue with tenant fallback.
+    }
+
+    if (darkAppearanceEnabled == null) {
+      try {
+        final tenantDoc = await _firestore
+            .collection('tenants')
+            .doc(tenantId)
+            .get();
+        final tenantData = tenantDoc.data() ?? const <String, dynamic>{};
+        final settings = tenantData['tenantSettings'];
+
+        if (settings is Map<String, dynamic>) {
+          darkAppearanceEnabled ??= settings['darkAppearanceEnabled'] as bool?;
+        }
+      } on FirebaseException {
+        // Fallback to defaults.
+      }
+    }
+
+    return {'darkAppearanceEnabled': darkAppearanceEnabled ?? true};
+  }
+
+  Future<void> saveTenantAppSettings({
+    required String tenantId,
+    required bool darkAppearanceEnabled,
+  }) async {
+    final payload = <String, dynamic>{
+      'darkAppearanceEnabled': darkAppearanceEnabled,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    await _firestore.collection('users').doc(tenantId).set({
+      'tenantSettings': payload,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await _firestore.collection('tenants').doc(tenantId).set({
+      'tenantSettings': payload,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -673,6 +856,7 @@ class TenantFirestoreService {
       'emailLowercase': normalizedEmail,
       'name': fallbackName,
       'phoneNumber': (phoneNumber ?? '').trim(),
+      'phoneHash': _hashPhone(_normalizePhone((phoneNumber ?? '').trim())),
       'ownerId': '',
       'roomNumber': '-',
       'propertyName': '',
@@ -681,10 +865,26 @@ class TenantFirestoreService {
       'rentDueDay': 1,
       'dueAmount': 0,
       'totalPaid': 0,
+      'trustScore': TenantTrustScore.defaultScore,
+      'trustBadge': TenantTrustScore.badgeFor(
+        TenantTrustScore.defaultScore,
+      ).label,
+      'onTimePayments': 0,
+      'latePayments': 0,
+      'missedPayments': 0,
+      'consecutiveOnTimeMonths': 0,
       'isActive': false,
       'onboardingStatus': 'pending_assignment',
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  String _normalizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
+  }
+
+  String _hashPhone(String normalizedPhone) {
+    return sha256.convert(utf8.encode(normalizedPhone)).toString();
   }
 }

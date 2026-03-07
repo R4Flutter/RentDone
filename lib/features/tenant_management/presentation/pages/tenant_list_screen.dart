@@ -317,6 +317,11 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
   Widget _buildTenantCard(BuildContext context, dynamic tenant) {
     final statusColor = _getStatusColor(tenant.status);
     final statusLabel = _getStatusLabel(tenant.status);
+    final int trustScore = tenant.trustScore is int
+        ? tenant.trustScore as int
+        : 50;
+    final trustLabel = _getTrustBadgeLabel(trustScore);
+    final trustColor = _getTrustBadgeColor(trustScore);
 
     return GestureDetector(
       onTap: () {
@@ -394,6 +399,31 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                   _buildDetailItem('Room', tenant.roomNumber),
                   _buildDetailItem('Rent', '₹${tenant.rentAmount}'),
                   _buildDetailItem('Due', 'Day ${tenant.rentDueDate}'),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _buildDetailItem('Trust Score', '$trustScore/100'),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: trustColor.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      trustLabel,
+                      style: TextStyle(
+                        color: trustColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -504,6 +534,24 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
       default:
         return status;
     }
+  }
+
+  String _getTrustBadgeLabel(int score) {
+    final clamped = score.clamp(0, 100);
+    if (clamped >= 90) return 'Trustworthy Pro';
+    if (clamped >= 70) return 'Reliable Tenant';
+    if (clamped >= 50) return 'Average Tenant';
+    if (clamped >= 20) return 'Risky Tenant';
+    return 'Untrustworthy';
+  }
+
+  Color _getTrustBadgeColor(int score) {
+    final clamped = score.clamp(0, 100);
+    if (clamped >= 90) return AppTheme.successGreen;
+    if (clamped >= 70) return AppTheme.primaryBlue;
+    if (clamped >= 50) return AppTheme.warningAmber;
+    if (clamped >= 20) return Colors.orange;
+    return AppTheme.errorRed;
   }
 
   void _showDeactivateDialog(BuildContext context, dynamic tenant) {

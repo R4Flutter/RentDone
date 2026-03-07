@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+import 'package:rentdone/core/trust/tenant_trust_score.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/property_dto.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/tenant_dto.dart';
 
@@ -167,6 +170,25 @@ class PropertyFirebaseService {
   Future<void> addTenant(TenantDto tenant) async {
     final tenantRef = _db.collection('tenants').doc(tenant.id);
     final propertyRef = _db.collection('properties').doc(tenant.propertyId);
+    final tenantMap = tenant.toMap();
+    final normalizedPhone = _normalizePhone(tenant.phone);
+    tenantMap['phoneHash'] = _hashPhone(normalizedPhone);
+    final trustScore = TenantTrustScore.clamp(
+      (tenantMap['trustScore'] as num?)?.toInt() ??
+          TenantTrustScore.defaultScore,
+    );
+    tenantMap['trustScore'] = trustScore;
+    tenantMap['trustBadge'] = TenantTrustScore.badgeFor(trustScore).label;
+    tenantMap['onTimePayments'] =
+        (tenantMap['onTimePayments'] as num?)?.toInt() ?? 0;
+    tenantMap['latePayments'] =
+        (tenantMap['latePayments'] as num?)?.toInt() ?? 0;
+    tenantMap['missedPayments'] =
+        (tenantMap['missedPayments'] as num?)?.toInt() ?? 0;
+    tenantMap['consecutiveOnTimeMonths'] =
+        (tenantMap['consecutiveOnTimeMonths'] as num?)?.toInt() ?? 0;
+    tenantMap['lastTrustScoreDelta'] =
+        (tenantMap['lastTrustScoreDelta'] as num?)?.toInt() ?? 0;
 
     await _db.runTransaction((txn) async {
       final propertyDoc = await txn.get(propertyRef);
@@ -192,7 +214,7 @@ class PropertyFirebaseService {
 
       rooms[roomIndex] = {...room, 'isOccupied': true, 'tenantId': tenant.id};
 
-      txn.set(tenantRef, tenant.toMap());
+      txn.set(tenantRef, tenantMap);
       txn.update(propertyRef, {'rooms': rooms});
     });
   }
@@ -242,5 +264,13 @@ class PropertyFirebaseService {
         .whereType<Map>()
         .map((room) => Map<String, dynamic>.from(room))
         .toList();
+  }
+
+  String _normalizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
+  }
+
+  String _hashPhone(String normalizedPhone) {
+    return sha256.convert(utf8.encode(normalizedPhone)).toString();
   }
 }

@@ -105,7 +105,10 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                   _HeroIdentityCard(
                         tenantName: summary.tenantName,
                         profileImageUrl: summary.profileImageUrl,
-                        trustScore: 742,
+                        trustScore: summary.trustScore,
+                        trustBadge: summary.trustBadge,
+                        onTrustScoreTap: () =>
+                            _showTrustScoreBreakdown(summary),
                       )
                       .animate()
                       .fadeIn(duration: const Duration(milliseconds: 340))
@@ -113,6 +116,18 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                         begin: 0.08,
                         end: 0,
                         duration: const Duration(milliseconds: 340),
+                      ),
+                  const SizedBox(height: 14),
+                  _PaymentReliabilityCard(
+                        onTimeRate: summary.onTimePaymentRate,
+                        delayedRate: summary.latePaymentRate,
+                      )
+                      .animate(delay: const Duration(milliseconds: 60))
+                      .fadeIn(duration: const Duration(milliseconds: 300))
+                      .slideY(
+                        begin: 0.04,
+                        end: 0,
+                        duration: const Duration(milliseconds: 300),
                       ),
                   const SizedBox(height: 28),
                   const _SectionTitle(title: 'Personal Details'),
@@ -301,6 +316,147 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _showTrustScoreBreakdown(dynamic summary) async {
+    final score = (summary.trustScore as int?) ?? 50;
+    final badge = (summary.trustBadge as String?) ?? 'Average Tenant';
+    final onTimeRate = ((summary.onTimePaymentRate as num?)?.toDouble() ?? 0)
+        .clamp(0, 100);
+    final delayedRate = ((summary.latePaymentRate as num?)?.toDouble() ?? 0)
+        .clamp(0, 100);
+    final dueDay = (summary.rentDueDay as int?) ?? 1;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF17263D), Color(0xFF101A2D)],
+            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.insights_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'How Your Trust Score Is Calculated',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _TrustMetaRow(label: 'Current Score', value: '$score / 100'),
+                  _TrustMetaRow(label: 'Current Badge', value: badge),
+                  _TrustMetaRow(
+                    label: 'On-time Payments',
+                    value: '${onTimeRate.toStringAsFixed(1)}%',
+                  ),
+                  _TrustMetaRow(
+                    label: 'Delayed Payments',
+                    value: '${delayedRate.toStringAsFixed(1)}%',
+                  ),
+                  _TrustMetaRow(
+                    label: 'Rent Due Day',
+                    value: '$dueDay every month',
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Score Rules (Per Payment)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const _RuleLine(text: 'Pay before due date: +7 points'),
+                  const _RuleLine(text: 'Pay on due date: +5 points'),
+                  const _RuleLine(text: '1-3 days late: -5 points'),
+                  const _RuleLine(text: '4-10 days late: -10 points'),
+                  const _RuleLine(text: 'More than 10 days late: -15 points'),
+                  const _RuleLine(text: 'Missed payment: -25 points'),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Consistency Bonus',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const _RuleLine(
+                    text: '6 consecutive on-time months: +10 bonus',
+                  ),
+                  const _RuleLine(
+                    text: '12 consecutive on-time months: +20 bonus',
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Badge Levels',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const _RuleLine(text: '90-100: Trustworthy Pro'),
+                  const _RuleLine(text: '70-89: Reliable Tenant'),
+                  const _RuleLine(text: '50-69: Average Tenant'),
+                  const _RuleLine(text: '20-49: Risky Tenant'),
+                  const _RuleLine(text: '0-19: Untrustworthy'),
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.successGreen.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.successGreen.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: const Text(
+                      'Tip: Pay rent on or before your due day each month to earn points and streak bonuses.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -523,11 +679,15 @@ class _HeroIdentityCard extends StatelessWidget {
   final String tenantName;
   final String? profileImageUrl;
   final int trustScore;
+  final String trustBadge;
+  final VoidCallback onTrustScoreTap;
 
   const _HeroIdentityCard({
     required this.tenantName,
     required this.profileImageUrl,
     required this.trustScore,
+    required this.trustBadge,
+    required this.onTrustScoreTap,
   });
 
   @override
@@ -591,18 +751,18 @@ class _HeroIdentityCard extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.28),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.verified_rounded,
                         color: Colors.white,
                         size: 14,
                       ),
-                      SizedBox(width: 5),
+                      const SizedBox(width: 5),
                       Text(
-                        'Verified Tenant',
-                        style: TextStyle(
+                        trustBadge,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
@@ -615,7 +775,24 @@ class _HeroIdentityCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          _TrustScoreRing(score: trustScore),
+          InkWell(
+            onTap: onTrustScoreTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Column(
+              children: [
+                _TrustScoreRing(score: trustScore),
+                const SizedBox(height: 6),
+                Text(
+                  'Tap to view rules',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -896,7 +1073,7 @@ class _TrustScoreRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (score / 1000).clamp(0.0, 1.0);
+    final progress = (score / 100).clamp(0.0, 1.0);
 
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 900),
@@ -962,6 +1139,125 @@ class _TrustScoreRing extends StatelessWidget {
   }
 }
 
+class _PaymentReliabilityCard extends StatelessWidget {
+  final double onTimeRate;
+  final double delayedRate;
+
+  const _PaymentReliabilityCard({
+    required this.onTimeRate,
+    required this.delayedRate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeOnTime = onTimeRate.clamp(0, 100).toDouble();
+    final safeDelayed = delayedRate.clamp(0, 100).toDouble();
+
+    return TenantGlassCard(
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Payment Reliability',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _PaymentRateTile(
+                  title: 'On-time',
+                  rate: safeOnTime,
+                  color: AppTheme.successGreen,
+                  icon: Icons.check_circle_rounded,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PaymentRateTile(
+                  title: 'Delayed',
+                  rate: safeDelayed,
+                  color: AppTheme.warningAmber,
+                  icon: Icons.schedule_rounded,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentRateTile extends StatelessWidget {
+  final String title;
+  final double rate;
+  final Color color;
+  final IconData icon;
+
+  const _PaymentRateTile({
+    required this.title,
+    required this.rate,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${rate.toStringAsFixed(1)}%',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: rate / 100,
+              minHeight: 7,
+              backgroundColor: Colors.white.withValues(alpha: 0.14),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SectionTitle extends StatelessWidget {
   final String title;
 
@@ -976,6 +1272,67 @@ class _SectionTitle extends StatelessWidget {
         fontSize: 17,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.2,
+      ),
+    );
+  }
+}
+
+class _TrustMetaRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _TrustMetaRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.78)),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RuleLine extends StatelessWidget {
+  final String text;
+
+  const _RuleLine({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.82),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+            ),
+          ),
+        ],
       ),
     );
   }

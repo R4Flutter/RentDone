@@ -40,6 +40,8 @@ class TenantDTO {
   final bool policeVerified;
   final bool backgroundChecked;
   final String status;
+  final int trustScore;
+  final String? phoneHash;
   final String? notes;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -82,6 +84,8 @@ class TenantDTO {
     this.previousLandlordPhone,
     this.previousAddress,
     this.status = 'active',
+    this.trustScore = 50,
+    this.phoneHash,
     this.notes,
     this.updatedAt,
   });
@@ -129,6 +133,8 @@ class TenantDTO {
       'policeVerified': policeVerified,
       'backgroundChecked': backgroundChecked,
       'status': status,
+      'trustScore': trustScore,
+      'phoneHash': phoneHash,
       'notes': notes,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
@@ -180,6 +186,8 @@ class TenantDTO {
       policeVerified: map['policeVerified'] as bool? ?? false,
       backgroundChecked: map['backgroundChecked'] as bool? ?? false,
       status: map['status'] as String? ?? 'active',
+      trustScore: (map['trustScore'] as num?)?.toInt() ?? 50,
+      phoneHash: map['phoneHash'] as String?,
       notes: map['notes'] as String?,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: map['updatedAt'] != null
@@ -226,6 +234,8 @@ class TenantDTO {
       previousAddress: previousAddress,
       policeVerified: policeVerified,
       backgroundChecked: backgroundChecked,
+      trustScore: trustScore,
+      phoneHash: phoneHash,
       createdAt: createdAt,
       status: status,
       notes: notes,
@@ -271,6 +281,8 @@ class TenantDTO {
       previousAddress: entity.previousAddress,
       policeVerified: entity.policeVerified,
       backgroundChecked: entity.backgroundChecked,
+      trustScore: entity.trustScore,
+      phoneHash: entity.phoneHash,
       createdAt: entity.createdAt,
       status: entity.status,
       notes: entity.notes,

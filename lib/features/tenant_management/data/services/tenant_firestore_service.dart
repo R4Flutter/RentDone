@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import '../models/tenant_dto.dart';
 
 /// Firestore service for tenant data operations
@@ -12,10 +14,17 @@ class TenantFirestoreService {
   /// Add a new tenant to Firestore
   /// Structure: /tenants/{tenantId}
   Future<void> addTenant(TenantDTO tenantDTO) async {
+    final map = tenantDTO.toMap();
+    final normalizedPhone = _normalizePhone(tenantDTO.phone);
+    map['phoneHash'] = _hashPhone(normalizedPhone);
+    map['trustScore'] = _clampTrustScore(
+      (map['trustScore'] as num?)?.toInt() ?? 50,
+    );
+
     await _firestore
         .collection('tenants')
         .doc(tenantDTO.id)
-        .set(tenantDTO.toMap(), SetOptions(merge: false));
+        .set(map, SetOptions(merge: false));
   }
 
   /// Get tenant by ID
@@ -92,10 +101,14 @@ class TenantFirestoreService {
   /// Update tenant information
   Future<void> updateTenant(TenantDTO tenantDTO) async {
     try {
-      await _firestore
-          .collection('tenants')
-          .doc(tenantDTO.id)
-          .update(tenantDTO.toMap());
+      final map = tenantDTO.toMap();
+      final normalizedPhone = _normalizePhone(tenantDTO.phone);
+      map['phoneHash'] = _hashPhone(normalizedPhone);
+      map['trustScore'] = _clampTrustScore(
+        (map['trustScore'] as num?)?.toInt() ?? 50,
+      );
+
+      await _firestore.collection('tenants').doc(tenantDTO.id).update(map);
     } catch (e) {
       rethrow;
     }
@@ -129,6 +142,10 @@ class TenantFirestoreService {
   Future<List<TenantDTO>> searchTenants(String ownerId, String query) async {
     try {
       final queryLower = query.toLowerCase();
+      final normalizedQueryPhone = _normalizePhone(query);
+      final hashedQueryPhone = normalizedQueryPhone.isEmpty
+          ? ''
+          : _hashPhone(normalizedQueryPhone);
 
       final docs = await _firestore
           .collection('tenants')
@@ -140,7 +157,9 @@ class TenantFirestoreService {
           .where(
             (tenant) =>
                 tenant.fullName.toLowerCase().contains(queryLower) ||
-                tenant.phone.contains(query),
+                tenant.phone.contains(query) ||
+                (hashedQueryPhone.isNotEmpty &&
+                    (tenant.phoneHash ?? '') == hashedQueryPhone),
           )
           .toList();
 
@@ -284,5 +303,19 @@ class TenantFirestoreService {
       'Dec',
     ];
     return '${months[now.month - 1]} ${now.year}';
+  }
+
+  String _normalizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
+  }
+
+  String _hashPhone(String normalizedPhone) {
+    return sha256.convert(utf8.encode(normalizedPhone)).toString();
+  }
+
+  int _clampTrustScore(int score) {
+    if (score < 0) return 0;
+    if (score > 100) return 100;
+    return score;
   }
 }

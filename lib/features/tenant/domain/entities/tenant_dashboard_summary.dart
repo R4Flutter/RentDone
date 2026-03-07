@@ -15,6 +15,11 @@ class TenantDashboardSummary {
   final int lifetimePaid;
   final String currentMonthName;
   final String? profileImageUrl;
+  final int trustScore;
+  final String trustBadge;
+  final double onTimePaymentRate;
+  final double latePaymentRate;
+  final double tenureYears;
 
   const TenantDashboardSummary({
     required this.tenantId,
@@ -33,6 +38,11 @@ class TenantDashboardSummary {
     required this.lifetimePaid,
     required this.currentMonthName,
     this.profileImageUrl,
+    this.trustScore = 50,
+    this.trustBadge = 'Average Tenant',
+    this.onTimePaymentRate = 0,
+    this.latePaymentRate = 0,
+    this.tenureYears = 0,
   });
 
   static const empty = TenantDashboardSummary(
@@ -51,5 +61,10 @@ class TenantDashboardSummary {
     dueAmount: 0,
     lifetimePaid: 0,
     currentMonthName: '',
+    trustScore: 50,
+    trustBadge: 'Average Tenant',
+    onTimePaymentRate: 0,
+    latePaymentRate: 0,
+    tenureYears: 0,
   );
 }

@@ -65,7 +65,16 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Tenants')),
+      appBar: AppBar(
+        title: const Text('Manage Tenants'),
+        actions: [
+          IconButton(
+            tooltip: 'Tenant Trust Search',
+            onPressed: () => context.push('/owner/tenants/trust-search'),
+            icon: const Icon(Icons.manage_search_rounded),
+          ),
+        ],
+      ),
       body: tenantsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),

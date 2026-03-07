@@ -84,6 +84,11 @@ class TenantDashboardRepositoryImpl implements TenantDashboardRepository {
         lifetimePaid: resolvedSummary.lifetimePaid,
         currentMonthName: resolvedSummary.currentMonthName,
         profileImageUrl: user.photoURL ?? resolvedSummary.profileImageUrl,
+        trustScore: resolvedSummary.trustScore,
+        trustBadge: resolvedSummary.trustBadge,
+        onTimePaymentRate: resolvedSummary.onTimePaymentRate,
+        latePaymentRate: resolvedSummary.latePaymentRate,
+        tenureYears: resolvedSummary.tenureYears,
       );
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
@@ -104,6 +109,11 @@ class TenantDashboardRepositoryImpl implements TenantDashboardRepository {
           lifetimePaid: 0,
           currentMonthName: '',
           profileImageUrl: user.photoURL,
+          trustScore: 50,
+          trustBadge: 'Average Tenant',
+          onTimePaymentRate: 0,
+          latePaymentRate: 0,
+          tenureYears: 0,
         );
       }
       rethrow;

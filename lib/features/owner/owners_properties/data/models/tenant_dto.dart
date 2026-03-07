@@ -44,6 +44,8 @@ class TenantDto {
   final bool policeVerified;
   final bool backgroundChecked;
   final bool isActive;
+  final int trustScore;
+  final String? phoneHash;
   final DateTime createdAt;
 
   const TenantDto({
@@ -89,6 +91,8 @@ class TenantDto {
     required this.policeVerified,
     required this.backgroundChecked,
     required this.isActive,
+    this.trustScore = 50,
+    this.phoneHash,
     required this.createdAt,
   });
 
@@ -136,6 +140,8 @@ class TenantDto {
       policeVerified: tenant.policeVerified,
       backgroundChecked: tenant.backgroundChecked,
       isActive: tenant.isActive,
+      trustScore: 50,
+      phoneHash: null,
       createdAt: tenant.createdAt,
     );
   }
@@ -188,6 +194,8 @@ class TenantDto {
       policeVerified: data['policeVerified'] == true,
       backgroundChecked: data['backgroundChecked'] == true,
       isActive: data['isActive'] != false,
+      trustScore: _toInt(data['trustScore'], fallback: 50),
+      phoneHash: data['phoneHash']?.toString(),
       createdAt: _toDateTime(data['createdAt']) ?? DateTime.now(),
     );
   }
@@ -284,6 +292,8 @@ class TenantDto {
       'policeVerified': policeVerified,
       'backgroundChecked': backgroundChecked,
       'isActive': isActive,
+      'trustScore': trustScore,
+      'phoneHash': phoneHash,
       'createdAt': createdAt,
     };
   }

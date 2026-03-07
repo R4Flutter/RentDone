@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rentdone/core/trust/tenant_trust_score.dart';
 import '../models/payment_dto.dart';
 
 /// Firestore service for payment/transaction data operations
@@ -11,13 +12,150 @@ class PaymentFirestoreService {
   /// Record a payment
   Future<void> recordPayment(PaymentDTO paymentDTO) async {
     try {
-      await _firestore
-          .collection('payments')
-          .doc(paymentDTO.id)
-          .set(paymentDTO.toMap(), SetOptions(merge: false));
+      final paymentsRef = _firestore.collection('payments');
+      final paymentRef = paymentDTO.id.trim().isEmpty
+          ? paymentsRef.doc()
+          : paymentsRef.doc(paymentDTO.id);
+
+      final savedPayment = PaymentDTO(
+        id: paymentRef.id,
+        tenantId: paymentDTO.tenantId,
+        ownerId: paymentDTO.ownerId,
+        propertyId: paymentDTO.propertyId,
+        amount: paymentDTO.amount,
+        paymentDate: paymentDTO.paymentDate,
+        monthFor: paymentDTO.monthFor,
+        paymentMethod: paymentDTO.paymentMethod,
+        status: paymentDTO.status,
+        createdAt: paymentDTO.createdAt,
+        referenceId: paymentDTO.referenceId,
+        notes: paymentDTO.notes,
+      );
+
+      final tenantRef = _firestore
+          .collection('tenants')
+          .doc(savedPayment.tenantId);
+
+      await _firestore.runTransaction((txn) async {
+        final tenantDoc = await txn.get(tenantRef);
+        final tenantData = tenantDoc.data() ?? <String, dynamic>{};
+
+        final currentScore = TenantTrustScore.clamp(
+          (tenantData['trustScore'] as num?)?.toInt() ??
+              TenantTrustScore.defaultScore,
+        );
+
+        final dueDay =
+            (tenantData['rentDueDate'] as num?)?.toInt() ??
+            (tenantData['rentDueDay'] as num?)?.toInt() ??
+            1;
+        final dueDate = _resolveDueDate(
+          monthFor: savedPayment.monthFor,
+          dueDay: dueDay,
+        );
+
+        final paymentDelta = TenantTrustScore.paymentDelta(
+          paymentDate: savedPayment.paymentDate,
+          dueDate: dueDate,
+          status: savedPayment.status,
+        );
+
+        final isOnTime = paymentDelta > 0;
+        final nextConsecutiveOnTime = isOnTime
+            ? ((tenantData['consecutiveOnTimeMonths'] as num?)?.toInt() ?? 0) +
+                  1
+            : 0;
+        final bonus = TenantTrustScore.consecutiveBonus(
+          consecutiveOnTimeMonths: nextConsecutiveOnTime,
+          perfectRecord: isOnTime,
+        );
+        final newScore = TenantTrustScore.clamp(
+          currentScore + paymentDelta + bonus,
+        );
+
+        final wasLate = !isOnTime;
+        final onTimePayments =
+            ((tenantData['onTimePayments'] as num?)?.toInt() ?? 0) +
+            (isOnTime ? 1 : 0);
+        final latePayments =
+            ((tenantData['latePayments'] as num?)?.toInt() ?? 0) +
+            (wasLate ? 1 : 0);
+        final missedPayments =
+            ((tenantData['missedPayments'] as num?)?.toInt() ?? 0) +
+            (savedPayment.status.trim().toLowerCase() == 'missed' ? 1 : 0);
+
+        txn.set(paymentRef, savedPayment.toMap(), SetOptions(merge: false));
+
+        txn.set(tenantRef, {
+          'trustScore': newScore,
+          'trustBadge': TenantTrustScore.badgeFor(newScore).label,
+          'onTimePayments': onTimePayments,
+          'latePayments': latePayments,
+          'missedPayments': missedPayments,
+          'consecutiveOnTimeMonths': nextConsecutiveOnTime,
+          'lastTrustScoreDelta': paymentDelta + bonus,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        final eventRef = tenantRef.collection('trust_score_events').doc();
+        txn.set(eventRef, {
+          'type': 'payment',
+          'paymentId': savedPayment.id,
+          'paymentMonth': savedPayment.monthFor,
+          'previousScore': currentScore,
+          'delta': paymentDelta,
+          'bonus': bonus,
+          'newScore': newScore,
+          'dueDate': Timestamp.fromDate(dueDate),
+          'paymentDate': Timestamp.fromDate(savedPayment.paymentDate),
+          'createdAt': FieldValue.serverTimestamp(),
+          'ownerId': savedPayment.ownerId,
+        });
+      });
     } catch (e) {
       rethrow;
     }
+  }
+
+  DateTime _resolveDueDate({required String monthFor, required int dueDay}) {
+    final now = DateTime.now();
+    final monthToken = monthFor.trim();
+    final monthPattern = RegExp(
+      r'^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})$',
+      caseSensitive: false,
+    );
+    final match = monthPattern.firstMatch(monthToken);
+
+    int year = now.year;
+    int month = now.month;
+
+    if (match != null) {
+      final monthLabel = match.group(1)!.toLowerCase();
+      final parsedYear = int.tryParse(match.group(2)!);
+      final monthMap = <String, int>{
+        'jan': 1,
+        'feb': 2,
+        'mar': 3,
+        'apr': 4,
+        'may': 5,
+        'jun': 6,
+        'jul': 7,
+        'aug': 8,
+        'sep': 9,
+        'oct': 10,
+        'nov': 11,
+        'dec': 12,
+      };
+
+      year = parsedYear ?? now.year;
+      month = monthMap[monthLabel] ?? now.month;
+    }
+
+    final safeDueDay = dueDay.clamp(1, 31).toInt();
+    final lastDay = DateTime(year, month + 1, 0).day;
+    final cappedDueDay = safeDueDay > lastDay ? lastDay : safeDueDay;
+
+    return DateTime(year, month, cappedDueDay);
   }
 
   /// Get payment history for tenant (paginated)
