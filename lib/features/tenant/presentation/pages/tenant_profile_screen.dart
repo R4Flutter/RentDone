@@ -11,7 +11,8 @@ import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard
 import 'package:rentdone/features/tenant/presentation/widgets/tenant_glass.dart';
 
 class TenantProfileScreen extends ConsumerStatefulWidget {
-  const TenantProfileScreen({super.key});
+  final bool isSetupMode;
+  const TenantProfileScreen({super.key, this.isSetupMode = false});
 
   @override
   ConsumerState<TenantProfileScreen> createState() =>
@@ -129,6 +130,14 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                         end: 0,
                         duration: const Duration(milliseconds: 300),
                       ),
+                  if (widget.isSetupMode) ...[
+                    const SizedBox(height: 4),
+                    _SetupBanner(
+                      nameEmpty: _tenantNameController.text.trim().isEmpty,
+                      phoneEmpty: _tenantPhoneController.text.trim().isEmpty,
+                    ),
+                    const SizedBox(height: 18),
+                  ],
                   const SizedBox(height: 28),
                   const _SectionTitle(title: 'Personal Details'),
                   const SizedBox(height: 10),
@@ -562,6 +571,14 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
       );
 
       if (!mounted) return;
+
+      final name = _tenantNameController.text.trim();
+      final phone = _tenantPhoneController.text.trim();
+      if (widget.isSetupMode && name.isNotEmpty && phone.isNotEmpty) {
+        context.go('/tenant/dashboard');
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile details saved successfully.')),
       );
@@ -670,6 +687,116 @@ class _ProfileGlowOrb extends StatelessWidget {
           color: color,
           boxShadow: [BoxShadow(color: color, blurRadius: 95, spreadRadius: 8)],
         ),
+      ),
+    );
+  }
+}
+
+class _SetupBanner extends StatelessWidget {
+  final bool nameEmpty;
+  final bool phoneEmpty;
+
+  const _SetupBanner({required this.nameEmpty, required this.phoneEmpty});
+
+  @override
+  Widget build(BuildContext context) {
+    final missing = <String>[
+      if (nameEmpty) 'Full Name',
+      if (phoneEmpty) 'Phone Number',
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFF59E0B).withValues(alpha: 0.18),
+            const Color(0xFFFBBF24).withValues(alpha: 0.10),
+          ],
+        ),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.45),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFFF59E0B),
+            size: 22,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Complete your profile',
+                  style: TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Please fill in the highlighted fields below to get started.',
+                  style: TextStyle(color: AppColors.white, fontSize: 12.5),
+                ),
+                if (missing.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: missing
+                        .map(
+                          (f) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFF59E0B,
+                              ).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFFF59E0B,
+                                ).withValues(alpha: 0.5),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  f,
+                                  style: const TextStyle(
+                                    color: Color(0xFFFBBF24),
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.arrow_downward_rounded,
+                                  color: Color(0xFFFBBF24),
+                                  size: 12,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

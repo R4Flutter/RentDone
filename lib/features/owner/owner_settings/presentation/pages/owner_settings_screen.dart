@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,120 +13,184 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final settings = ref.watch(ownerSettingsProvider);
     final notifier = ref.read(ownerSettingsProvider.notifier);
-    final isDesktop = MediaQuery.of(context).size.width > 1000;
+    final isDesktop = MediaQuery.of(context).size.width > 980;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings'), centerTitle: false),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: isDesktop ? 1200 : double.infinity,
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient:
+                    OwnerDashboardColors.managePropertiesBackgroundGradient(
+                      context,
+                    ),
+              ),
             ),
+          ),
+          _liquidBlob(top: -80, left: -58, size: 300, isDark: isDark),
+          _liquidBlob(bottom: -92, right: -60, size: 260, isDark: isDark),
+          SafeArea(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _pageHeader(theme, settings),
-                if (settings.errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    settings.errorMessage!,
-                    style: const TextStyle(color: AppTheme.errorRed),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                if (settings.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 20),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                if (isDesktop)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _sectionCard(
-                              theme,
-                              icon: Icons.shield_outlined,
-                              title: 'Security',
-                              subtitle: 'Protect your account access.',
-                              child: _securitySection(
-                                context,
-                                ref,
-                                settings,
-                                notifier,
-                                theme,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            _sectionCard(
-                              theme,
-                              icon: Icons.tune,
-                              title: 'Preferences',
-                              subtitle: 'Notifications and display.',
-                              child: _systemSection(settings, notifier, theme),
-                            ),
-                          ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                  child: _pageHeader(context, theme, settings, notifier),
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: notifier.load,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isDesktop ? 1200 : double.infinity,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (settings.errorMessage != null)
+                                _errorBanner(context, settings.errorMessage!),
+                              if (settings.errorMessage != null)
+                                const SizedBox(height: 14),
+                              if (settings.isLoading)
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 14),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                              if (isDesktop)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _glassSection(
+                                        context,
+                                        theme,
+                                        icon: Icons.shield_outlined,
+                                        title: 'Security',
+                                        subtitle:
+                                            'Protect your account access and session.',
+                                        child: _securitySection(
+                                          context,
+                                          ref,
+                                          settings,
+                                          notifier,
+                                          theme,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _glassSection(
+                                        context,
+                                        theme,
+                                        icon: Icons.tune,
+                                        title: 'Preferences',
+                                        subtitle:
+                                            'Control alerts and display behavior.',
+                                        child: _systemSection(
+                                          context,
+                                          settings,
+                                          notifier,
+                                          theme,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else ...[
+                                _glassSection(
+                                  context,
+                                  theme,
+                                  icon: Icons.shield_outlined,
+                                  title: 'Security',
+                                  subtitle:
+                                      'Protect your account access and session.',
+                                  child: _securitySection(
+                                    context,
+                                    ref,
+                                    settings,
+                                    notifier,
+                                    theme,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                _glassSection(
+                                  context,
+                                  theme,
+                                  icon: Icons.tune,
+                                  title: 'Preferences',
+                                  subtitle:
+                                      'Control alerts and display behavior.',
+                                  child: _systemSection(
+                                    context,
+                                    settings,
+                                    notifier,
+                                    theme,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  )
-                else ...[
-                  _sectionCard(
-                    theme,
-                    icon: Icons.shield_outlined,
-                    title: 'Security',
-                    subtitle: 'Protect your account access.',
-                    child: _securitySection(
-                      context,
-                      ref,
-                      settings,
-                      notifier,
-                      theme,
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  _sectionCard(
-                    theme,
-                    icon: Icons.tune,
-                    title: 'Preferences',
-                    subtitle: 'Notifications and display.',
-                    child: _systemSection(settings, notifier, theme),
-                  ),
-                ],
-                const SizedBox(height: 8),
+                ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _pageHeader(ThemeData theme, OwnerSettingsState settings) {
-    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.65);
+  Widget _pageHeader(
+    BuildContext context,
+    ThemeData theme,
+    OwnerSettingsState settings,
+    OwnerSettingsNotifier notifier,
+  ) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Settings', style: theme.textTheme.displayMedium),
-              const SizedBox(height: 8),
+              Text(
+                'Settings',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: OwnerDashboardColors.managePropertiesHeaderPrimary(
+                    context,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
               Text(
                 'Your changes save automatically and apply across the app.',
-                style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 13,
+                  color: OwnerDashboardColors.managePropertiesHeaderSecondary(
+                    context,
+                  ),
+                ),
               ),
             ],
           ),
         ),
+        const SizedBox(width: 12),
         _statusPill(
+          context: context,
           label: settings.isSaving ? 'Saving...' : 'Auto-saved',
           icon: settings.isSaving ? Icons.cloud_upload : Icons.cloud_done,
           color: settings.isSaving
@@ -135,66 +201,136 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _sectionCard(
+  Widget _glassSection(
+    BuildContext context,
     ThemeData theme, {
     required IconData icon,
     required String title,
     required String subtitle,
     required Widget child,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AppTheme.blueSurfaceGradient,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.white.withValues(alpha: 0.12)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(12),
+    final isDark = theme.brightness == Brightness.dark;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 34, sigmaY: 34),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [Colors.white.withAlpha(20), Colors.white.withAlpha(10)]
+                  : [Colors.white.withAlpha(188), Colors.white.withAlpha(140)],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: AppTheme.liquidPrimaryStart.withAlpha(48),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: OwnerDashboardColors.managePropertiesShadowColor(
+                  context,
                 ),
-                child: Icon(icon, color: theme.colorScheme.onPrimary),
+                blurRadius: 28,
+                offset: const Offset(0, 12),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onPrimary,
-                      ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      gradient:
+                          OwnerDashboardColors.managePropertiesAccentGradient(
+                            context,
+                          ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onPrimary.withValues(
-                          alpha: 0.7,
+                    child: Icon(icon, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color:
+                                OwnerDashboardColors.managePropertiesHeaderPrimary(
+                                  context,
+                                ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            color:
+                                OwnerDashboardColors.managePropertiesHeaderSecondary(
+                                  context,
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _errorBanner(BuildContext context, String message) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.errorRed.withAlpha(20),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.errorRed.withAlpha(90)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: AppTheme.errorRed),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: AppTheme.errorRed,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          child,
-        ],
+        ),
       ),
     );
   }
 
   Widget _statusPill({
+    required BuildContext context,
     required String label,
     required IconData icon,
     required Color color,
@@ -213,7 +349,12 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+              letterSpacing: 0.1,
+            ),
           ),
         ],
       ),
@@ -228,81 +369,212 @@ class SettingsScreen extends ConsumerWidget {
     ThemeData theme,
   ) {
     final titleStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onPrimary,
+      color: OwnerDashboardColors.managePropertiesHeaderPrimary(context),
       fontWeight: FontWeight.w600,
     );
     final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+      color: OwnerDashboardColors.managePropertiesHeaderSecondary(context),
     );
     return Column(
       children: [
-        SwitchListTile.adaptive(
-          value: settings.enable2FA,
-          onChanged: notifier.setEnable2FA,
-          title: Text('Enable Two-Factor Authentication', style: titleStyle),
-          subtitle: Text(
-            'Adds an extra verification step on login.',
-            style: subtitleStyle,
-          ),
-          secondary: Icon(
-            Icons.phonelink_lock,
-            color: theme.colorScheme.onPrimary,
+        _settingTile(
+          context,
+          icon: Icons.phonelink_lock,
+          title: 'Enable Two-Factor Authentication',
+          subtitle: 'Adds an extra verification step on login.',
+          child: Switch.adaptive(
+            value: settings.enable2FA,
+            onChanged: notifier.setEnable2FA,
           ),
         ),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: () => _showChangePasswordDialog(context, ref),
-          icon: const Icon(Icons.lock_reset),
-          label: const Text('Change Password'),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor:
+                        OwnerDashboardColors.managePropertiesActionColor(
+                          context,
+                        ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => _showChangePasswordDialog(context, ref),
+                  icon: const Icon(Icons.lock_reset, size: 18),
+                  label: Text(
+                    'Change Password',
+                    style: titleStyle?.copyWith(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.errorRed,
+                    side: const BorderSide(color: AppTheme.errorRed),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => _logout(context, ref),
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('Logout'),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: () => _logout(context, ref),
-          icon: const Icon(Icons.logout),
-          label: const Text('Logout'),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Security changes sync instantly to your account.',
+            style: subtitleStyle?.copyWith(fontSize: 12),
+          ),
         ),
       ],
     );
   }
 
   Widget _systemSection(
+    BuildContext context,
     OwnerSettingsState settings,
     OwnerSettingsNotifier notifier,
     ThemeData theme,
   ) {
-    final titleStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onPrimary,
-      fontWeight: FontWeight.w600,
-    );
     final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+      color: OwnerDashboardColors.managePropertiesHeaderSecondary(context),
     );
     return Column(
       children: [
-        SwitchListTile.adaptive(
-          value: settings.notificationsEnabled,
-          onChanged: notifier.setNotificationsEnabled,
-          title: Text('Enable Notifications', style: titleStyle),
-          subtitle: Text(
-            'Receive rent alerts and reminders.',
-            style: subtitleStyle,
-          ),
-          secondary: Icon(
-            Icons.notifications_active_outlined,
-            color: theme.colorScheme.onPrimary,
+        _settingTile(
+          context,
+          icon: Icons.notifications_active_outlined,
+          title: 'Enable Notifications',
+          subtitle: 'Receive rent alerts and reminders.',
+          child: Switch.adaptive(
+            value: settings.notificationsEnabled,
+            onChanged: notifier.setNotificationsEnabled,
           ),
         ),
-        SwitchListTile.adaptive(
-          value: settings.darkMode,
-          onChanged: notifier.setDarkMode,
-          title: Text('Dark Mode', style: titleStyle),
-          subtitle: Text('Use a darker color scheme.', style: subtitleStyle),
-          secondary: Icon(
-            Icons.dark_mode_outlined,
-            color: theme.colorScheme.onPrimary,
+        const SizedBox(height: 12),
+        _settingTile(
+          context,
+          icon: Icons.dark_mode_outlined,
+          title: 'Dark Mode',
+          subtitle: 'Use a darker color scheme.',
+          child: Switch.adaptive(
+            value: settings.darkMode,
+            onChanged: notifier.setDarkMode,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Theme and notification preferences are applied immediately.',
+            style: subtitleStyle?.copyWith(fontSize: 12),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _settingTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.pureWhite.withAlpha(90),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: OwnerDashboardColors.managePropertiesPillBorder(context),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              gradient: OwnerDashboardColors.managePropertiesAccentGradient(
+                context,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.white, size: 17),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: OwnerDashboardColors.managePropertiesHeaderPrimary(
+                      context,
+                    ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: OwnerDashboardColors.managePropertiesHeaderSecondary(
+                      context,
+                    ),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _liquidBlob({
+    double? top,
+    double? left,
+    double? bottom,
+    double? right,
+    required double size,
+    required bool isDark,
+  }) {
+    return Positioned(
+      top: top,
+      left: left,
+      bottom: bottom,
+      right: right,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark
+              ? AppTheme.liquidPrimaryStart.withAlpha(20)
+              : AppTheme.liquidPrimaryStart.withAlpha(30),
+        ),
+      ),
     );
   }
 

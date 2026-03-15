@@ -1,9 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:rentdone/features/payment/data/gateways/cashfree_service.dart';
-import 'package:rentdone/features/payment/data/gateways/payment_gateway.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/owner/owner_subscription/presentation/providers/subscription_provider.dart';
 
@@ -12,447 +11,462 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final subscriptionAsync = ref.watch(subscriptionProvider);
-    final tenantCountAsync = ref.watch(tenantListProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Subscription')),
-      body: subscriptionAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Error: $error')),
-        data: (subscription) {
-          final tenantsUsed = tenantCountAsync.maybeWhen(
-            data: (count) => count,
-            orElse: () => subscription.currentTenantCount,
-          );
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient:
+                    OwnerDashboardColors.managePropertiesBackgroundGradient(
+                      context,
+                    ),
+              ),
+            ),
+          ),
+          _liquidBlob(top: -90, left: -60, size: 300, isDark: isDark),
+          _liquidBlob(bottom: -100, right: -70, size: 260, isDark: isDark),
+          SafeArea(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(subscriptionProvider);
+                await ref.read(subscriptionProvider.future);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 980),
+                    child: subscriptionAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.only(top: 100),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (error, _) =>
+                          _errorCard(context, error.toString()),
+                      data: (subscription) {
+                        final plan = subscription.planConfig;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _CurrentPlanCard(
-                  planTitle: subscription.planConfig.title,
-                  paymentStatus: subscription.paymentStatus,
-                  tenantLimit: subscription.tenantLimit,
-                  tenantsUsed: tenantsUsed,
-                  isActive: subscription.isActive,
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Choose Your Plan',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                ...subscriptionPlans.map(
-                  (plan) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _PlanCard(
-                      plan: plan,
-                      isCurrent: plan.code == subscription.subscriptionPlan,
-                      onTap: () => _onPlanSelected(context, ref, plan),
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _header(
+                              context,
+                              plan.title,
+                              subscription.paymentStatus,
+                            ),
+                            const SizedBox(height: 18),
+                            _usageCard(context, subscription),
+                            const SizedBox(height: 16),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isWide = constraints.maxWidth > 900;
+                                if (isWide) {
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: _planCard(
+                                          context,
+                                          plan: freePlanConfig,
+                                          currentPlanCode:
+                                              subscription.subscriptionPlan,
+                                          onSelect: () => _selectPlan(
+                                            context,
+                                            ref,
+                                            freePlanConfig,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: _planCard(
+                                          context,
+                                          plan: basicPlanConfig,
+                                          currentPlanCode:
+                                              subscription.subscriptionPlan,
+                                          onSelect: () => _selectPlan(
+                                            context,
+                                            ref,
+                                            basicPlanConfig,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: _planCard(
+                                          context,
+                                          plan: proPlanConfig,
+                                          currentPlanCode:
+                                              subscription.subscriptionPlan,
+                                          onSelect: () => _selectPlan(
+                                            context,
+                                            ref,
+                                            proPlanConfig,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }
+
+                                return Column(
+                                  children: [
+                                    _planCard(
+                                      context,
+                                      plan: freePlanConfig,
+                                      currentPlanCode:
+                                          subscription.subscriptionPlan,
+                                      onSelect: () => _selectPlan(
+                                        context,
+                                        ref,
+                                        freePlanConfig,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _planCard(
+                                      context,
+                                      plan: basicPlanConfig,
+                                      currentPlanCode:
+                                          subscription.subscriptionPlan,
+                                      onSelect: () => _selectPlan(
+                                        context,
+                                        ref,
+                                        basicPlanConfig,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _planCard(
+                                      context,
+                                      plan: proPlanConfig,
+                                      currentPlanCode:
+                                          subscription.subscriptionPlan,
+                                      onSelect: () => _selectPlan(
+                                        context,
+                                        ref,
+                                        proPlanConfig,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    context.pushNamed('ownerPayments');
-                  },
-                  icon: const Icon(Icons.payment_rounded),
-                  label: const Text('Payment History (Cashfree)'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _onPlanSelected(
-    BuildContext context,
-    WidgetRef ref,
-    SubscriptionPlanConfig plan,
-  ) async {
-    try {
-      final auth = ref.read(firebaseAuthProvider);
-      final ownerId = auth.currentUser?.uid;
-
-      if (ownerId == null || ownerId.isEmpty) {
-        if (!context.mounted) return;
-        _showError(context, 'Please sign in again.');
-        return;
-      }
-
-      await ref
-          .read(ownerSubscriptionServiceProvider)
-          .ensureOwnerSubscriptionDoc(
-            ownerId: ownerId,
-            email: auth.currentUser?.email ?? '',
-          );
-
-      if (plan.code == 'free') {
-        await ref
-            .read(ownerSubscriptionServiceProvider)
-            .activateFreePlan(ownerId: ownerId);
-
-        ref.invalidate(subscriptionProvider);
-        ref.invalidate(tenantListProvider);
-
-        if (!context.mounted) return;
-        _showSuccess(context, 'Free plan activated successfully!');
-        return;
-      }
-
-      if (!context.mounted) return;
-      _showPaymentDialog(context, ref, plan);
-    } catch (e) {
-      if (!context.mounted) return;
-      _showError(context, 'Error: ${e.toString()}');
-    }
-  }
-
-  void _showPaymentDialog(
-    BuildContext context,
-    WidgetRef ref,
-    SubscriptionPlanConfig plan,
-  ) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => _PaymentDialog(
-        plan: plan,
-        onPaymentCompleted: () {
-          Navigator.pop(dialogContext);
-          ref.invalidate(subscriptionProvider);
-          ref.invalidate(tenantListProvider);
-          _showSuccess(context, '${plan.title} plan activated successfully!');
-        },
-        onPaymentFailed: (reason) {
-          Navigator.pop(dialogContext);
-          _showError(context, reason);
-        },
-      ),
-    );
-  }
-
-  void _showError(BuildContext context, String message) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.red,
-        duration: const Duration(seconds: 4),
-      ),
-    );
-  }
-
-  void _showSuccess(BuildContext context, String message) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.green,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-}
-
-class _PaymentDialog extends ConsumerStatefulWidget {
-  final SubscriptionPlanConfig plan;
-  final VoidCallback onPaymentCompleted;
-  final Function(String) onPaymentFailed;
-
-  const _PaymentDialog({
-    required this.plan,
-    required this.onPaymentCompleted,
-    required this.onPaymentFailed,
-  });
-
-  @override
-  ConsumerState<_PaymentDialog> createState() => _PaymentDialogState();
-}
-
-class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
-  bool _isProcessing = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _initiatePayment();
-  }
-
-  Future<void> _initiatePayment() async {
-    try {
-      final auth = ref.read(firebaseAuthProvider);
-      final service = ref.read(ownerSubscriptionServiceProvider);
-
-      if (!mounted) return;
-      setState(() => _isProcessing = true);
-
-      final intent = await service.createSubscriptionPaymentIntent(
-        plan: widget.plan,
-      );
-
-      if (!mounted) return;
-
-      final ownerPhoneRaw = auth.currentUser?.phoneNumber ?? '';
-      final ownerPhone = ownerPhoneRaw.replaceAll(RegExp(r'\D'), '');
-      final normalizedPhone = ownerPhone.length >= 10
-          ? ownerPhone.substring(ownerPhone.length - 10)
-          : '9999999999';
-
-      final result = await CashfreeService(isSandbox: false).initializePayment(
-        PaymentGatewayRequest(
-          orderId: intent.orderId,
-          gatewayKey: intent.keyId,
-          amount: intent.amountInPaise,
-          currency: intent.currency,
-          paymentId: intent.paymentId,
-          tenantEmail: auth.currentUser?.email ?? 'owner@rentdone.app',
-          tenantPhone: normalizedPhone,
-          paymentSessionId: intent.paymentSessionId,
-        ),
-      );
-
-      if (!mounted) return;
-
-      if (!result.isSuccess) {
-        setState(() {
-          _isProcessing = false;
-          _errorMessage = result.failureReason ?? 'Payment failed';
-        });
-        return;
-      }
-
-      await service.verifySubscriptionPayment(paymentId: intent.paymentId);
-
-      if (!mounted) return;
-      widget.onPaymentCompleted();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-        _errorMessage = e.toString();
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_errorMessage != null) {
-      return Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, color: AppColors.red, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                'Payment Failed',
-                style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 12),
-              Text(_errorMessage!),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => widget.onPaymentFailed(_errorMessage!),
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(
-              'Processing Payment',
-              style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Please complete the ${widget.plan.title} plan payment.\n'
-              'Amount: ₹${widget.plan.monthlyPrice}',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              _isProcessing ? 'Loading...' : 'Ready',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CurrentPlanCard extends StatelessWidget {
-  const _CurrentPlanCard({
-    required this.planTitle,
-    required this.paymentStatus,
-    required this.tenantLimit,
-    required this.tenantsUsed,
-    required this.isActive,
-  });
-
-  final String planTitle;
-  final String paymentStatus;
-  final int tenantLimit;
-  final int tenantsUsed;
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    final ratio = tenantLimit <= 0
-        ? 0.0
-        : (tenantsUsed / tenantLimit).clamp(0, 1).toDouble();
-    final scheme = Theme.of(context).colorScheme;
-
-    Color statusColor = isActive && paymentStatus == 'active'
-        ? AppColors.green
-        : paymentStatus == 'pending'
-        ? AppColors.orange
-        : AppColors.red;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [scheme.primaryContainer, scheme.secondaryContainer],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.workspace_premium_rounded),
-              const SizedBox(width: 8),
-              Text(
-                'Current Plan: $planTitle',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Text('Status: '),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  paymentStatus.toUpperCase(),
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text('Usage: $tenantsUsed / $tenantLimit tenants'),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: LinearProgressIndicator(value: ratio, minHeight: 10),
           ),
         ],
       ),
     );
   }
-}
 
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({
-    required this.plan,
-    required this.isCurrent,
-    required this.onTap,
-  });
+  Widget _header(BuildContext context, String currentPlan, String status) {
+    final theme = Theme.of(context);
 
-  final SubscriptionPlanConfig plan;
-  final bool isCurrent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: isCurrent ? 1 : 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  plan.title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isCurrent
-                        ? scheme.primary.withValues(alpha: 0.15)
-                        : scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(isCurrent ? 'Current' : 'Available'),
-                ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.liquidPrimaryStart.withAlpha(220),
+                AppTheme.liquidPrimaryEnd.withAlpha(200),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              plan.monthlyPrice == 0 ? 'Free' : '₹${plan.monthlyPrice}/month',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 6),
-            Text('${plan.tenantLimit} tenants included'),
-            const SizedBox(height: 6),
-            Text(plan.description),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isCurrent ? null : onTap,
-                child: Text(
-                  isCurrent ? 'Current Plan' : 'Choose ${plan.title}',
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withAlpha(46),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: AppColors.white,
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Subscription',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Current: ${currentPlan.toUpperCase()} • ${status.toUpperCase()}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.white.withAlpha(220),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _usageCard(BuildContext context, OwnerSubscriptionData subscription) {
+    final theme = Theme.of(context);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.pureWhite.withAlpha(130),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppTheme.liquidPrimaryStart.withAlpha(44),
             ),
-          ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tenant Usage',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: OwnerDashboardColors.managePropertiesHeaderPrimary(
+                    context,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: subscription.usageRatio,
+                minHeight: 9,
+                borderRadius: BorderRadius.circular(999),
+                backgroundColor: AppTheme.liquidPrimaryStart.withAlpha(36),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppTheme.liquidPrimaryEnd,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${subscription.currentTenantCount} of ${subscription.tenantLimit} tenants used',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: OwnerDashboardColors.managePropertiesHeaderSecondary(
+                    context,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _planCard(
+    BuildContext context, {
+    required SubscriptionPlanConfig plan,
+    required String currentPlanCode,
+    required VoidCallback onSelect,
+  }) {
+    final theme = Theme.of(context);
+    final isCurrent = plan.code == currentPlanCode;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isCurrent
+                ? AppTheme.liquidPrimaryStart.withAlpha(44)
+                : AppTheme.pureWhite.withAlpha(125),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isCurrent
+                  ? AppTheme.liquidPrimaryEnd
+                  : AppTheme.liquidPrimaryStart.withAlpha(42),
+              width: isCurrent ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                plan.title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: OwnerDashboardColors.managePropertiesHeaderPrimary(
+                    context,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                plan.description,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: OwnerDashboardColors.managePropertiesHeaderSecondary(
+                    context,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                plan.monthlyPrice == 0
+                    ? 'Free'
+                    : 'Rs ${plan.monthlyPrice}/month',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.liquidPrimaryEnd,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Limit: ${plan.tenantLimit} tenants',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: OwnerDashboardColors.managePropertiesHeaderSecondary(
+                    context,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 40,
+                child: FilledButton(
+                  onPressed: isCurrent ? null : onSelect,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.liquidPrimaryEnd,
+                    disabledBackgroundColor: AppTheme.liquidPrimaryEnd
+                        .withAlpha(90),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(isCurrent ? 'Current Plan' : 'Select Plan'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectPlan(
+    BuildContext context,
+    WidgetRef ref,
+    SubscriptionPlanConfig plan,
+  ) async {
+    final service = ref.read(ownerSubscriptionServiceProvider);
+    final auth = ref.read(firebaseAuthProvider);
+    final ownerId = auth.currentUser?.uid;
+    final email = auth.currentUser?.email ?? '';
+
+    if (ownerId == null || ownerId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to manage subscription.')),
+      );
+      return;
+    }
+
+    try {
+      if (plan.code == 'free') {
+        await service.activateFreePlan(ownerId: ownerId);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Free plan activated successfully.')),
+        );
+      } else {
+        await service.ensureOwnerSubscriptionDoc(
+          ownerId: ownerId,
+          email: email,
+        );
+        final intent = await service.createSubscriptionPaymentIntent(
+          plan: plan,
+        );
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Payment intent created. Order: ${intent.orderId}. Continue in payment flow.',
+            ),
+          ),
+        );
+      }
+      ref.invalidate(subscriptionProvider);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Widget _errorCard(BuildContext context, String message) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.errorRed.withAlpha(18),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.errorRed.withAlpha(80)),
+      ),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: AppTheme.errorRed,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _liquidBlob({
+    double? top,
+    double? left,
+    double? bottom,
+    double? right,
+    required double size,
+    required bool isDark,
+  }) {
+    return Positioned(
+      top: top,
+      left: left,
+      bottom: bottom,
+      right: right,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark
+              ? AppTheme.liquidPrimaryStart.withAlpha(22)
+              : AppTheme.liquidPrimaryStart.withAlpha(32),
         ),
       ),
     );

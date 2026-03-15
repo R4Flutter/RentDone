@@ -72,6 +72,7 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
     final navBase = isDark ? AppColors.cFF020617 : AppColors.cFFFFFFFF;
     final activeColor = OwnerDashboardColors.navActive(context);
     final inactiveColor = OwnerDashboardColors.navInactive(context);
+    final hideTopBorderForProperties = widget.currentIndex == 2;
 
     return SizedBox(
       height: _kTotalHeight,
@@ -153,9 +154,11 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                             ),
                             border: Border(
                               top: BorderSide(
-                                color: brand.withValues(
-                                  alpha: isDark ? 0.24 : 0.14,
-                                ),
+                                color: hideTopBorderForProperties
+                                    ? AppColors.transparent
+                                    : brand.withValues(
+                                        alpha: isDark ? 0.24 : 0.14,
+                                      ),
                                 width: 0.8,
                               ),
                             ),

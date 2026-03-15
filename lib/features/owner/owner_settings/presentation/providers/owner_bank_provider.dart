@@ -10,6 +10,9 @@ class OwnerBankState {
   final String ifsc;
   final String branch;
   final bool isVerified;
+  final bool isDirty;
+  final DateTime? verifiedAt;
+  final DateTime? updatedAt;
   final String? errorMessage;
   final String? successMessage;
 
@@ -21,6 +24,9 @@ class OwnerBankState {
     this.ifsc = '',
     this.branch = '',
     this.isVerified = false,
+    this.isDirty = false,
+    this.verifiedAt,
+    this.updatedAt,
     this.errorMessage,
     this.successMessage,
   });
@@ -33,6 +39,11 @@ class OwnerBankState {
     String? ifsc,
     String? branch,
     bool? isVerified,
+    bool? isDirty,
+    DateTime? verifiedAt,
+    bool clearVerifiedAt = false,
+    DateTime? updatedAt,
+    bool clearUpdatedAt = false,
     String? errorMessage,
     String? successMessage,
   }) {
@@ -44,6 +55,9 @@ class OwnerBankState {
       ifsc: ifsc ?? this.ifsc,
       branch: branch ?? this.branch,
       isVerified: isVerified ?? this.isVerified,
+      isDirty: isDirty ?? this.isDirty,
+      verifiedAt: clearVerifiedAt ? null : verifiedAt ?? this.verifiedAt,
+      updatedAt: clearUpdatedAt ? null : updatedAt ?? this.updatedAt,
       errorMessage: errorMessage,
       successMessage: successMessage,
     );
@@ -87,6 +101,9 @@ class OwnerBankNotifier extends Notifier<OwnerBankState> {
         ifsc: profile?.ifsc ?? '',
         branch: profile?.branch ?? '',
         isVerified: profile?.isVerified ?? false,
+        isDirty: false,
+        verifiedAt: profile?.verifiedAt,
+        updatedAt: profile?.updatedAt,
         errorMessage: null,
         successMessage: null,
       );
@@ -99,20 +116,50 @@ class OwnerBankNotifier extends Notifier<OwnerBankState> {
     }
   }
 
-  void updateAccountHolderName(String value) =>
-      state = state.copyWith(accountHolderName: value.trim());
+  Future<void> refresh() => load();
 
-  void updateBankName(String value) =>
-      state = state.copyWith(bankName: value.trim());
+  void clearMessages() {
+    state = state.copyWith(errorMessage: null, successMessage: null);
+  }
 
-  void updateAccountNumber(String value) =>
-      state = state.copyWith(accountNumber: value.trim());
+  void updateAccountHolderName(String value) => state = state.copyWith(
+    accountHolderName: value.trim(),
+    isDirty: true,
+    errorMessage: null,
+    successMessage: null,
+  );
 
-  void updateIfsc(String value) =>
-      state = state.copyWith(ifsc: value.trim().toUpperCase());
+  void updateBankName(String value) => state = state.copyWith(
+    bankName: value.trim(),
+    isDirty: true,
+    errorMessage: null,
+    successMessage: null,
+  );
 
-  void updateBranch(String value) =>
-      state = state.copyWith(branch: value.trim());
+  void updateAccountNumber(String value) => state = state.copyWith(
+    accountNumber: value.trim(),
+    isDirty: true,
+    isVerified: false,
+    clearVerifiedAt: true,
+    errorMessage: null,
+    successMessage: null,
+  );
+
+  void updateIfsc(String value) => state = state.copyWith(
+    ifsc: value.trim().toUpperCase(),
+    isDirty: true,
+    isVerified: false,
+    clearVerifiedAt: true,
+    errorMessage: null,
+    successMessage: null,
+  );
+
+  void updateBranch(String value) => state = state.copyWith(
+    branch: value.trim(),
+    isDirty: true,
+    errorMessage: null,
+    successMessage: null,
+  );
 
   Future<void> verifyAndSaveBankDetails() async {
     if (!_isValidAccountHolder(state.accountHolderName)) {
@@ -166,6 +213,9 @@ class OwnerBankNotifier extends Notifier<OwnerBankState> {
       state = state.copyWith(
         isLoading: false,
         isVerified: true,
+        isDirty: false,
+        verifiedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
         errorMessage: null,
         successMessage: 'Bank details saved successfully.',
       );

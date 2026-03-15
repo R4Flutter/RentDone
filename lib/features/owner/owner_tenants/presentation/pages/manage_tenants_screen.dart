@@ -36,15 +36,15 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
           return;
         }
         if (next.cleanedCount != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                next.cleanedCount == 0
-                    ? 'No orphan tenant records found.'
-                    : 'Removed ${next.cleanedCount} orphan tenant records.',
+          if (next.cleanedCount! > 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Removed ${next.cleanedCount} orphan tenant records.',
+                ),
               ),
-            ),
-          );
+            );
+          }
           ref.read(orphanTenantCleanupProvider.notifier).clearResult();
         }
       });
@@ -63,7 +63,6 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
   Widget build(BuildContext context) {
     final tenantsAsync = ref.watch(ownerTenantsProvider);
     final propertiesAsync = ref.watch(ownerTenantPropertiesProvider);
-    final cleanupState = ref.watch(orphanTenantCleanupProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -153,51 +152,49 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
                               );
                             }
 
-                            final orphanTenants = visibleTenants
-                                .where(
-                                  (t) => !propertyNameById.containsKey(
-                                    t.propertyId,
-                                  ),
-                                )
-                                .toList();
+                            // Group tenants by property name
+                            final Map<String, List<Tenant>> grouped = {};
+                            for (final t in visibleTenants) {
+                              final name =
+                                  propertyNameById[t.propertyId] ??
+                                  'Unassigned';
+                              grouped.putIfAbsent(name, () => []).add(t);
+                            }
 
-                            return ListView.separated(
+                            // Build flat list: property header string + tenant objects
+                            final List<Object> items = [];
+                            for (final entry in grouped.entries) {
+                              items.add(entry.key);
+                              items.addAll(entry.value);
+                            }
+
+                            return ListView.builder(
                               padding: const EdgeInsets.only(
                                 top: 6,
                                 bottom: 12,
                               ),
-                              itemCount:
-                                  visibleTenants.length +
-                                  (orphanTenants.isNotEmpty ? 1 : 0),
-                              separatorBuilder: (_, index) =>
-                                  const SizedBox(height: 12),
+                              itemCount: items.length,
                               itemBuilder: (context, index) {
-                                if (orphanTenants.isNotEmpty && index == 0) {
-                                  return _orphanWarningCard(
-                                    context,
-                                    theme,
-                                    orphanCount: orphanTenants.length,
-                                    isLoading: cleanupState.isLoading,
-                                  );
+                                final item = items[index];
+                                if (item is String) {
+                                  return _propertyHeader(context, theme, item);
                                 }
-
-                                final tenantIndex = orphanTenants.isNotEmpty
-                                    ? index - 1
-                                    : index;
-                                final tenant = visibleTenants[tenantIndex];
+                                final tenant = item as Tenant;
                                 final isOrphan = !propertyNameById.containsKey(
                                   tenant.propertyId,
                                 );
                                 final propertyName =
                                     propertyNameById[tenant.propertyId] ??
-                                    'Unknown Property';
-
-                                return _tenantCard(
-                                  context,
-                                  theme,
-                                  tenant,
-                                  propertyName,
-                                  isOrphan: isOrphan,
+                                    'Unassigned';
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _tenantCard(
+                                    context,
+                                    theme,
+                                    tenant,
+                                    propertyName,
+                                    isOrphan: isOrphan,
+                                  ),
                                 );
                               },
                             );
@@ -215,6 +212,34 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
     );
   }
 
+  Widget _propertyHeader(BuildContext context, ThemeData theme, String name) {
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 18, 2, 8),
+      child: Row(
+        children: [
+          Icon(Icons.home_work_rounded, size: 17, color: brand),
+          const SizedBox(width: 7),
+          Text(
+            name,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: OwnerDashboardColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Divider(
+              color: OwnerDashboardColors.border(context),
+              thickness: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _liquidBlob(double size, Color color) {
     return Container(
       width: size,
@@ -222,61 +247,6 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(colors: [color, AppColors.transparent]),
-      ),
-    );
-  }
-
-  Widget _orphanWarningCard(
-    BuildContext context,
-    ThemeData theme, {
-    required int orphanCount,
-    required bool isLoading,
-  }) {
-    final isDark = OwnerDashboardColors.isDark(context);
-    final brand = OwnerDashboardColors.brandPrimary(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer.withValues(
-          alpha: isDark ? 0.42 : 0.6,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.error.withValues(alpha: 0.35),
-        ),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '$orphanCount tenant records are linked to missing properties.',
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-          const SizedBox(width: 10),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: brand,
-              foregroundColor: isDark ? AppColors.white : AppColors.cFF0F172A,
-            ),
-            onPressed: isLoading
-                ? null
-                : () async {
-                    await ref
-                        .read(orphanTenantCleanupProvider.notifier)
-                        .cleanup();
-                  },
-            child: isLoading
-                ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Clean'),
-          ),
-        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:rentdone/core/constants/user_role.dart';
 import 'package:rentdone/core/services/gravatar_service.dart';
@@ -114,15 +115,14 @@ class AuthFirebaseService {
         final googleUser = await _googleSignIn.authenticate();
 
         final googleAuth = googleUser.authentication;
-        if (googleAuth.idToken == null || googleAuth.idToken!.isEmpty) {
+        final idToken = googleAuth.idToken;
+        if (idToken == null || idToken.isEmpty) {
           throw const AuthException(
             message:
-                'Google Sign-In is not fully configured. Ensure SHA-1 fingerprint is added in Firebase Console and Google Sign-In API is enabled.',
+                'Google Sign-In is not fully configured. Ensure SHA-1/SHA-256 fingerprints are added in Firebase Console and Google Sign-In is enabled.',
           );
         }
-        final authCredential = GoogleAuthProvider.credential(
-          idToken: googleAuth.idToken,
-        );
+        final authCredential = GoogleAuthProvider.credential(idToken: idToken);
 
         credential = await _auth.signInWithCredential(authCredential);
       }
@@ -143,6 +143,24 @@ class AuthFirebaseService {
       rethrow;
     } on FirebaseAuthException catch (error) {
       throw _mapFirebaseException(error);
+    } on GoogleSignInException catch (error) {
+      if (error.code.name == 'canceled') {
+        throw const AuthException(message: 'Google sign-in was cancelled.');
+      }
+      throw AuthException(
+        message:
+            error.description ?? 'Unable to sign in with Google right now.',
+      );
+    } on PlatformException catch (e) {
+      if (e.message?.contains('serverClientId') == true) {
+        throw const AuthException(
+          message:
+              'Google Sign-In is not configured for this app. Please contact support.',
+        );
+      }
+      throw AuthException(
+        message: e.message ?? 'Unable to sign in with Google right now.',
+      );
     } catch (_) {
       throw const AuthException(
         message: 'Unable to sign in with Google right now.',
@@ -359,6 +377,10 @@ class AuthFirebaseService {
 
     final roleToPersist = existingRole ?? selectedRole;
     final normalizedPhone = phone.trim();
+    final existingPhone = (data?['phone'] as String? ?? '').trim();
+    final phoneToPersist = normalizedPhone.isNotEmpty
+        ? normalizedPhone
+        : existingPhone;
     final now = FieldValue.serverTimestamp();
 
     // Generate Gravatar URL from email
@@ -375,7 +397,7 @@ class AuthFirebaseService {
       'emailLowercase': normalizedEmail,
       'photoUrl': user.photoURL ?? gravatarUrl,
       'gravatarUrl': gravatarUrl,
-      'phone': normalizedPhone,
+      'phone': phoneToPersist,
       'role': roleToPersist.value,
       'updatedAt': now,
       if (!snapshot.exists) 'createdAt': now,
@@ -387,7 +409,7 @@ class AuthFirebaseService {
       uid: dto.uid,
       name: dto.name,
       email: dto.email,
-      phone: normalizedPhone,
+      phone: phoneToPersist,
       role: roleToPersist.value,
       createdAt: dto.createdAt,
       lastLoginAt: dto.lastLoginAt,
@@ -397,7 +419,10 @@ class AuthFirebaseService {
 
   Future<void> _initializeGoogleSignInIfNeeded() async {
     if (_googleInitialized) return;
-    await _googleSignIn.initialize();
+    await _googleSignIn.initialize(
+      serverClientId:
+          '35844123331-ut1le47rn4bc62ev8q1461m8bhboikrd.apps.googleusercontent.com',
+    );
     _googleInitialized = true;
   }
 

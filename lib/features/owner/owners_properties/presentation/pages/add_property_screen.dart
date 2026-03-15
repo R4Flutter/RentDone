@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
@@ -102,198 +104,430 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     final isEditing = widget.property != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? "Edit Property" : "Add Property")),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth >= 900;
-
-          return Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isDesktop ? 800 : double.infinity,
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Gradient background
+          Container(
+            decoration: BoxDecoration(
+              gradient: OwnerDashboardColors.managePropertiesBackgroundGradient(
+                context,
               ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isDesktop ? 32 : 20,
-                  vertical: 24,
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Property Info
-                      _buildCard(theme, "Property Information", [
-                        TextFormField(
-                          controller: nameCtrl,
-                          decoration: InputDecoration(
-                            labelText: "Property Name",
-                            hintText: "e.g., Sunshine Residency",
-                            filled: true,
-                            fillColor: AppColors.white.withValues(alpha: 0.08),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          validator: (value) =>
-                              value?.isEmpty ?? true ? "Required" : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: addressCtrl,
-                          decoration: InputDecoration(
-                            labelText: "Address",
-                            hintText: "e.g., 123 Main Street, City",
-                            filled: true,
-                            fillColor: AppColors.white.withValues(alpha: 0.08),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          maxLines: 2,
-                          validator: (value) =>
-                              value?.isEmpty ?? true ? "Required" : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: totalRoomsCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: "Total Rooms/Units",
-                            filled: true,
-                            fillColor: AppColors.white.withValues(alpha: 0.08),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          validator: (value) =>
-                              value?.isEmpty ?? true ? "Required" : null,
-                        ),
-                      ]),
-                      const SizedBox(height: 24),
-
-                      // Room Details
-                      if (rooms.isNotEmpty)
-                        _buildCard(theme, "Room/Unit Details", [
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: rooms.length,
-                            itemBuilder: (context, index) {
-                              final room = rooms[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: TextFormField(
-                                        initialValue: room.roomNumber,
-                                        decoration: InputDecoration(
-                                          labelText: "Room #",
-                                          filled: true,
-                                          fillColor: AppColors.white.withValues(
-                                            alpha: 0.08,
-                                          ),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            borderSide: BorderSide.none,
-                                          ),
-                                        ),
-                                        onChanged: (value) {
-                                          room.roomNumber = value;
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 2,
-                                      child: TextFormField(
-                                        initialValue: room.name,
-                                        decoration: InputDecoration(
-                                          labelText: "Room Name",
-                                          filled: true,
-                                          fillColor: AppColors.white.withValues(
-                                            alpha: 0.08,
-                                          ),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            borderSide: BorderSide.none,
-                                          ),
-                                        ),
-                                        onChanged: (value) {
-                                          room.name = value;
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ]),
-
-                      const SizedBox(height: 32),
-
-                      // Action Buttons
-                      Row(
+            ),
+          ),
+          // Liquid blobs
+          _liquidBlob(
+            left: -60,
+            top: -80,
+            size: 300,
+            color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.12),
+          ),
+          _liquidBlob(
+            right: -80,
+            bottom: 100,
+            size: 240,
+            color: AppTheme.liquidPrimaryEnd.withValues(alpha: 0.09),
+          ),
+          // Content
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isDesktop = constraints.maxWidth >= 900;
+                return Column(
+                  children: [
+                    // Custom header
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 32 : 20,
+                        vertical: 16,
+                      ),
+                      child: Row(
                         children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text("Cancel"),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _save,
-                              icon: Icon(isEditing ? Icons.save : Icons.add),
-                              label: Text(isEditing ? "Update" : "Create"),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    AppTheme.liquidPrimaryStart,
+                                    AppTheme.liquidPrimaryEnd,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.liquidShadow,
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back_rounded,
+                                color: Colors.white,
+                                size: 20,
                               ),
                             ),
                           ),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEditing ? 'Edit Property' : 'Add Property',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 22,
+                                  color:
+                                      OwnerDashboardColors.managePropertiesHeaderPrimary(
+                                        context,
+                                      ),
+                                ),
+                              ),
+                              Text(
+                                isEditing
+                                    ? 'Update property details'
+                                    : 'Create a new property',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color:
+                                      OwnerDashboardColors.managePropertiesHeaderSecondary(
+                                        context,
+                                      ),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
+                    // Scrollable form
+                    Expanded(
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isDesktop ? 800 : double.infinity,
+                          ),
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.only(
+                              left: isDesktop ? 32 : 20,
+                              right: isDesktop ? 32 : 20,
+                              top: 8,
+                              bottom: 32,
+                            ),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildGlassCard(
+                                    context,
+                                    theme,
+                                    'Property Information',
+                                    [
+                                      _glassField(
+                                        controller: nameCtrl,
+                                        label: 'Property Name',
+                                        hint: 'e.g., Sunshine Residency',
+                                        validator: (v) => v?.isEmpty ?? true
+                                            ? 'Required'
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _glassField(
+                                        controller: addressCtrl,
+                                        label: 'Address',
+                                        hint: 'e.g., 123 Main Street, City',
+                                        maxLines: 2,
+                                        validator: (v) => v?.isEmpty ?? true
+                                            ? 'Required'
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _glassField(
+                                        controller: totalRoomsCtrl,
+                                        label: 'Total Rooms/Units',
+                                        keyboardType: TextInputType.number,
+                                        validator: (v) => v?.isEmpty ?? true
+                                            ? 'Required'
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  if (rooms.isNotEmpty)
+                                    _buildGlassCard(
+                                      context,
+                                      theme,
+                                      'Room / Unit Details',
+                                      [
+                                        ListView.builder(
+                                          shrinkWrap: true,
+                                          physics:
+                                              const NeverScrollableScrollPhysics(),
+                                          itemCount: rooms.length,
+                                          itemBuilder: (context, index) {
+                                            final room = rooms[index];
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 16,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: _glassField(
+                                                      initialValue:
+                                                          room.roomNumber,
+                                                      label: 'Room #',
+                                                      onChanged: (v) {
+                                                        room.roomNumber = v;
+                                                      },
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: _glassField(
+                                                      initialValue: room.name,
+                                                      label: 'Room Name',
+                                                      onChanged: (v) {
+                                                        room.name = v;
+                                                      },
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  const SizedBox(height: 28),
+                                  // Equal-size action buttons
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor:
+                                                AppTheme.liquidPrimaryEnd,
+                                            side: const BorderSide(
+                                              color: AppTheme.liquidPrimaryEnd,
+                                              width: 1.5,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                            minimumSize: const Size(0, 50),
+                                            textStyle: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                          child: const Text('Cancel'),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: FilledButton.icon(
+                                          onPressed: _save,
+                                          icon: Icon(
+                                            isEditing
+                                                ? Icons.save_rounded
+                                                : Icons.add_rounded,
+                                            size: 18,
+                                          ),
+                                          label: Text(
+                                            isEditing ? 'Update' : 'Create',
+                                          ),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor:
+                                                AppTheme.liquidPrimaryEnd,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                            minimumSize: const Size(0, 50),
+                                            textStyle: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCard(ThemeData theme, String title, List<Widget> children) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AppTheme.blueSurfaceGradient,
-        borderRadius: BorderRadius.circular(20),
+  Widget _liquidBlob({
+    double? left,
+    double? right,
+    double? top,
+    double? bottom,
+    required double size,
+    required Color color,
+  }) {
+    return Positioned(
+      left: left,
+      right: right,
+      top: top,
+      bottom: bottom,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: theme.textTheme.titleLarge),
-          const SizedBox(height: 20),
-          ...children,
-        ],
+    );
+  }
+
+  Widget _buildGlassCard(
+    BuildContext context,
+    ThemeData theme,
+    String title,
+    List<Widget> children,
+  ) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(alpha: 0.72),
+                AppTheme.liquidPrimaryStart.withValues(alpha: 0.06),
+              ],
+            ),
+            border: Border.all(
+              color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.18),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.liquidShadow,
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(2),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.liquidPrimaryStart,
+                          AppTheme.liquidPrimaryEnd,
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: OwnerDashboardColors.managePropertiesHeaderPrimary(
+                        context,
+                      ),
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              ...children,
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _glassField({
+    TextEditingController? controller,
+    String? initialValue,
+    required String label,
+    String? hint,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    void Function(String)? onChanged,
+  }) {
+    return TextFormField(
+      controller: controller,
+      initialValue: initialValue,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: AppTheme.liquidPrimaryStart.withValues(alpha: 0.07),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.25),
+            width: 1.2,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.25),
+            width: 1.2,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(
+            color: AppTheme.liquidPrimaryEnd,
+            width: 1.8,
+          ),
+        ),
+      ),
+      validator: validator,
     );
   }
 

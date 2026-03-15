@@ -148,6 +148,11 @@ service cloud.firestore {
         && value.matches('^[6-9][0-9]{9}$');
     }
 
+    function isPhoneKeyedTenantDoc(tenantId) {
+      return tenantId is string
+        && tenantId.matches('^\\+91[6-9][0-9]{9}$');
+    }
+
     match /users/{userId} {
       // Allow reading own document
       allow read: if isAuthenticated() && userId == currentUid();
@@ -221,6 +226,7 @@ service cloud.firestore {
             ('propertyId' in resource.data)
             && ownerOwnsProperty(resource.data.propertyId)
           )
+          || isPhoneKeyedTenantDoc(tenantId)
         ))
         || tenantOwnsDocByIdOrEmail(tenantId, resource.data);
 

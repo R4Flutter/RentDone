@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 import 'package:rentdone/app/theme_mode_provider.dart';
+import 'package:rentdone/features/auth/di/auth_di.dart';
+import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 
 import 'app_router.dart';
 import 'app_theme.dart';
@@ -27,10 +28,17 @@ class RentDoneApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ownerSettings = ref.watch(ownerSettingsProvider);
     final themeOverride = ref.watch(appThemeModeProvider);
+    final currentUser = ref.watch(firebaseAuthProvider).currentUser;
+
     final persistedTheme = ownerSettings.isLoading
         ? ThemeMode.system
         : (ownerSettings.darkMode ? ThemeMode.dark : ThemeMode.light);
-    final themeMode = themeOverride ?? persistedTheme;
+
+    // Keep auth-entry flow (splash, role, login, signup) aligned to system theme.
+    final baseThemeMode = currentUser == null
+        ? ThemeMode.system
+        : persistedTheme;
+    final themeMode = themeOverride ?? baseThemeMode;
 
     return MaterialApp.router(
       // App identity

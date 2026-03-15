@@ -13,6 +13,15 @@ class AppTheme {
   static const Color primaryHoverBlue = Color(0xFF2563EB);
   static const Color primarySoftBlue = Color(0xFFDBEAFE);
 
+  // Liquid manage-properties palette
+  static const Color liquidPrimaryStart = Color(0xFF4F8CFF);
+  static const Color liquidPrimaryEnd = Color(0xFF2563EB);
+  static const Color liquidBackgroundLightStart = Color(0xFFF3F6FB);
+  static const Color liquidBackgroundLightEnd = Color(0xFFE6ECF7);
+  static const Color liquidTextPrimaryLight = Color(0xFF111827);
+  static const Color liquidTextSecondaryLight = Color(0xFF6B7280);
+  static const Color liquidShadow = Color(0x262040AF);
+
   // Semantics
   static const Color successGreen = Color(0xFF22C55E);
   static const Color warningAmber = Color(0xFFF59E0B);
@@ -366,6 +375,56 @@ class OwnerDashboardColors {
 
   static Color ownerBottomBlobColor(BuildContext context) =>
       brandPrimary(context).withValues(alpha: isDark(context) ? 0.12 : 0.08);
+
+  static LinearGradient managePropertiesBackgroundGradient(
+    BuildContext context,
+  ) {
+    if (isDark(context)) {
+      return ownerPageBackgroundGradient(context);
+    }
+
+    return const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        AppTheme.liquidBackgroundLightStart,
+        AppTheme.liquidBackgroundLightEnd,
+      ],
+    );
+  }
+
+  static LinearGradient managePropertiesAccentGradient(BuildContext context) =>
+      const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [AppTheme.liquidPrimaryStart, AppTheme.liquidPrimaryEnd],
+      );
+
+  static Color managePropertiesHeaderPrimary(BuildContext context) =>
+      isDark(context) ? textPrimary(context) : AppTheme.liquidTextPrimaryLight;
+
+  static Color managePropertiesHeaderSecondary(BuildContext context) =>
+      isDark(context)
+      ? textSecondary(context)
+      : AppTheme.liquidTextSecondaryLight;
+
+  static Color managePropertiesPillTextColor(BuildContext context) =>
+      isDark(context) ? textPrimary(context) : AppTheme.liquidTextPrimaryLight;
+
+  static Color managePropertiesPillBackground(BuildContext context) =>
+      AppTheme.pureWhite.withValues(alpha: isDark(context) ? 0.22 : 0.45);
+
+  static Color managePropertiesPillBorder(BuildContext context) =>
+      AppTheme.pureWhite.withValues(alpha: isDark(context) ? 0.32 : 0.55);
+
+  static Color managePropertiesCardTint(BuildContext context) =>
+      isDark(context) ? brandPrimary(context) : AppTheme.liquidPrimaryStart;
+
+  static Color managePropertiesShadowColor(BuildContext context) =>
+      AppTheme.liquidShadow.withValues(alpha: isDark(context) ? 0.22 : 0.15);
+
+  static Color managePropertiesActionColor(BuildContext context) =>
+      AppTheme.liquidPrimaryEnd;
 
   static OwnerDashboardTone propertiesTone(BuildContext context) {
     if (isDark(context)) {

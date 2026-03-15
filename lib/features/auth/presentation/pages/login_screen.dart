@@ -1,10 +1,14 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:rentdone/app/app_theme.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/core/constants/user_role.dart';
+import 'package:rentdone/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
+import 'package:rentdone/features/auth/presentation/providers/auth_state.dart';
 import 'package:rentdone/features/auth/presentation/widgets/forgot_password_dialog.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -16,12 +20,16 @@ class LoginPage extends ConsumerStatefulWidget {
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage>
+    with SingleTickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
+  late final AnimationController _bgController;
+
   bool _obscurePassword = true;
-  String? _phoneError;
 
   @override
   void initState() {
@@ -30,70 +38,349 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
 
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 18),
+    )..repeat(reverse: true);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(authProvider.notifier).setSelectedRole(widget.selectedRole);
+      final notifier = ref.read(authProvider.notifier);
+      notifier.setSelectedRole(widget.selectedRole);
+      notifier.setMode(registerMode: false);
     });
   }
 
   @override
   void dispose() {
+    _bgController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  String? _validatePhone(String phone) {
-    final digits = phone.replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) {
-      return 'Phone number is required';
-    }
-    if (digits.length < 10) {
-      return 'Phone must be at least 10 digits';
-    }
-
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(authProvider);
-    final notifier = ref.read(authProvider.notifier);
+    final authState = ref.watch(authProvider);
+    final authNotifier = ref.read(authProvider.notifier);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isOwner = widget.selectedRole == UserRole.owner;
 
-    final bg60Color = isDark ? AppColors.cFF0A0E27 : AppColors.cFFF5F7FA;
-    final accent30Color = AppColors.cFF2563EB;
-
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              bg60Color,
-              isDark ? AppColors.cFF1A1F3A : AppColors.cFFFBFDFF,
+      backgroundColor: OwnerDashboardColors.pageBackground(context),
+      body: AnimatedBuilder(
+        animation: _bgController,
+        builder: (context, _) {
+          final shift = _bgController.value;
+          final begin = Alignment(-1 + (shift * 0.4), -1 + (shift * 0.15));
+          final end = Alignment(1 - (shift * 0.25), 1 - (shift * 0.1));
+
+          final bgColors = isDark
+              ? const [Color(0xFF0C1224), Color(0xFF111B33), Color(0xFF141F3B)]
+              : const [Color(0xFFEEF3FF), Color(0xFFE8F0FF), Color(0xFFF8FAFF)];
+
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: begin,
+                      end: end,
+                      colors: bgColors,
+                    ),
+                  ),
+                ),
+              ),
+              _liquidBlob(
+                top: -110,
+                left: -70,
+                size: 290,
+                color: isDark
+                    ? const Color(0x404F7CFF)
+                    : const Color(0x664F7CFF),
+                travel: 18 * shift,
+              ),
+              _liquidBlob(
+                top: 180,
+                right: -100,
+                size: 240,
+                color: isDark
+                    ? const Color(0x336FA8FF)
+                    : const Color(0x556FA8FF),
+                travel: -14 * shift,
+              ),
+              _liquidBlob(
+                bottom: -120,
+                left: 30,
+                size: 320,
+                color: isDark
+                    ? const Color(0x2E5A90FF)
+                    : const Color(0x405A90FF),
+                travel: 22 * shift,
+              ),
+              SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 24,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildTopBrandSection(
+                            context,
+                            theme,
+                            isOwner,
+                            isDark,
+                          ),
+                          const SizedBox(height: 24),
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0, end: 1),
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeOut,
+                            builder: (context, value, child) {
+                              return Opacity(
+                                opacity: value,
+                                child: Transform.translate(
+                                  offset: Offset(0, (1 - value) * 18),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: _buildLoginCard(
+                              context,
+                              authState,
+                              authNotifier,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTopBrandSection(
+    BuildContext context,
+    ThemeData theme,
+    bool isOwner,
+    bool isDark,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: 0.68,
+            child: Image.asset(
+              'assets/images/rentdone_logo.png',
+              width: 152,
+              height: 152,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Icon(
+                isOwner ? Icons.business_outlined : Icons.home_work_outlined,
+                size: 50,
+                color: AppTheme.liquidPrimaryEnd,
+              ),
+            ),
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        Transform.translate(
+          offset: const Offset(0, -10),
+          child: Text(
+            'RentDone',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontSize: 29,
+              fontWeight: FontWeight.w800,
+              color: isDark ? AppTheme.pureWhite : AppColors.black,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Property Management Simplified',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: OwnerDashboardColors.managePropertiesHeaderSecondary(
+              context,
+            ),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoginCard(
+    BuildContext context,
+    AuthState authState,
+    AuthNotifier authNotifier,
+  ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [Colors.white.withAlpha(20), Colors.white.withAlpha(10)]
+                  : [Colors.white.withAlpha(192), Colors.white.withAlpha(152)],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: AppTheme.liquidPrimaryStart.withAlpha(isDark ? 96 : 70),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.liquidShadow.withAlpha(isDark ? 70 : 40),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildHeaderCard(context, bg60Color, accent30Color, isOwner),
-                const SizedBox(height: 32),
-                _buildLoginForm(
-                  context,
-                  state,
-                  notifier,
-                  bg60Color,
-                  accent30Color,
-                  isDark,
+                Text(
+                  'Sign In',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? AppTheme.pureWhite : AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Secure owner and tenant access powered by Firebase',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: OwnerDashboardColors.managePropertiesHeaderSecondary(
+                      context,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildInput(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(15),
+                  ],
+                  onChanged: (_) => authNotifier.clearError(),
+                  validator: _validatePhone,
+                  label: 'Phone Number',
+                  icon: Icons.phone_rounded,
+                ),
+                const SizedBox(height: 16),
+                _buildInput(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) => authNotifier.clearError(),
+                  validator: _validateEmail,
+                  label: 'Email Address',
+                  icon: Icons.alternate_email_rounded,
+                ),
+                const SizedBox(height: 16),
+                _buildInput(
+                  controller: _passwordController,
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.done,
+                  obscureText: _obscurePassword,
+                  onChanged: (_) => authNotifier.clearError(),
+                  validator: _validatePassword,
+                  onFieldSubmitted: (_) {
+                    if (!authState.isLoading) {
+                      _onEmailPressed();
+                    }
+                  },
+                  label: 'Password',
+                  icon: Icons.lock_rounded,
+                  suffix: IconButton(
+                    onPressed: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: authState.isLoading
+                        ? null
+                        : () => showForgotPasswordDialog(
+                            context: context,
+                            ref: ref,
+                            initialEmail: _emailController.text,
+                            onEmailSynced: (email) {
+                              _emailController.text = email;
+                            },
+                          ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark
+                          ? AppTheme.pureWhite
+                          : AppTheme.liquidPrimaryEnd,
+                    ),
+                    child: const Text('Forgot password?'),
+                  ),
+                ),
+                if (authState.errorMessage != null) ...[
+                  const SizedBox(height: 8),
+                  _errorCard(authState.errorMessage!),
+                ],
+                const SizedBox(height: 16),
+                _primaryButton(authState),
+                const SizedBox(height: 16),
+                _secondaryButton(authState),
+                const SizedBox(height: 24),
+                Center(
+                  child: TextButton(
+                    onPressed: authState.isLoading
+                        ? null
+                        : () => context.go(
+                            '/signup?role=${widget.selectedRole.name}',
+                          ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark
+                          ? AppTheme.pureWhite
+                          : AppColors.black,
+                    ),
+                    child: const Text(
+                      'Create account',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -103,505 +390,295 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  Widget _buildHeaderCard(
-    BuildContext context,
-    Color bg60Color,
-    Color accent30Color,
-    bool isOwner,
-  ) {
-    final theme = Theme.of(context);
+  Widget _buildInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required FormFieldValidator<String> validator,
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    List<TextInputFormatter>? inputFormatters,
+    ValueChanged<String>? onChanged,
+    ValueChanged<String>? onFieldSubmitted,
+    bool obscureText = false,
+    Widget? suffix,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      inputFormatters: inputFormatters,
+      onChanged: onChanged,
+      onFieldSubmitted: onFieldSubmitted,
+      obscureText: obscureText,
+      validator: validator,
+      decoration: _inputDecoration(label: label, icon: icon, suffix: suffix),
+    );
+  }
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accent30Color.withValues(alpha: 0.9),
-            accent30Color.withValues(alpha: 0.7),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: accent30Color.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+  InputDecoration _inputDecoration({
+    required String label,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: AppTheme.liquidPrimaryStart.withAlpha(46)),
+    );
+
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: AppTheme.liquidPrimaryEnd.withAlpha(170)),
+    );
+
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: AppTheme.liquidPrimaryEnd),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: isDark
+          ? AppTheme.pureWhite.withAlpha(26)
+          : AppTheme.pureWhite.withAlpha(110),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      enabledBorder: border,
+      focusedBorder: focusedBorder,
+      errorBorder: border,
+      focusedErrorBorder: focusedBorder,
+      errorStyle: const TextStyle(
+        color: AppTheme.errorRed,
+        fontSize: 11,
+        height: 1.1,
+        fontWeight: FontWeight.w500,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  isOwner ? Icons.apartment_rounded : Icons.home_work_rounded,
-                  color: AppColors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  '${widget.selectedRole.label} Access',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Secure login for ${widget.selectedRole.label.toLowerCase()} dashboard',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.white.withValues(alpha: 0.85),
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              OutlinedButton(
-                onPressed: () => context.goNamed('roleSelection'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.white,
-                  side: const BorderSide(color: AppColors.white38, width: 1),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: const Text('Change Role'),
-              ),
-            ],
-          ),
-        ],
+      helperStyle: TextStyle(
+        color: OwnerDashboardColors.managePropertiesHeaderSecondary(context),
+        fontSize: 11,
       ),
     );
   }
 
-  Widget _buildLoginForm(
-    BuildContext context,
-    dynamic authState,
-    dynamic authNotifier,
-    Color bg60Color,
-    Color accent30Color,
-    bool isDark,
-  ) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.cFF1A1F3A.withValues(alpha: 0.8)
-            : AppColors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: accent30Color.withValues(alpha: 0.1),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? AppColors.black26
-                : AppColors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Welcome to RentDone',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sign in with your phone number and create account easily',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppColors.white54 : AppColors.black54,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 28),
-          _buildPhoneField(context, authNotifier, isDark, accent30Color),
-          if (_phoneError != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _phoneError!,
-              style: TextStyle(
-                color: AppColors.red[400],
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          _buildGoogleButton(authState, isDark, accent30Color),
-          const SizedBox(height: 20),
-          _buildDivider(isDark),
-          const SizedBox(height: 20),
-          _buildEmailField(context, authNotifier, isDark, accent30Color),
-          const SizedBox(height: 12),
-          _buildPasswordField(isDark, accent30Color),
-          const SizedBox(height: 4),
-          _buildForgotPasswordButton(authState),
-          if (authState.errorMessage != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.red[50],
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.red[200]!, width: 1),
-              ),
-              child: Text(
-                authState.errorMessage!,
-                style: TextStyle(
-                  color: AppColors.red[700],
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
-          _buildSubmitButton(authState, isDark, accent30Color),
-          const SizedBox(height: 12),
-          _buildToggleModeButton(authState, isDark),
-        ],
-      ),
+  Widget _primaryButton(AuthState authState) {
+    const gradient = LinearGradient(
+      colors: [Color(0xFF4F7CFF), Color(0xFF6FA8FF)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
     );
-  }
-
-  Widget _buildPhoneField(
-    BuildContext context,
-    authNotifier,
-    bool isDark,
-    Color accent30Color,
-  ) {
-    final theme = Theme.of(context);
-
-    return TextField(
-      controller: _phoneController,
-      keyboardType: TextInputType.phone,
-      maxLength: 10,
-      onChanged: (value) {
-        setState(() {
-          _phoneError = null;
-        });
-        authNotifier.clearError();
-      },
-      style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-      decoration: InputDecoration(
-        labelText: 'Phone Number',
-        hintText: 'Enter 10 digits',
-        prefixIcon: Icon(Icons.phone_rounded, color: accent30Color),
-        counterText: '',
-        filled: true,
-        fillColor: isDark
-            ? AppColors.white.withValues(alpha: 0.05)
-            : accent30Color.withValues(alpha: 0.04),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color.withValues(alpha: 0.15)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color.withValues(alpha: 0.15)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color, width: 2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmailField(
-    BuildContext context,
-    authNotifier,
-    bool isDark,
-    Color accent30Color,
-  ) {
-    final theme = Theme.of(context);
-
-    return TextField(
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      onChanged: (_) => authNotifier.clearError(),
-      style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-      decoration: InputDecoration(
-        labelText: 'Email Address',
-        hintText: 'name@example.com',
-        prefixIcon: Icon(Icons.alternate_email_rounded, color: accent30Color),
-        filled: true,
-        fillColor: isDark
-            ? AppColors.white.withValues(alpha: 0.05)
-            : accent30Color.withValues(alpha: 0.04),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color.withValues(alpha: 0.15)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color.withValues(alpha: 0.15)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color, width: 2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPasswordField(bool isDark, Color accent30Color) {
-    final theme = Theme.of(context);
-
-    return TextField(
-      controller: _passwordController,
-      obscureText: _obscurePassword,
-      onChanged: (_) => ref.read(authProvider.notifier).clearError(),
-      style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-      decoration: InputDecoration(
-        labelText: 'Password',
-        hintText: 'At least 6 characters',
-        prefixIcon: Icon(Icons.lock_rounded, color: accent30Color),
-        suffixIcon: IconButton(
-          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-          icon: Icon(
-            _obscurePassword
-                ? Icons.visibility_off_rounded
-                : Icons.visibility_rounded,
-            color: accent30Color.withValues(alpha: 0.6),
-          ),
-        ),
-        filled: true,
-        fillColor: isDark
-            ? AppColors.white.withValues(alpha: 0.05)
-            : accent30Color.withValues(alpha: 0.04),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color.withValues(alpha: 0.15)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color.withValues(alpha: 0.15)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: accent30Color, width: 2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGoogleButton(
-    dynamic authState,
-    bool isDark,
-    Color accent30Color,
-  ) {
-    const Color googleBlue = AppColors.cFF4285F4;
 
     return SizedBox(
-      height: 52,
-      child: OutlinedButton.icon(
+      height: 58,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Material(
+          color: Colors.transparent,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: gradient,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4F7CFF).withAlpha(75),
+                  blurRadius: 18,
+                  offset: const Offset(0, 7),
+                ),
+              ],
+            ),
+            child: InkWell(
+              onTap: authState.isLoading ? null : _onEmailPressed,
+              child: Center(
+                child: authState.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.white,
+                          ),
+                        ),
+                      )
+                    : const Text(
+                        'Sign In',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _secondaryButton(AuthState authState) {
+    return SizedBox(
+      height: 56,
+      child: OutlinedButton(
         onPressed: authState.isLoading ? null : _onGooglePressed,
         style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: googleBlue.withValues(alpha: 0.3),
-            width: 1.5,
-          ),
+          backgroundColor: AppTheme.pureWhite.withAlpha(90),
+          side: BorderSide(color: AppTheme.liquidPrimaryStart.withAlpha(80)),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
-        icon: const Icon(Icons.login_rounded, color: googleBlue),
-        label: Text(
-          'Continue with Google',
-          style: TextStyle(
-            color: isDark ? AppColors.white : AppColors.black87,
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDivider(bool isDark) {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-            color: isDark ? AppColors.white12 : AppColors.black12,
-            thickness: 1,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'or continue with email',
-            style: TextStyle(
-              color: isDark ? AppColors.white54 : AppColors.black54,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.pureWhite,
+                border: Border.all(
+                  color: AppTheme.liquidPrimaryStart.withAlpha(80),
+                ),
+              ),
+              child: const Text(
+                'G',
+                style: TextStyle(
+                  color: Color(0xFF4285F4),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            const Text(
+              'Continue with Google',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
         ),
-        Expanded(
-          child: Divider(
-            color: isDark ? AppColors.white12 : AppColors.black12,
-            thickness: 1,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSubmitButton(
-    dynamic authState,
-    bool isDark,
-    Color accent30Color,
-  ) {
-    return SizedBox(
-      height: 52,
-      child: FilledButton(
-        onPressed: authState.isLoading ? null : _onEmailPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: accent30Color,
-          disabledBackgroundColor: accent30Color.withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: authState.isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-                ),
-              )
-            : Text(
-                authState.isRegisterMode ? 'Create Account' : 'Sign In',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  letterSpacing: 0.3,
-                ),
-              ),
       ),
     );
   }
 
-  Widget _buildToggleModeButton(dynamic authState, bool isDark) {
-    return TextButton(
-      onPressed: authState.isLoading
-          ? null
-          : () {
-              ref
-                  .read(authProvider.notifier)
-                  .setMode(registerMode: !authState.isRegisterMode);
-            },
+  Widget _errorCard(String message) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.errorRed.withAlpha(18),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.errorRed.withAlpha(80)),
+      ),
       child: Text(
-        authState.isRegisterMode
-            ? 'Already have an account? Sign in'
-            : 'New here? Create an account',
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: AppColors.cFF2563EB,
+        message,
+        style: const TextStyle(
+          color: AppTheme.errorRed,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  Widget _buildForgotPasswordButton(dynamic authState) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: TextButton(
-        onPressed: authState.isLoading || authState.isRegisterMode
-            ? null
-            : () => showForgotPasswordDialog(
-                context: context,
-                ref: ref,
-                initialEmail: _emailController.text,
-                onEmailSynced: (email) => _emailController.text = email,
-              ),
-        child: const Text('Forgot password? Get verification code'),
+  Widget _liquidBlob({
+    double? top,
+    double? left,
+    double? right,
+    double? bottom,
+    required double size,
+    required Color color,
+    required double travel,
+  }) {
+    return Positioned(
+      top: top,
+      left: left,
+      right: right,
+      bottom: bottom,
+      child: Transform.translate(
+        offset: Offset(travel, -travel * 0.4),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color,
+            boxShadow: [
+              BoxShadow(color: color, blurRadius: 70, spreadRadius: 6),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  String? _validatePhone(String? input) {
+    final digits = (input ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return 'Phone number is required';
+    if (digits.length < 10 || digits.length > 15) {
+      return 'Enter a valid phone number';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? input) {
+    final value = (input ?? '').trim();
+    if (value.isEmpty) return 'Email is required';
+    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    if (!emailRegex.hasMatch(value)) return 'Enter a valid email address';
+    return null;
+  }
+
+  String? _validatePassword(String? input) {
+    final value = input ?? '';
+    if (value.isEmpty) return 'Password is required';
+    if (value.length < 6) return 'Password must be at least 6 characters';
+    return null;
   }
 
   Future<void> _onGooglePressed() async {
-    final phoneError = _validatePhone(_phoneController.text);
-    if (phoneError != null) {
-      setState(() => _phoneError = phoneError);
-      return;
+    final rawPhone = _phoneController.text.trim();
+    if (rawPhone.isNotEmpty) {
+      final phoneError = _validatePhone(rawPhone);
+      if (phoneError != null) {
+        ref.read(authProvider.notifier).clearError();
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(phoneError),
+              backgroundColor: AppTheme.errorRed,
+            ),
+          );
+        return;
+      }
     }
 
     final notifier = ref.read(authProvider.notifier);
+
     try {
       final user = await notifier.continueWithGoogle(
-        phone: _phoneController.text,
+        phone: _phoneController.text.trim(),
       );
       if (!mounted) return;
       _navigateByRole(UserRoleX.tryParse(user.role) ?? widget.selectedRole);
-    } catch (_) {}
+    } catch (_) {
+      // Error state is managed by auth notifier.
+    }
   }
 
   Future<void> _onEmailPressed() async {
-    final phoneError = _validatePhone(_phoneController.text);
-    if (phoneError != null) {
-      setState(() => _phoneError = phoneError);
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     final notifier = ref.read(authProvider.notifier);
+
     try {
       final user = await notifier.continueWithEmail(
-        phone: _phoneController.text,
-        email: _emailController.text,
+        phone: _phoneController.text.trim(),
+        email: _emailController.text.trim(),
         password: _passwordController.text,
       );
       if (!mounted) return;
       _navigateByRole(UserRoleX.tryParse(user.role) ?? widget.selectedRole);
-    } catch (_) {}
+    } catch (_) {
+      // Error state is managed by auth notifier.
+    }
   }
 
   void _navigateByRole(UserRole role) {

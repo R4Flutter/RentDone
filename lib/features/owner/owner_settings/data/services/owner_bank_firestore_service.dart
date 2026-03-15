@@ -7,6 +7,8 @@ class OwnerBankProfile {
   final String ifsc;
   final String branch;
   final bool isVerified;
+  final DateTime? verifiedAt;
+  final DateTime? updatedAt;
 
   const OwnerBankProfile({
     required this.accountHolderName,
@@ -15,6 +17,8 @@ class OwnerBankProfile {
     required this.ifsc,
     required this.branch,
     required this.isVerified,
+    required this.verifiedAt,
+    required this.updatedAt,
   });
 }
 
@@ -39,6 +43,8 @@ class OwnerBankFirestoreService {
     final accountNumber = (data['bankAccountNumber'] as String?)?.trim() ?? '';
     final ifsc = (data['bankIfsc'] as String?)?.trim() ?? '';
     final branch = (data['bankBranch'] as String?)?.trim() ?? '';
+    final verifiedAt = _toDateTime(data['bankVerifiedAt']);
+    final updatedAt = _toDateTime(data['updatedAt']);
 
     if (accountHolderName.isEmpty &&
         bankName.isEmpty &&
@@ -54,6 +60,8 @@ class OwnerBankFirestoreService {
       ifsc: ifsc,
       branch: branch,
       isVerified: data['isBankVerified'] == true,
+      verifiedAt: verifiedAt,
+      updatedAt: updatedAt,
     );
   }
 
@@ -76,5 +84,12 @@ class OwnerBankFirestoreService {
       'bankVerifiedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  DateTime? _toDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    return null;
   }
 }

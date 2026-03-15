@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
@@ -8,8 +9,9 @@ import 'package:rentdone/shared/widgets/profile_picture_avatar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final String? avatarUrl;
+  final bool isSetupMode;
 
-  const ProfileScreen({super.key, this.avatarUrl});
+  const ProfileScreen({super.key, this.avatarUrl, this.isSetupMode = false});
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -19,7 +21,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late final TextEditingController _fullNameController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
+  late final ScrollController _scrollController;
   bool _dirty = false;
+  bool _hasScrolledToSetup = false;
   static const _horizontalPadding = 20.0;
 
   @override
@@ -28,6 +32,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _fullNameController = TextEditingController();
     _emailController = TextEditingController();
     _phoneController = TextEditingController();
+    _scrollController = ScrollController();
 
     void markDirty() {
       if (_dirty) return;
@@ -44,6 +49,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _fullNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -52,6 +58,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _fullNameController.text = profile.fullName;
     _emailController.text = profile.email;
     _phoneController.text = profile.phone;
+
+    // In setup mode, scroll to the form card after first load
+    if (widget.isSetupMode && !_hasScrolledToSetup && !profile.isLoading) {
+      _hasScrolledToSetup = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
+      });
+    }
   }
 
   String _resolvedLocationForSave(
@@ -85,6 +104,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
     if (mounted) {
       setState(() => _dirty = false);
+      // In setup mode: if phone and name are now filled, go to dashboard
+      if (widget.isSetupMode) {
+        final name = _fullNameController.text.trim();
+        final phone = _phoneController.text.trim();
+        if (name.isNotEmpty && phone.isNotEmpty) {
+          context.goNamed('ownerDashboard');
+        }
+      }
     }
   }
 
@@ -169,6 +196,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         profile.isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
+                controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(
                   _horizontalPadding,
                   10,
@@ -178,6 +206,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (widget.isSetupMode) _buildSetupBanner(context, profile),
+                    if (widget.isSetupMode) const SizedBox(height: 14),
                     _buildProfileHeader(context, profile),
                     const SizedBox(height: 18),
                     _buildProfileFormCard(context, profile),
@@ -199,6 +229,148 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(colors: [color, Colors.transparent]),
+      ),
+    );
+  }
+
+  // ─── Setup Banner ──────────────────────────────────────────────────────────
+
+  Widget _buildSetupBanner(BuildContext context, OwnerProfileState profile) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final missingFields = <String>[];
+    if (profile.fullName.isEmpty && _fullNameController.text.trim().isEmpty) {
+      missingFields.add('Full Name');
+    }
+    if (profile.email.isEmpty && _emailController.text.trim().isEmpty) {
+      missingFields.add('Email');
+    }
+    if (profile.phone.isEmpty && _phoneController.text.trim().isEmpty) {
+      missingFields.add('Phone Number');
+    }
+    if (profile.location.isEmpty) missingFields.add('Location');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  const Color(0xFFB45309).withValues(alpha: 0.35),
+                  const Color(0xFF92400E).withValues(alpha: 0.25),
+                ]
+              : [const Color(0xFFFEF3C7), const Color(0xFFFDE68A)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
+              : const Color(0xFFF59E0B).withValues(alpha: 0.7),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(
+              0xFFF59E0B,
+            ).withValues(alpha: isDark ? 0.20 : 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.22),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_pin_rounded,
+              color: Color(0xFFF59E0B),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Complete your profile',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: isDark
+                        ? const Color(0xFFFDE68A)
+                        : const Color(0xFF92400E),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Please fill in the highlighted fields below to continue using the app.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isDark
+                        ? const Color(0xFFFCD34D).withValues(alpha: 0.85)
+                        : const Color(0xFF78350F),
+                    height: 1.4,
+                  ),
+                ),
+                if (missingFields.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: missingFields.map((f) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFF59E0B,
+                          ).withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFF59E0B,
+                            ).withValues(alpha: 0.55),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.arrow_downward_rounded,
+                              size: 12,
+                              color: Color(0xFFF59E0B),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              f,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark
+                                    ? const Color(0xFFFDE68A)
+                                    : const Color(0xFF78350F),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -324,6 +496,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.person_outline,
             keyboardType: TextInputType.name,
             textInputAction: TextInputAction.next,
+            requiresSetup:
+                widget.isSetupMode && _fullNameController.text.trim().isEmpty,
           ),
           const SizedBox(height: 10),
           _glassInput(
@@ -333,6 +507,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.mail_outline,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
+            requiresSetup:
+                widget.isSetupMode && _emailController.text.trim().isEmpty,
           ),
           const SizedBox(height: 10),
           _glassInput(
@@ -342,6 +518,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.phone_outlined,
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.done,
+            requiresSetup:
+                widget.isSetupMode && _phoneController.text.trim().isEmpty,
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -617,41 +795,70 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required IconData icon,
     TextInputType? keyboardType,
     TextInputAction? textInputAction,
+    bool requiresSetup = false,
   }) {
+    final setupBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.8),
+    );
+
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
+      onChanged: (_) =>
+          setState(() {}), // rebuild so requiresSetup updates live
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
         color: OwnerDashboardColors.textPrimary(context),
       ),
       cursorColor: OwnerDashboardColors.textPrimary(context),
       decoration: InputDecoration(
-        labelText: label,
+        labelText: requiresSetup ? '★  $label  (required)' : label,
         prefixIcon: Icon(
           icon,
-          color: OwnerDashboardColors.brandPrimary(context),
+          color: requiresSetup
+              ? const Color(0xFFF59E0B)
+              : OwnerDashboardColors.brandPrimary(context),
           size: 20,
         ),
         labelStyle: TextStyle(
-          color: OwnerDashboardColors.textSecondary(context),
+          color: requiresSetup
+              ? const Color(0xFFF59E0B)
+              : OwnerDashboardColors.textSecondary(context),
+          fontWeight: requiresSetup ? FontWeight.w600 : FontWeight.normal,
         ),
         filled: true,
-        fillColor: OwnerDashboardColors.brandPrimary(
-          context,
-        ).withValues(alpha: OwnerDashboardColors.isDark(context) ? 0.12 : 0.06),
+        fillColor: requiresSetup
+            ? const Color(0xFFF59E0B).withValues(alpha: 0.08)
+            : OwnerDashboardColors.brandPrimary(context).withValues(
+                alpha: OwnerDashboardColors.isDark(context) ? 0.12 : 0.06,
+              ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: OwnerDashboardColors.border(context)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.2),
-        ),
+        enabledBorder: requiresSetup
+            ? setupBorder
+            : OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: OwnerDashboardColors.border(context),
+                ),
+              ),
+        focusedBorder: requiresSetup
+            ? setupBorder.copyWith(
+                borderSide: const BorderSide(
+                  color: Color(0xFFF59E0B),
+                  width: 2,
+                ),
+              )
+            : OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(
+                  color: Color(0xFF3B82F6),
+                  width: 1.2,
+                ),
+              ),
       ),
     );
   }

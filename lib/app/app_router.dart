@@ -8,6 +8,7 @@ import 'package:rentdone/core/constants/user_role.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
+import 'package:rentdone/features/auth/presentation/pages/signup_screen.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart'
     as owner_add_tenant;
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_screen.dart';
@@ -72,7 +73,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           }
           return '/login?role=owner';
         }
-        return null; // Allow /role and /login
+        return null; // Allow /role, /login and /signup
       }
 
       // User is authenticated - check their role
@@ -81,7 +82,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // If user has no role yet, only allow /role and /login
       if (role == null) {
-        if (path == '/role' || path == '/login') {
+        if (path == '/role' || path == '/login' || path == '/signup') {
           return null; // Allow these paths
         }
         return '/role'; // Redirect everything else to role selection
@@ -96,7 +97,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // If user with role tries to access role selection or login, redirect to their dashboard
-      if (path == '/role' || path == '/login' || path == '/') {
+      if (path == '/role' ||
+          path == '/login' ||
+          path == '/signup' ||
+          path == '/') {
+        // Check whether the user's profile is complete (name + phone required)
+        try {
+          final userDoc = await ref
+              .read(firestoreProvider)
+              .collection('users')
+              .doc(uid)
+              .get();
+          final data = userDoc.data() ?? {};
+          final phone = (data['phone'] as String? ?? '').trim();
+          final name = (data['name'] as String? ?? '').trim();
+          if (phone.isEmpty || name.isEmpty) {
+            return role == UserRole.owner
+                ? '/owner/profile?setup=true'
+                : '/tenant/profile?setup=true';
+          }
+        } catch (_) {
+          // If Firestore check fails, fall through to dashboard normally
+        }
         return role == UserRole.owner
             ? '/owner/dashboard'
             : '/tenant/dashboard';
@@ -134,6 +156,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      /// 🆕 Signup Screen
+      GoRoute(
+        path: '/signup',
+        name: 'signup',
+        builder: (context, state) {
+          final roleParam = state.uri.queryParameters['role'];
+          final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
+          return SignupPage(selectedRole: selectedRole);
+        },
+      ),
+
       // ============================================================
       // 🧑‍💼 TENANT ROUTES
       // ============================================================
@@ -158,7 +191,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/tenant/profile',
             name: 'tenantProfile',
-            builder: (context, state) => const TenantProfileScreen(),
+            builder: (context, state) {
+              final setup = state.uri.queryParameters['setup'] == 'true';
+              return TenantProfileScreen(isSetupMode: setup);
+            },
           ),
           GoRoute(
             path: '/tenant/transactions',
@@ -368,7 +404,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/owner/profile',
             name: 'ownerProfile',
-            builder: (context, state) => const ProfileScreen(),
+            builder: (context, state) {
+              final setup = state.uri.queryParameters['setup'] == 'true';
+              return ProfileScreen(isSetupMode: setup);
+            },
           ),
 
           // ========================================================

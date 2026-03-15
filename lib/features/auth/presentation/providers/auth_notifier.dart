@@ -25,7 +25,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<AuthUser> continueWithGoogle({required String phone}) async {
     final role = _validatedRole();
-    final normalizedPhone = _validatePhone(phone);
+    final normalizedPhone = _normalizeOptionalPhone(phone);
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
@@ -98,6 +98,17 @@ class AuthNotifier extends Notifier<AuthState> {
 
   String _validatePhone(String phone) {
     final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10 || digits.length > 15) {
+      const message = 'Enter a valid phone number.';
+      state = state.copyWith(errorMessage: message);
+      throw StateError(message);
+    }
+    return digits;
+  }
+
+  String _normalizeOptionalPhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return '';
     if (digits.length < 10 || digits.length > 15) {
       const message = 'Enter a valid phone number.';
       state = state.copyWith(errorMessage: message);
