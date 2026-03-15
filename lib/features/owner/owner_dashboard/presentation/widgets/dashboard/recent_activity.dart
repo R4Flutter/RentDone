@@ -88,7 +88,9 @@ class _ActivityRow extends StatelessWidget {
               Text(
                 text,
                 style: textTheme.bodyMedium?.copyWith(
-                  color: color,
+                  color: OwnerDashboardColors.isDark(context)
+                      ? AppColors.white
+                      : AppColors.cFF0F172A,
                   fontWeight: FontWeight.w600,
                 ),
               ),

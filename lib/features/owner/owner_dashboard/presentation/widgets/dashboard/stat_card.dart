@@ -32,7 +32,7 @@ class StatCard extends StatelessWidget {
     final bubbleBorder = OwnerDashboardColors.brandPrimary(
       context,
     ).withValues(alpha: 0.3);
-    final bubbleText = OwnerDashboardColors.brandPrimary(context);
+    final bubbleText = isDark ? AppColors.white : AppColors.cFF0F172A;
 
     return DashboardCard(
       useGradient: false,

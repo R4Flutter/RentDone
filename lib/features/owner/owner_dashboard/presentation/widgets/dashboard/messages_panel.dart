@@ -40,9 +40,7 @@ class MessagesPanel extends ConsumerWidget {
                 ),
               ),
               if (async.hasError)
-                _StatusPill(label: 'Offline', color: scheme.error)
-              else if (!async.isLoading && useFallback)
-                _StatusPill(label: 'Sample', color: scheme.primary),
+                _StatusPill(label: 'Offline', color: scheme.error),
             ],
           ),
           const SizedBox(height: 12),
