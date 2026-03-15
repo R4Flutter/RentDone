@@ -40,18 +40,8 @@ class OwnerDashboardPage extends ConsumerWidget {
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      OwnerDashboardColors.pageBackground(context),
-                      Color.lerp(
-                            OwnerDashboardColors.pageBackground(context),
-                            OwnerDashboardColors.brandPrimary(context),
-                            0.06,
-                          ) ??
-                          OwnerDashboardColors.pageBackground(context),
-                    ],
+                  gradient: OwnerDashboardColors.ownerPageBackgroundGradient(
+                    context,
                   ),
                 ),
               ),
@@ -61,9 +51,7 @@ class OwnerDashboardPage extends ConsumerWidget {
               left: -50,
               child: _LiquidBlob(
                 size: 220,
-                color: OwnerDashboardColors.brandPrimary(
-                  context,
-                ).withValues(alpha: 0.16),
+                color: OwnerDashboardColors.ownerTopBlobColor(context),
               ),
             ),
             Positioned(
@@ -71,9 +59,7 @@ class OwnerDashboardPage extends ConsumerWidget {
               right: -30,
               child: _LiquidBlob(
                 size: 260,
-                color: OwnerDashboardColors.brandPrimary(
-                  context,
-                ).withValues(alpha: 0.12),
+                color: OwnerDashboardColors.ownerBottomBlobColor(context),
               ),
             ),
             BackdropFilter(
@@ -91,7 +77,15 @@ class OwnerDashboardPage extends ConsumerWidget {
                     children: [
                       const OwnerTopNavBar(),
 
-                      Expanded(child: child),
+                      Expanded(
+                        child: Theme(
+                          data: Theme.of(context).copyWith(
+                            scaffoldBackgroundColor: AppColors.transparent,
+                            canvasColor: AppColors.transparent,
+                          ),
+                          child: child,
+                        ),
+                      ),
                     ],
                   ),
                 ),

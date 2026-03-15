@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -66,82 +67,161 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Tenants'),
-        actions: [
-          IconButton(
-            tooltip: 'Tenant Trust Search',
-            onPressed: () => context.push('/owner/tenants/trust-search'),
-            icon: const Icon(Icons.manage_search_rounded),
+      backgroundColor: OwnerDashboardColors.pageBackground(context),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: OwnerDashboardColors.ownerPageBackgroundGradient(
+                  context,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: -80,
+            left: -40,
+            child: _liquidBlob(
+              210,
+              OwnerDashboardColors.ownerTopBlobColor(context),
+            ),
+          ),
+          Positioned(
+            bottom: -110,
+            right: -40,
+            child: _liquidBlob(
+              250,
+              OwnerDashboardColors.ownerBottomBlobColor(context),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Manage Tenants',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: OwnerDashboardColors.textPrimary(context),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Tenant Trust Search',
+                        onPressed: () =>
+                            context.push('/owner/tenants/trust-search'),
+                        icon: Icon(
+                          Icons.manage_search_rounded,
+                          color: OwnerDashboardColors.iconPrimary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: tenantsAsync.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => Center(child: Text('Error: $e')),
+                      data: (tenants) {
+                        return propertiesAsync.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (e, _) =>
+                              Center(child: Text('Property load error: $e')),
+                          data: (properties) {
+                            final propertyNameById = {
+                              for (final p in properties) p.id: p.name,
+                            };
+
+                            final visibleTenants = tenants
+                                .where((t) => !dismissedIds.contains(t.id))
+                                .toList();
+
+                            if (visibleTenants.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  'No tenants yet',
+                                  style: theme.textTheme.titleMedium,
+                                ),
+                              );
+                            }
+
+                            final orphanTenants = visibleTenants
+                                .where(
+                                  (t) => !propertyNameById.containsKey(
+                                    t.propertyId,
+                                  ),
+                                )
+                                .toList();
+
+                            return ListView.separated(
+                              padding: const EdgeInsets.only(
+                                top: 6,
+                                bottom: 12,
+                              ),
+                              itemCount:
+                                  visibleTenants.length +
+                                  (orphanTenants.isNotEmpty ? 1 : 0),
+                              separatorBuilder: (_, index) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                if (orphanTenants.isNotEmpty && index == 0) {
+                                  return _orphanWarningCard(
+                                    context,
+                                    theme,
+                                    orphanCount: orphanTenants.length,
+                                    isLoading: cleanupState.isLoading,
+                                  );
+                                }
+
+                                final tenantIndex = orphanTenants.isNotEmpty
+                                    ? index - 1
+                                    : index;
+                                final tenant = visibleTenants[tenantIndex];
+                                final isOrphan = !propertyNameById.containsKey(
+                                  tenant.propertyId,
+                                );
+                                final propertyName =
+                                    propertyNameById[tenant.propertyId] ??
+                                    'Unknown Property';
+
+                                return _tenantCard(
+                                  context,
+                                  theme,
+                                  tenant,
+                                  propertyName,
+                                  isOrphan: isOrphan,
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      body: tenantsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (tenants) {
-          return propertiesAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Property load error: $e')),
-            data: (properties) {
-              final propertyNameById = {
-                for (final p in properties) p.id: p.name,
-              };
+    );
+  }
 
-              final visibleTenants = tenants
-                  .where((t) => !dismissedIds.contains(t.id))
-                  .toList();
-
-              if (visibleTenants.isEmpty) {
-                return Center(
-                  child: Text(
-                    'No tenants yet',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                );
-              }
-
-              final orphanTenants = visibleTenants
-                  .where((t) => !propertyNameById.containsKey(t.propertyId))
-                  .toList();
-
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount:
-                    visibleTenants.length + (orphanTenants.isNotEmpty ? 1 : 0),
-                separatorBuilder: (_, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  if (orphanTenants.isNotEmpty && index == 0) {
-                    return _orphanWarningCard(
-                      context,
-                      theme,
-                      orphanCount: orphanTenants.length,
-                      isLoading: cleanupState.isLoading,
-                    );
-                  }
-
-                  final tenantIndex = orphanTenants.isNotEmpty
-                      ? index - 1
-                      : index;
-                  final tenant = visibleTenants[tenantIndex];
-                  final isOrphan = !propertyNameById.containsKey(
-                    tenant.propertyId,
-                  );
-                  final propertyName =
-                      propertyNameById[tenant.propertyId] ?? 'Unknown Property';
-
-                  return _tenantCard(
-                    context,
-                    theme,
-                    tenant,
-                    propertyName,
-                    isOrphan: isOrphan,
-                  );
-                },
-              );
-            },
-          );
-        },
+  Widget _liquidBlob(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [color, AppColors.transparent]),
       ),
     );
   }
@@ -152,10 +232,17 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
     required int orphanCount,
     required bool isLoading,
   }) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer.withValues(alpha: 0.6),
+        color: theme.colorScheme.errorContainer.withValues(
+          alpha: isDark ? 0.42 : 0.6,
+        ),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.error.withValues(alpha: 0.35),
+        ),
       ),
       padding: const EdgeInsets.all(14),
       child: Row(
@@ -170,6 +257,10 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
           ),
           const SizedBox(width: 10),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: brand,
+              foregroundColor: isDark ? AppColors.white : AppColors.cFF0F172A,
+            ),
             onPressed: isLoading
                 ? null
                 : () async {
@@ -197,92 +288,129 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
     String propertyName, {
     required bool isOrphan,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                CircularProfileAvatar(
-                  photoUrl: tenant.photoUrl,
-                  email: tenant.email,
-                  radius: 22,
+    final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                (isDark ? AppColors.white : AppColors.cFFFFFFFF).withValues(
+                  alpha: isDark ? 0.15 : 0.80,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tenant.fullName,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(tenant.phone, style: theme.textTheme.bodySmall),
-                      const SizedBox(height: 4),
-                      Text(
-                        propertyName,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: isOrphan
-                              ? theme.colorScheme.error
-                              : theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.7,
-                                ),
-                        ),
-                      ),
-                      if (isOrphan) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.errorContainer,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'Orphan record',
-                            style: theme.textTheme.labelSmall,
+                OwnerDashboardColors.brandPrimary(
+                  context,
+                ).withValues(alpha: isDark ? 0.08 : 0.04),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: OwnerDashboardColors.border(context)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: isDark ? 0.2 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  CircularProfileAvatar(
+                    photoUrl: tenant.photoUrl,
+                    email: tenant.email,
+                    radius: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tenant.fullName,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        Text(tenant.phone, style: theme.textTheme.bodySmall),
+                        const SizedBox(height: 4),
+                        Text(
+                          propertyName,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isOrphan
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.7,
+                                  ),
+                          ),
+                        ),
+                        if (isOrphan) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.errorContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Orphan record',
+                              style: theme.textTheme.labelSmall,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _viewDocuments(context, tenant),
-                    icon: const Icon(Icons.description_outlined, size: 16),
-                    label: const Text('View Documents'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: isOrphan
-                        ? null
-                        : () => _viewPayments(context, tenant, propertyName),
-                    icon: const Icon(
-                      Icons.account_balance_wallet_outlined,
-                      size: 16,
                     ),
-                    label: const Text('View Payments'),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: brand,
+                        side: BorderSide(color: brand.withValues(alpha: 0.45)),
+                      ),
+                      onPressed: () => _viewDocuments(context, tenant),
+                      icon: const Icon(Icons.description_outlined, size: 16),
+                      label: const Text('View Documents'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: brand,
+                        foregroundColor: isDark
+                            ? AppColors.white
+                            : AppColors.cFF0F172A,
+                      ),
+                      onPressed: isOrphan
+                          ? null
+                          : () => _viewPayments(context, tenant, propertyName),
+                      icon: const Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 16,
+                      ),
+                      label: const Text('View Payments'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

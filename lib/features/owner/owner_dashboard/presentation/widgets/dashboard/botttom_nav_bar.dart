@@ -7,15 +7,9 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 const _kBarHeight = 59.0;
 const _kIconRise = 16.0; // active icon lifts this many px above rest pos
 const _kNotchRadius = 34.0;
-const _kNotchDepth = 44.0;
+const _kNotchDepth = 38.0;
 const _kTopRadius = 28.0;
 const _kTotalHeight = _kBarHeight + _kIconRise;
-
-const _kActiveColor = Color(0xFF5DA8FF);
-const _kInactiveColor = Color(0xFF5A6C8E);
-const _kGlowColor = Color(0xFF3D8DFF);
-const _kNavBgTop = Color(0xFF0A1F44);
-const _kNavBgBottom = Color(0xFF081631);
 
 double _lerpd(double a, double b, double t) => a + (b - a) * t;
 
@@ -73,6 +67,12 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final navBase = isDark ? AppColors.cFF020617 : AppColors.cFFFFFFFF;
+    final activeColor = OwnerDashboardColors.navActive(context);
+    final inactiveColor = OwnerDashboardColors.navInactive(context);
+
     return SizedBox(
       height: _kTotalHeight,
       child: LayoutBuilder(
@@ -112,12 +112,16 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.45),
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.45 : 0.14,
+                            ),
                             blurRadius: 28,
                             offset: const Offset(0, -6),
                           ),
                           BoxShadow(
-                            color: _kGlowColor.withValues(alpha: 0.14),
+                            color: brand.withValues(
+                              alpha: isDark ? 0.16 : 0.09,
+                            ),
                             blurRadius: 36,
                             offset: const Offset(0, -2),
                           ),
@@ -139,14 +143,19 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                         child: Container(
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
+                            gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [_kNavBgTop, _kNavBgBottom],
+                              colors: [
+                                navBase.withValues(alpha: isDark ? 0.82 : 0.92),
+                                brand.withValues(alpha: isDark ? 0.12 : 0.06),
+                              ],
                             ),
                             border: Border(
                               top: BorderSide(
-                                color: _kGlowColor.withValues(alpha: 0.22),
+                                color: brand.withValues(
+                                  alpha: isDark ? 0.24 : 0.14,
+                                ),
                                 width: 0.8,
                               ),
                             ),
@@ -168,6 +177,9 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                               icon: Icons.dashboard_rounded,
                               currentIndex: widget.currentIndex,
                               onTap: widget.onTap,
+                              activeColor: activeColor,
+                              inactiveColor: inactiveColor,
+                              isDark: isDark,
                             ),
                           ),
                           Expanded(
@@ -176,6 +188,9 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                               icon: Icons.person_add_alt_1_rounded,
                               currentIndex: widget.currentIndex,
                               onTap: widget.onTap,
+                              activeColor: activeColor,
+                              inactiveColor: inactiveColor,
+                              isDark: isDark,
                             ),
                           ),
                           Expanded(
@@ -184,6 +199,9 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                               icon: Icons.add_business_rounded,
                               currentIndex: widget.currentIndex,
                               onTap: widget.onTap,
+                              activeColor: activeColor,
+                              inactiveColor: inactiveColor,
+                              isDark: isDark,
                             ),
                           ),
                         ],
@@ -207,12 +225,18 @@ class _NavIcon extends StatelessWidget {
   final IconData icon;
   final int currentIndex;
   final Function(int) onTap;
+  final Color activeColor;
+  final Color inactiveColor;
+  final bool isDark;
 
   const _NavIcon({
     required this.index,
     required this.icon,
     required this.currentIndex,
     required this.onTap,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.isDark,
   });
 
   @override
@@ -245,11 +269,13 @@ class _NavIcon extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isActive
-                        ? _kActiveColor.withValues(alpha: 0.22)
+                        ? activeColor.withValues(alpha: isDark ? 0.22 : 0.14)
                         : Colors.transparent,
                     border: isActive
                         ? Border.all(
-                            color: _kActiveColor.withValues(alpha: 0.45),
+                            color: activeColor.withValues(
+                              alpha: isDark ? 0.45 : 0.28,
+                            ),
                             width: 1,
                           )
                         : null,
@@ -260,9 +286,7 @@ class _NavIcon extends StatelessWidget {
                     child: Icon(
                       icon,
                       size: 24,
-                      color: isActive
-                          ? const Color(0xFFB7D7FF)
-                          : _kInactiveColor,
+                      color: isActive ? activeColor : inactiveColor,
                     ),
                   ),
                 ),

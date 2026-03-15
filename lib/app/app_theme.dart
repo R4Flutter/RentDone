@@ -343,6 +343,30 @@ class OwnerDashboardColors {
       ? AppTheme.darkTextSecondary
       : AppTheme.lightTextSecondary;
 
+  // Shared owner-page background system to keep dashboard look globally consistent.
+  static LinearGradient ownerPageBackgroundGradient(BuildContext context) {
+    final base = pageBackground(context);
+    final tinted =
+        Color.lerp(
+          base,
+          brandPrimary(context),
+          isDark(context) ? 0.08 : 0.05,
+        ) ??
+        base;
+
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [base, tinted],
+    );
+  }
+
+  static Color ownerTopBlobColor(BuildContext context) =>
+      brandPrimary(context).withValues(alpha: isDark(context) ? 0.16 : 0.10);
+
+  static Color ownerBottomBlobColor(BuildContext context) =>
+      brandPrimary(context).withValues(alpha: isDark(context) ? 0.12 : 0.08);
+
   static OwnerDashboardTone propertiesTone(BuildContext context) {
     if (isDark(context)) {
       return const OwnerDashboardTone(

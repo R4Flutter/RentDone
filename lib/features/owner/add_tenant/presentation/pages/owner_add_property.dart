@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
@@ -102,73 +103,146 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final actionBlue = OwnerDashboardColors.brandPrimary(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Manage Tenants")),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth >= 900;
-
-          return Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isDesktop ? 750 : double.infinity,
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isDesktop ? 32 : 20,
-                  vertical: 24,
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _progressIndicator(theme),
-                      const SizedBox(height: 32),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildStepContent(step, theme),
-                      ),
-                      const SizedBox(height: 32),
-                      Row(
-                        children: [
-                          if (step > 0)
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: _back,
-                                child: const Text("Back"),
-                              ),
-                            ),
-                          if (step > 0) const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: step == 5 ? _save : _next,
-                              child: Text(
-                                step == 5 ? "Save Tenant" : "Continue",
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+      backgroundColor: OwnerDashboardColors.pageBackground(context),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: OwnerDashboardColors.ownerPageBackgroundGradient(
+                  context,
                 ),
               ),
             ),
-          );
-        },
+          ),
+          Positioned(
+            top: -90,
+            left: -50,
+            child: _liquidBlob(
+              220,
+              OwnerDashboardColors.ownerTopBlobColor(context),
+            ),
+          ),
+          Positioned(
+            bottom: -110,
+            right: -40,
+            child: _liquidBlob(
+              260,
+              OwnerDashboardColors.ownerBottomBlobColor(context),
+            ),
+          ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth >= 900;
+
+              return SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop ? 750 : double.infinity,
+                    ),
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 32 : 20,
+                        vertical: 8,
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Center(
+                              child: Text(
+                                'Manage Tenants',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: OwnerDashboardColors.textPrimary(
+                                    context,
+                                  ),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Center(
+                              child: Text(
+                                'Add and configure tenant details',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: OwnerDashboardColors.textSecondary(
+                                    context,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            _progressIndicator(theme, actionBlue),
+                            const SizedBox(height: 24),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: _buildStepContent(step, theme),
+                            ),
+                            const SizedBox(height: 28),
+                            Row(
+                              children: [
+                                if (step > 0)
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: _back,
+                                      child: const Text('Back'),
+                                    ),
+                                  ),
+                                if (step > 0) const SizedBox(width: 16),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: actionBlue,
+                                      foregroundColor: AppColors.white,
+                                    ),
+                                    onPressed: step == 5 ? _save : _next,
+                                    child: Text(
+                                      step == 5 ? 'Save Tenant' : 'Continue',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _liquidBlob(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [color, AppColors.transparent]),
       ),
     );
   }
 
   // ===== PROGRESS INDICATOR =====
-  Widget _progressIndicator(ThemeData theme) {
+  Widget _progressIndicator(ThemeData theme, Color progressColor) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: LinearProgressIndicator(
         value: (step + 1) / 6,
         minHeight: 8,
+        valueColor: AlwaysStoppedAnimation<Color>(progressColor),
         backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.08),
       ),
     );
@@ -194,6 +268,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
 
   // ===== PROPERTY SELECTION STEP =====
   Widget _propertySelectionStep(ThemeData theme) {
+    final dropdownBlue = OwnerDashboardColors.brandPrimary(context);
     return _premiumCard(
       theme,
       Column(
@@ -221,10 +296,23 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         initialValue: selectedPropertyId,
+                        isExpanded: true,
+                        iconEnabledColor: dropdownBlue,
+                        dropdownColor: OwnerDashboardColors.cardBackground(
+                          context,
+                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: dropdownBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
                         decoration: InputDecoration(
                           hintText: "Select a property",
                           filled: true,
                           fillColor: AppColors.white.withValues(alpha: 0.08),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide.none,
@@ -234,7 +322,11 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                             .map(
                               (p) => DropdownMenuItem(
                                 value: p.id,
-                                child: Text(p.name),
+                                child: Text(
+                                  p.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             )
                             .toList(),
@@ -293,10 +385,21 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     return [
       DropdownButtonFormField<String>(
         initialValue: selectedRoomId,
+        isExpanded: true,
+        iconEnabledColor: OwnerDashboardColors.brandPrimary(context),
+        dropdownColor: OwnerDashboardColors.cardBackground(context),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: OwnerDashboardColors.brandPrimary(context),
+          fontWeight: FontWeight.w600,
+        ),
         decoration: InputDecoration(
           hintText: "Select a room",
           filled: true,
           fillColor: AppColors.white.withValues(alpha: 0.08),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 14,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -306,7 +409,11 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
             .map(
               (r) => DropdownMenuItem(
                 value: r.id,
-                child: Text("${r.roomNumber} - ${r.name}"),
+                child: Text(
+                  "${r.roomNumber} - ${r.name}",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             )
             .toList(),
@@ -556,13 +663,42 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
 
   // ===== PREMIUM CARD =====
   Widget _premiumCard(ThemeData theme, Widget child) {
+    final isDark = OwnerDashboardColors.isDark(context);
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AppTheme.blueSurfaceGradient,
-        borderRadius: BorderRadius.circular(20),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(22)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  (isDark ? AppColors.white : AppColors.cFFFFFFFF).withValues(
+                    alpha: isDark ? 0.16 : 0.78,
+                  ),
+                  OwnerDashboardColors.brandPrimary(
+                    context,
+                  ).withValues(alpha: isDark ? 0.12 : 0.06),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: OwnerDashboardColors.border(context)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.black.withValues(alpha: isDark ? 0.2 : 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: child,
+          ),
+        ),
       ),
-      child: child,
     );
   }
 
@@ -579,10 +715,16 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: AppColors.white.withValues(alpha: 0.08),
+        fillColor: OwnerDashboardColors.brandPrimary(
+          context,
+        ).withValues(alpha: OwnerDashboardColors.isDark(context) ? 0.10 : 0.05),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: OwnerDashboardColors.border(context)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: OwnerDashboardColors.border(context)),
         ),
       ),
       validator:
@@ -594,7 +736,9 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   Widget _dateTile(ThemeData theme) {
     return ListTile(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      tileColor: AppColors.white.withValues(alpha: 0.08),
+      tileColor: OwnerDashboardColors.brandPrimary(
+        context,
+      ).withValues(alpha: OwnerDashboardColors.isDark(context) ? 0.10 : 0.05),
       title: const Text("Move-in Date"),
       subtitle: Text(
         "${moveInDate.day}-${moveInDate.month}-${moveInDate.year}",
