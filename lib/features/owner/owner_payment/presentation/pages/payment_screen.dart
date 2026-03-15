@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
 import 'package:rentdone/features/owner/owner_payment/domain/entities/payment.dart';
@@ -33,8 +32,6 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   String selectedTenantId = 'all';
   late String selectedStatus;
   final TextEditingController searchCtrl = TextEditingController();
-  late final Razorpay _razorpay;
-  String? _activePaymentId;
 
   @override
   void initState() {
@@ -46,15 +43,10 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     selectedTenantId = (widget.initialTenantId?.trim().isNotEmpty ?? false)
         ? widget.initialTenantId!.trim()
         : 'all';
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
   @override
   void dispose() {
-    _razorpay.clear();
     searchCtrl.dispose();
     super.dispose();
   }
@@ -485,12 +477,6 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.receipt_long_rounded),
-                title: const Text("Online (Razorpay)"),
-                subtitle: const Text("Accept online payment securely"),
-                onTap: () => Navigator.pop(c, 'razorpay'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.credit_card_rounded),
                 title: const Text("Online (Manual Ref)"),
                 subtitle: const Text("Use if payment came externally"),
                 onTap: () => Navigator.pop(c, 'online-manual'),
@@ -516,23 +502,20 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               payment.id,
               transactionId: txId?.trim().isEmpty ?? true ? null : txId,
             );
-      } else if (action == 'razorpay') {
-        await _startRazorpayCheckout(payment, tenant);
-        return;
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Payment updated"),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.green,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+          SnackBar(content: Text("Error: $e"), backgroundColor: AppColors.red),
         );
       }
     }
@@ -566,109 +549,6 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     );
     ctrl.dispose();
     return result;
-  }
-
-  // ==========================================================
-  // RAZORPAY CHECKOUT
-  // ==========================================================
-
-  Future<void> _startRazorpayCheckout(Payment payment, Tenant? tenant) async {
-    try {
-      final order = await ref
-          .read(createRazorpayOrderUseCaseProvider)
-          .call(
-            paymentId: payment.id,
-            amountInPaise: payment.amount * 100, // Razorpay expects paise
-            currency: 'INR',
-            receipt: 'rent_${payment.id}',
-          );
-
-      _activePaymentId = payment.id;
-
-      _razorpay.open({
-        'key': order.keyId,
-        'amount': order.amount,
-        'currency': order.currency,
-        'name': 'RentDone',
-        'description':
-            'Rent ${payment.periodKey.isNotEmpty ? payment.periodKey : _monthKey(payment.dueDate)}',
-        'order_id': order.orderId,
-        'prefill': {
-          'contact': tenant?.phone ?? '',
-          'email': tenant?.email ?? '',
-        },
-        'notes': {'paymentId': payment.id},
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Razorpay error: $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    final paymentId = _activePaymentId;
-    _activePaymentId = null;
-    if (paymentId == null) return;
-
-    try {
-      if (response.orderId == null ||
-          response.paymentId == null ||
-          response.signature == null) {
-        throw Exception('Missing Razorpay response fields');
-      }
-      await ref
-          .read(confirmRazorpayPaymentUseCaseProvider)
-          .call(
-            paymentId: paymentId,
-            razorpayOrderId: response.orderId!,
-            razorpayPaymentId: response.paymentId!,
-            razorpaySignature: response.signature!,
-          );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Payment confirmed"),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Verification failed: $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    _activePaymentId = null;
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "Payment failed: ${response.code} ${response.message ?? ''}",
-        ),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("External wallet: ${response.walletName ?? ''}")),
-    );
   }
 
   // ==========================================================

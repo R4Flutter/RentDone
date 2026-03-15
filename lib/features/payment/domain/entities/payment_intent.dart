@@ -7,6 +7,7 @@ class PaymentIntent {
   final String? orderId;
   final String? clientSecret;
   final String? keyId;
+  final String? paymentSessionId;
 
   const PaymentIntent({
     required this.paymentId,
@@ -17,5 +18,6 @@ class PaymentIntent {
     this.orderId,
     this.clientSecret,
     this.keyId,
+    this.paymentSessionId,
   });
 }

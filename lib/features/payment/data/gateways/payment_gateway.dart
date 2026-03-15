@@ -6,6 +6,7 @@ class PaymentGatewayRequest {
   final String paymentId;
   final String tenantEmail;
   final String tenantPhone;
+  final String? paymentSessionId;
 
   const PaymentGatewayRequest({
     required this.orderId,
@@ -15,6 +16,7 @@ class PaymentGatewayRequest {
     required this.paymentId,
     required this.tenantEmail,
     required this.tenantPhone,
+    this.paymentSessionId,
   });
 }
 

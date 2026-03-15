@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rentdone/app/app_theme.dart';
+
 class OtpInput extends StatefulWidget {
   const OtpInput({
     super.key,
@@ -46,10 +47,7 @@ class _OtpInputState extends State<OtpInput> {
               gradient: AppTheme.blueSurfaceGradient,
               borderRadius: BorderRadius.circular(12),
               border: isFocused
-                  ? Border.all(
-                      color: colors.primary,
-                      width: 1.8,
-                    )
+                  ? Border.all(color: colors.primary, width: 1.8)
                   : Border.all(
                       color: colors.onSurface.withValues(alpha: 0.15),
                       width: 1,
@@ -69,7 +67,7 @@ class _OtpInputState extends State<OtpInput> {
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
                 filled: true,
-                fillColor: Colors.transparent,
+                fillColor: AppColors.transparent,
                 border: InputBorder.none,
               ),
 
@@ -78,10 +76,11 @@ class _OtpInputState extends State<OtpInput> {
                 // paste support
                 if (value.length > 1) {
                   final chars = value.split('');
-                  for (int i = 0;
-                      i < chars.length &&
-                          i < widget.controllers.length;
-                      i++) {
+                  for (
+                    int i = 0;
+                    i < chars.length && i < widget.controllers.length;
+                    i++
+                  ) {
                     widget.controllers[i].text = chars[i];
                   }
                   widget.focusNodes.last.requestFocus();
@@ -89,8 +88,7 @@ class _OtpInputState extends State<OtpInput> {
                 }
 
                 // move forward
-                if (value.isNotEmpty &&
-                    index < widget.controllers.length - 1) {
+                if (value.isNotEmpty && index < widget.controllers.length - 1) {
                   widget.focusNodes[index + 1].requestFocus();
                 }
 

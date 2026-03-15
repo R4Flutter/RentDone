@@ -4,8 +4,6 @@ import 'package:rentdone/features/owner/owner_payment/domain/entities/payment.da
 
 export 'package:rentdone/features/owner/owner_payment/di/payment_di.dart'
     show
-        confirmRazorpayPaymentUseCaseProvider,
-        createRazorpayOrderUseCaseProvider,
         markPaymentPaidCashUseCaseProvider,
         markPaymentPaidOnlineUseCaseProvider;
 

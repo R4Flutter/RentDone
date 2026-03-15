@@ -26,7 +26,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(8.0),
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white.withAlpha(18),
+                backgroundColor: AppColors.white.withAlpha(18),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 10,
@@ -41,7 +41,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                   MaterialPageRoute(builder: (_) => const AddPropertyScreen()),
                 );
               },
-              icon: const Icon(Icons.add, color: Colors.white),
+              icon: const Icon(Icons.add, color: AppColors.white),
               label: const Text("Add Property"),
             ),
           ),
@@ -71,7 +71,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                             const Icon(
                               Icons.home_work_outlined,
                               size: 64,
-                              color: Colors.grey,
+                              color: AppColors.grey,
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -235,7 +235,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(10),
+                  color: AppColors.white.withAlpha(10),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -258,7 +258,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                               return Text(
                                 "Loading tenant...",
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey,
+                                  color: AppColors.grey,
                                   fontSize: 11,
                                 ),
                               );
@@ -269,7 +269,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                               return Text(
                                 "Occupied",
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.red,
+                                  color: AppColors.red,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -291,7 +291,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                                   tenant.phone,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     fontSize: 10,
-                                    color: Colors.grey,
+                                    color: AppColors.grey,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -301,7 +301,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                                     tenant.email!,
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       fontSize: 10,
-                                      color: Colors.grey,
+                                      color: AppColors.grey,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -350,7 +350,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                       Text(
                         "Vacant",
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.orange,
+                          color: AppColors.orange,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -385,7 +385,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
   Widget _statChip(ThemeData theme, String label, String value) {
     return Chip(
       label: Text("$label: $value", style: theme.textTheme.bodySmall),
-      backgroundColor: Colors.white.withValues(alpha: 0.2),
+      backgroundColor: AppColors.white.withValues(alpha: 0.2),
     );
   }
 
@@ -422,7 +422,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
             child: const Text("Delete"),
           ),
         ],

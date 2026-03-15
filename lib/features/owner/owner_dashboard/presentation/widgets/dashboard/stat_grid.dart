@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:rentdone/features/owner/owner_dashboard/domain/entities/dashboard_summary.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/stat_card.dart';
 
 class StatsGrid extends StatelessWidget {
@@ -10,21 +11,25 @@ class StatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    final columns = width >= 1200 ? 4 : width >= 900 ? 3 : 2;
+    final columns = width >= 1200
+        ? 4
+        : width >= 900
+        ? 3
+        : 2;
     final aspect = width >= 1200
         ? 1.35
         : width >= 900
-            ? 1.2
-            : 0.9;
+        ? 1.2
+        : 0.9;
     final monthLabel = _monthLabel();
 
     final cards = [
       StatCard(
-        title: 'Total Properties',
+        title: 'Properties',
         value: summary.totalProperties.toString(),
-        subtitle: '${summary.vacantProperties} vacant',
+        subtitle: 'Vacant rooms',
         icon: Icons.apartment_rounded,
-        color: Colors.blue,
+        tone: OwnerDashboardColors.propertiesTone(context),
         assetPath: 'assets/images/property.png',
       ),
       StatCard(
@@ -32,7 +37,7 @@ class StatsGrid extends StatelessWidget {
         value: summary.totalTenants.toString(),
         subtitle: 'Active tenants',
         icon: Icons.people_alt_rounded,
-        color: Colors.teal,
+        tone: OwnerDashboardColors.tenantsTone(context),
         assetPath: 'assets/images/tenant_final.png',
       ),
       StatCard(
@@ -40,7 +45,7 @@ class StatsGrid extends StatelessWidget {
         value: '\u20B9${_formatInr(summary.collectedAmount)}',
         subtitle: '$monthLabel - ${summary.collectedPayments} payments',
         icon: Icons.check_circle_rounded,
-        color: Colors.green,
+        tone: OwnerDashboardColors.collectedTone(context),
         assetPath: 'assets/images/collected.png',
       ),
       StatCard(
@@ -50,7 +55,7 @@ class StatsGrid extends StatelessWidget {
             ? '$monthLabel - ${summary.pendingTenants} tenants pending'
             : '$monthLabel - ${summary.pendingPayments} dues',
         icon: Icons.warning_amber_rounded,
-        color: Colors.orange,
+        tone: OwnerDashboardColors.pendingTone(context),
         assetPath: 'assets/images/pending.png',
       ),
     ];

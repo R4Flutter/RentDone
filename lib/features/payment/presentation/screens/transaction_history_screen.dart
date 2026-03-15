@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -7,6 +8,8 @@ import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/payment/domain/entities/payment_failure.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_record.dart';
+import 'package:rentdone/features/payment/presentation/providers/payment_dashboard_provider.dart';
+import 'package:rentdone/features/payment/presentation/providers/payment_di.dart';
 import 'package:rentdone/features/payment/presentation/providers/transaction_history_provider.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_owner_details.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
@@ -50,11 +53,11 @@ class _TransactionHistoryScreenState
     final summaryAsync = ref.watch(tenantDashboardProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: AppColors.transparent,
         title: Text(isTenant ? 'Payments' : 'Transactions'),
       ),
       body: Container(
@@ -62,7 +65,11 @@ class _TransactionHistoryScreenState
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0B1220), Color(0xFF0F1C2E), Color(0xFF111C30)],
+            colors: [
+              AppColors.cFF0B1220,
+              AppColors.cFF0F1C2E,
+              AppColors.cFF111C30,
+            ],
           ),
         ),
         child: Stack(
@@ -147,7 +154,7 @@ class _TransactionHistoryScreenState
                           ),
                           Expanded(
                             child: RefreshIndicator(
-                              color: const Color(0xFF3FE0FF),
+                              color: AppColors.cFF3FE0FF,
                               onRefresh: () async {
                                 await ref
                                     .read(transactionHistoryProvider.notifier)
@@ -234,8 +241,8 @@ class _FintechBackgroundEffects extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF4F7CFF).withValues(alpha: 0.3),
-                    const Color(0xFF4F7CFF).withValues(alpha: 0),
+                    AppColors.cFF4F7CFF.withValues(alpha: 0.3),
+                    AppColors.cFF4F7CFF.withValues(alpha: 0),
                   ],
                 ),
               ),
@@ -251,8 +258,8 @@ class _FintechBackgroundEffects extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF7A5CFF).withValues(alpha: 0.24),
-                    const Color(0xFF7A5CFF).withValues(alpha: 0),
+                    AppColors.cFF7A5CFF.withValues(alpha: 0.24),
+                    AppColors.cFF7A5CFF.withValues(alpha: 0),
                   ],
                 ),
               ),
@@ -268,7 +275,7 @@ class _FintechBackgroundEffects extends StatelessWidget {
 class _NoisePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.018);
+    final paint = Paint()..color = AppColors.white.withValues(alpha: 0.018);
     const step = 14.0;
     for (double x = 0; x < size.width; x += step) {
       for (double y = 0; y < size.height; y += step) {
@@ -314,14 +321,14 @@ class _PremiumGlassCard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withValues(alpha: 0.08),
-                    Colors.white.withValues(alpha: 0.04),
+                    AppColors.white.withValues(alpha: 0.08),
+                    AppColors.white.withValues(alpha: 0.04),
                   ],
                 ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.45),
+                color: AppColors.black.withValues(alpha: 0.45),
                 blurRadius: 50,
                 offset: const Offset(0, 16),
               ),
@@ -337,7 +344,7 @@ class _PremiumGlassCard extends StatelessWidget {
     }
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(onTap: onTap, borderRadius: borderRadius, child: content),
     );
   }
@@ -369,7 +376,7 @@ class _FilterBar extends StatelessWidget {
           Text(
             'Transaction History',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.96),
+              color: AppColors.white.withValues(alpha: 0.96),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -439,8 +446,8 @@ class _TransactionTile extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.08),
-          const Color(0xFF4F7CFF).withValues(alpha: 0.06),
+          AppColors.white.withValues(alpha: 0.08),
+          AppColors.cFF4F7CFF.withValues(alpha: 0.06),
         ],
       ),
       child: Column(
@@ -451,7 +458,7 @@ class _TransactionTile extends StatelessWidget {
               Text(
                 _formatCurrency(transaction.amount),
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                 ),
@@ -482,7 +489,7 @@ class _TransactionTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Failure: ${transaction.failureReason}',
-              style: const TextStyle(color: Color(0xFFFF5A5F)),
+              style: const TextStyle(color: AppColors.cFFFF5A5F),
             ),
           ],
           const SizedBox(height: 10),
@@ -558,11 +565,11 @@ class _LockGlowButtonState extends State<_LockGlowButton>
                 gradient: const LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  colors: [Color(0xFF4F7CFF), Color(0xFF7A5CFF)],
+                  colors: [AppColors.cFF4F7CFF, AppColors.cFF7A5CFF],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF4F7CFF).withValues(alpha: glow),
+                    color: AppColors.cFF4F7CFF.withValues(alpha: glow),
                     blurRadius: 24,
                     offset: const Offset(0, 10),
                   ),
@@ -594,8 +601,8 @@ class _TransactionDetailSheet extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white.withValues(alpha: 0.1),
-              const Color(0xFF4F7CFF).withValues(alpha: 0.06),
+              AppColors.white.withValues(alpha: 0.1),
+              AppColors.cFF4F7CFF.withValues(alpha: 0.06),
             ],
           ),
           child: Column(
@@ -609,11 +616,11 @@ class _TransactionDetailSheet extends StatelessWidget {
                     height: 30,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.18),
+                      color: AppColors.cFF22C55E.withValues(alpha: 0.18),
                     ),
                     child: const Icon(
                       Icons.shield_outlined,
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 16,
                     ),
                   ),
@@ -621,7 +628,7 @@ class _TransactionDetailSheet extends StatelessWidget {
                   Text(
                     'Transaction Details',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -657,7 +664,7 @@ class _TransactionDetailSheet extends StatelessWidget {
                 _DetailRow(
                   label: 'Failure',
                   value: transaction.failureReason!,
-                  tone: const Color(0xFFFF5A5F),
+                  tone: AppColors.cFFFF5A5F,
                 ),
               const SizedBox(height: 10),
               _LockGlowButton(
@@ -665,12 +672,12 @@ class _TransactionDetailSheet extends StatelessWidget {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                    Icon(Icons.check_rounded, color: AppColors.white, size: 18),
                     SizedBox(width: 8),
                     Text(
                       'Close',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -704,7 +711,7 @@ class _LoadMoreTile extends StatelessWidget {
         child: Center(
           child: Text(
             'No more transactions',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: AppColors.white70),
           ),
         ),
       );
@@ -726,7 +733,10 @@ class _LoadMoreTile extends StatelessWidget {
         child: const Center(
           child: Text(
             'Load more',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -756,7 +766,7 @@ class _HistoryError extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.white),
             ),
             const SizedBox(height: 24),
             FilledButton(onPressed: onRetry, child: const Text('Retry')),
@@ -767,7 +777,7 @@ class _HistoryError extends StatelessWidget {
   }
 }
 
-class _TenantPaymentHero extends StatefulWidget {
+class _TenantPaymentHero extends ConsumerStatefulWidget {
   final int latestAmount;
   final String ownerUpiId;
   final String ownerName;
@@ -779,13 +789,14 @@ class _TenantPaymentHero extends StatefulWidget {
   });
 
   @override
-  State<_TenantPaymentHero> createState() => _TenantPaymentHeroState();
+  ConsumerState<_TenantPaymentHero> createState() => _TenantPaymentHeroState();
 }
 
-class _TenantPaymentHeroState extends State<_TenantPaymentHero>
+class _TenantPaymentHeroState extends ConsumerState<_TenantPaymentHero>
     with TickerProviderStateMixin {
   late final TextEditingController _amountController;
   bool _isLaunchingUpi = false;
+  bool _isPayingCashfree = false;
   late final AnimationController _introController;
   late final AnimationController _qrGlowController;
   late final FocusNode _amountFocusNode;
@@ -929,6 +940,59 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
     }
   }
 
+  Future<void> _payCashfree(BuildContext context) async {
+    if (_isPayingCashfree) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to continue.')),
+      );
+      return;
+    }
+
+    setState(() => _isPayingCashfree = true);
+
+    try {
+      final cashfreeGateway = ref.read(cashfreeGatewayProvider);
+      final notifier = ref.read(paymentDashboardProvider.notifier);
+
+      final intent = await notifier.createAndPay(
+        gateway: 'cashfree',
+        paymentGateway: cashfreeGateway,
+        tenantEmail: user.email ?? '',
+        tenantPhone: user.phoneNumber ?? '',
+      );
+
+      if (!context.mounted) return;
+
+      if (intent != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment successful!'),
+            backgroundColor: AppColors.cFF22C55E,
+          ),
+        );
+        // Refresh transaction history
+        ref.read(transactionHistoryProvider.notifier).refresh();
+      } else {
+        final payState = ref.read(paymentDashboardProvider).asData?.value;
+        final msg = payState?.message ?? 'Payment failed. Please try again.';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isPayingCashfree = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final latestAmount = widget.latestAmount;
@@ -958,7 +1022,11 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF1B2E4D), Color(0xFF162640), Color(0xFF141F35)],
+              colors: [
+                AppColors.cFF1B2E4D,
+                AppColors.cFF162640,
+                AppColors.cFF141F35,
+              ],
             ),
             child: Column(
               children: [
@@ -970,16 +1038,16 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4F7CFF).withValues(alpha: 0.22),
+                        color: AppColors.cFF4F7CFF.withValues(alpha: 0.22),
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.16),
+                          color: AppColors.white.withValues(alpha: 0.16),
                         ),
                       ),
                       child: const Text(
                         'RENTDONE UPI',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                         ),
@@ -990,7 +1058,7 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                       width: 8,
                       height: 8,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF22C55E),
+                        color: AppColors.cFF22C55E,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -998,7 +1066,7 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                     Text(
                       'Secure',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: AppColors.white.withValues(alpha: 0.8),
                         fontSize: 12,
                       ),
                     ),
@@ -1010,7 +1078,7 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                   child: Text(
                     'Scan & Pay Rent',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 23,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1028,21 +1096,21 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: _amountFocused
-                          ? const Color(0xFF3FE0FF)
-                          : Colors.white.withValues(alpha: 0.13),
+                          ? AppColors.cFF3FE0FF
+                          : AppColors.white.withValues(alpha: 0.13),
                     ),
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Colors.white.withValues(alpha: 0.08),
-                        Colors.white.withValues(alpha: 0.04),
+                        AppColors.white.withValues(alpha: 0.08),
+                        AppColors.white.withValues(alpha: 0.04),
                       ],
                     ),
                     boxShadow: [
                       if (_amountFocused)
                         BoxShadow(
-                          color: const Color(0xFF3FE0FF).withValues(alpha: 0.2),
+                          color: AppColors.cFF3FE0FF.withValues(alpha: 0.2),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -1055,7 +1123,7 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                         child: Text(
                           '₹',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
                           ),
@@ -1068,7 +1136,7 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                           onChanged: (_) => setState(() {}),
                           keyboardType: TextInputType.number,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontSize: 30,
                             fontWeight: FontWeight.w800,
                           ),
@@ -1077,7 +1145,7 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                                 ? latestAmount.toString()
                                 : '0',
                             hintStyle: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.38),
+                              color: AppColors.white.withValues(alpha: 0.38),
                               fontWeight: FontWeight.w700,
                             ),
                             border: InputBorder.none,
@@ -1102,7 +1170,7 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.white,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1113,13 +1181,13 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF22C55E).withValues(alpha: 0.15),
+                        color: AppColors.cFF22C55E.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         'Encrypted',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: AppColors.white.withValues(alpha: 0.9),
                           fontSize: 11,
                         ),
                       ),
@@ -1128,7 +1196,7 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                     Text(
                       '${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.75),
+                        color: AppColors.white.withValues(alpha: 0.75),
                         fontSize: 12,
                       ),
                     ),
@@ -1152,12 +1220,12 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: AppColors.white,
                               ),
                             )
                           : const Icon(
                               Icons.lock_outline_rounded,
-                              color: Colors.white,
+                              color: AppColors.white,
                               size: 18,
                             ),
                       const SizedBox(width: 8),
@@ -1166,15 +1234,89 @@ class _TenantPaymentHeroState extends State<_TenantPaymentHero>
                             ? 'Opening payment app...'
                             : 'Pay with UPI (${_formatCurrency(enteredAmount)})',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.white,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 10),
+                _CashfreePayButton(
+                  isLoading: _isPayingCashfree,
+                  onPressed: () => _payCashfree(context),
+                ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CashfreePayButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  const _CashfreePayButton({required this.isLoading, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onPressed,
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: isLoading
+                ? [
+                    AppColors.cFF1A8C6E.withValues(alpha: 0.5),
+                    AppColors.cFF0E7A5F.withValues(alpha: 0.5),
+                  ]
+                : const [AppColors.cFF1A8C6E, AppColors.cFF0E7A5F],
+          ),
+          boxShadow: isLoading
+              ? []
+              : [
+                  BoxShadow(
+                    color: AppColors.cFF1A8C6E.withValues(alpha: 0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isLoading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.white,
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.payments_outlined,
+                  color: AppColors.white,
+                  size: 18,
+                ),
+              const SizedBox(width: 8),
+              Text(
+                isLoading ? 'Processing...' : 'Pay with Cashfree',
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1205,15 +1347,15 @@ class _QrContainer extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            color: Colors.white,
+            color: AppColors.white,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF4F7CFF).withValues(alpha: alpha),
+                color: AppColors.cFF4F7CFF.withValues(alpha: alpha),
                 blurRadius: 24,
                 offset: const Offset(0, 10),
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
+                color: AppColors.black.withValues(alpha: 0.18),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -1227,7 +1369,7 @@ class _QrContainer extends StatelessWidget {
                 child: Icon(
                   Icons.shield_outlined,
                   size: 16,
-                  color: const Color(0xFF0B1220).withValues(alpha: 0.15),
+                  color: AppColors.cFF0B1220.withValues(alpha: 0.15),
                 ),
               ),
               Center(
@@ -1241,14 +1383,14 @@ class _QrContainer extends StatelessWidget {
                         children: [
                           const Icon(
                             Icons.qr_code_2_rounded,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.cFF0F172A,
                             size: 52,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'UPI not set',
                             style: TextStyle(
-                              color: Colors.black.withValues(alpha: 0.75),
+                              color: AppColors.black.withValues(alpha: 0.75),
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -1260,7 +1402,7 @@ class _QrContainer extends StatelessWidget {
                       data: upiUri,
                       version: QrVersions.auto,
                       size: 140,
-                      backgroundColor: Colors.white,
+                      backgroundColor: AppColors.white,
                       eyeStyle: const QrEyeStyle(
                         eyeShape: QrEyeShape.square,
                         color: AppTheme.nearBlack,
@@ -1296,19 +1438,19 @@ class _DarkDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Colors.white.withValues(alpha: 0.9);
+    final textColor = AppColors.white.withValues(alpha: 0.9);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.07),
+        color: AppColors.white.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.12)),
       ),
       child: DropdownButton<T>(
         value: value,
         hint: Text(
           hint,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.74)),
+          style: TextStyle(color: AppColors.white.withValues(alpha: 0.74)),
         ),
         iconEnabledColor: textColor,
         dropdownColor: AppTheme.nearBlack,
@@ -1336,7 +1478,7 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final valueColor = tone ?? Colors.white.withValues(alpha: 0.9);
+    final valueColor = tone ?? AppColors.white.withValues(alpha: 0.9);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -1346,7 +1488,7 @@ class _DetailRow extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.62),
+                color: AppColors.white.withValues(alpha: 0.62),
                 fontSize: 12,
               ),
             ),

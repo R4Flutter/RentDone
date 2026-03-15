@@ -23,6 +23,16 @@ function getStripeConfig() {
   };
 }
 
+function getCashfreeConfig() {
+  const cfg = functions.config().cashfree || {};
+  return {
+    appId: cfg.app_id || process.env.CASHFREE_APP_ID || '',
+    secretKey: cfg.secret_key || process.env.CASHFREE_SECRET_KEY || '',
+    webhookSecret: cfg.webhook_secret || process.env.CASHFREE_WEBHOOK_SECRET || '',
+    isSandbox: (cfg.env || process.env.CASHFREE_ENV || 'production') === 'sandbox',
+  };
+}
+
 function getWhatsAppConfig() {
   const cfg = functions.config().whatsapp || {};
   return {
@@ -701,7 +711,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   const leaseId = data.leaseId;
   const month = Number(data.month);
   const year = Number(data.year);
-  const gateway = (data.gateway || 'razorpay').toLowerCase();
+  const gateway = (data.gateway || 'cashfree').toLowerCase();
   const idempotencyKey = data.idempotencyKey;
 
   if (!leaseId || !month || !year || !idempotencyKey) {
@@ -758,6 +768,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       orderId: payment.get('razorpayOrderId') || null,
       clientSecret: payment.get('stripeClientSecret') || null,
       keyId: payment.get('razorpayKeyId') || null,
+      paymentSessionId: payment.get('cashfreeTokenData') || payment.get('cashfreePaymentSessionId') || null,
     };
   }
 
@@ -892,6 +903,85 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     );
   }
 
+  if (gateway === 'cashfree') {
+    const { appId, secretKey, isSandbox } = getCashfreeConfig();
+    if (!appId || !secretKey) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Cashfree not configured',
+      );
+    }
+
+    // Cashfree SDK v2 uses cftoken API
+    const cashfreeBaseUrl = isSandbox
+      ? 'https://test.cashfree.com'
+      : 'https://api.cashfree.com';
+
+    const cashfreeOrderId = `cf_${paymentId}`;
+    const orderAmountInRupees = (totalAmount / 100).toFixed(2);
+
+    const tokenResponse = await fetch(`${cashfreeBaseUrl}/api/v2/cftoken/order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-client-id': appId,
+        'x-client-secret': secretKey,
+      },
+      body: JSON.stringify({
+        orderId: cashfreeOrderId,
+        orderAmount: orderAmountInRupees,
+        orderCurrency: currency,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const errText = await tokenResponse.text();
+      throw new functions.https.HttpsError(
+        'internal',
+        `Cashfree token creation failed: ${errText}`,
+      );
+    }
+
+    const tokenData = await tokenResponse.json();
+    if (tokenData.status !== 'OK') {
+      throw new functions.https.HttpsError(
+        'internal',
+        `Cashfree token error: ${tokenData.message || 'Unknown error'}`,
+      );
+    }
+    const cftoken = tokenData.cftoken;
+
+    await db.runTransaction(async (txn) => {
+      txn.set(
+        paymentRef,
+        {
+          cashfreeOrderId: cashfreeOrderId,
+          cashfreeTokenData: cftoken,
+          currency,
+          totalAmount,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      txn.set(transactionRef, {
+        paymentId,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return {
+      paymentId,
+      gateway: 'cashfree',
+      amount: totalAmount,
+      currency,
+      idempotencyKey,
+      orderId: cashfreeOrderId,
+      paymentSessionId: cftoken,
+      keyId: appId,
+      clientSecret: null,
+    };
+  }
+
   throw new functions.https.HttpsError(
     'invalid-argument',
     'Unsupported payment gateway',
@@ -1012,10 +1102,631 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
     );
   }
 
+  if (gateway === 'cashfree') {
+    const paymentDoc = await db.collection('payments').doc(paymentId).get();
+    if (!paymentDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Payment record not found');
+    }
+
+    const cashfreeOrderId = paymentDoc.get('cashfreeOrderId');
+    if (!cashfreeOrderId) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Cashfree order ID not found for this payment',
+      );
+    }
+
+    const { appId, secretKey, isSandbox } = getCashfreeConfig();
+    if (!appId || !secretKey) {
+      throw new functions.https.HttpsError('failed-precondition', 'Cashfree not configured');
+    }
+
+    const cashfreeBaseUrl = isSandbox
+      ? 'https://test.cashfree.com'
+      : 'https://api.cashfree.com';
+
+    const orderRes = await fetch(`${cashfreeBaseUrl}/api/v2/orders/${cashfreeOrderId}`, {
+      method: 'GET',
+      headers: {
+        'x-client-id': appId,
+        'x-client-secret': secretKey,
+      },
+    });
+
+    if (!orderRes.ok) {
+      const errText = await orderRes.text();
+      throw new functions.https.HttpsError('internal', `Cashfree order fetch failed: ${errText}`);
+    }
+
+    const orderData = await orderRes.json();
+    if (orderData.orderStatus !== 'PAID') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        `Payment not completed. Status: ${orderData.orderStatus}`,
+      );
+    }
+
+    const cfTransactionId = orderData.referenceId?.toString() || cashfreeOrderId;
+
+    const now = FieldValue.serverTimestamp();
+    await db.collection('payments').doc(paymentId).set(
+      {
+        status: 'paid',
+        method: 'online',
+        transactionId: cfTransactionId,
+        cashfreeOrderId,
+        paidAt: now,
+        updatedAt: now,
+      },
+      { merge: true },
+    );
+
+    await db.collection('transactions').add({
+      paymentId,
+      gateway: 'cashfree',
+      status: 'success',
+      transactionId: cfTransactionId,
+      cashfreeOrderId,
+      amount: paymentDoc.get('totalAmount') || 0,
+      currency: paymentDoc.get('currency') || 'INR',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { success: true };
+  }
+
   throw new functions.https.HttpsError(
     'invalid-argument',
     'Unsupported payment gateway',
   );
+});
+
+// ==========================================================
+// OWNER SUBSCRIPTION (CASHFREE)
+// ==========================================================
+
+async function assertOwnerAccessOrThrow(ownerId) {
+  const ownerUserDoc = await db.collection('users').doc(ownerId).get();
+  if (!ownerUserDoc.exists) {
+    // Legacy accounts might not have a synced users doc yet.
+    return;
+  }
+
+  const ownerRole = String(ownerUserDoc.data()?.role || '').trim().toLowerCase();
+  if (ownerRole && ownerRole !== 'owner') {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Only owners can perform this operation',
+    );
+  }
+}
+
+function toEpochMillisOrNull(value) {
+  if (!value) return null;
+  if (value instanceof Timestamp) return value.toMillis();
+  if (value instanceof Date) return value.getTime();
+  return null;
+}
+
+exports.ensureOwnerSubscriptionProfile = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const ownerId = context.auth.uid;
+  const requestedOwnerId = String(data?.ownerId || ownerId).trim();
+  if (requestedOwnerId !== ownerId) {
+    throw new functions.https.HttpsError('permission-denied', 'Invalid owner scope');
+  }
+
+  await assertOwnerAccessOrThrow(ownerId);
+
+  const email = String(data?.email || '').trim();
+  const ownerRef = db.collection('owners').doc(ownerId);
+  const ownerDoc = await ownerRef.get();
+  const current = ownerDoc.data() || {};
+
+  const payload = {
+    ownerId,
+    email: email || String(current.email || ''),
+    subscriptionPlan: String(current.subscriptionPlan || 'free').toLowerCase(),
+    paymentStatus: String(current.paymentStatus || 'active').toLowerCase(),
+    tenantLimit: Number.isFinite(current.tenantLimit) ? Number(current.tenantLimit) : 2,
+    currentTenantCount: Number.isFinite(current.currentTenantCount)
+      ? Number(current.currentTenantCount)
+      : 0,
+    updatedAt: FieldValue.serverTimestamp(),
+    ...(current.subscriptionStartDate ? {} : { subscriptionStartDate: FieldValue.serverTimestamp() }),
+  };
+
+  await ownerRef.set(payload, { merge: true });
+  return { ok: true };
+});
+
+exports.getOwnerSubscriptionSnapshot = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const ownerId = context.auth.uid;
+  const requestedOwnerId = String(data?.ownerId || ownerId).trim();
+  if (requestedOwnerId !== ownerId) {
+    throw new functions.https.HttpsError('permission-denied', 'Invalid owner scope');
+  }
+
+  await assertOwnerAccessOrThrow(ownerId);
+
+  const email = String(data?.email || '').trim();
+  const ownerRef = db.collection('owners').doc(ownerId);
+  const ownerDoc = await ownerRef.get();
+  const current = ownerDoc.data() || {};
+
+  if (!ownerDoc.exists) {
+    await ownerRef.set({
+      ownerId,
+      email,
+      subscriptionPlan: 'free',
+      paymentStatus: 'active',
+      tenantLimit: 2,
+      currentTenantCount: 0,
+      subscriptionStartDate: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  } else if (email && current.email !== email) {
+    await ownerRef.set({ email, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  }
+
+  const finalDoc = await ownerRef.get();
+  const finalData = finalDoc.data() || {};
+
+  return {
+    ownerId,
+    email: String(finalData.email || email || ''),
+    subscriptionPlan: String(finalData.subscriptionPlan || 'free').toLowerCase(),
+    paymentStatus: String(finalData.paymentStatus || 'active').toLowerCase(),
+    tenantLimit: Number.isFinite(finalData.tenantLimit) ? Number(finalData.tenantLimit) : 2,
+    currentTenantCount: Number.isFinite(finalData.currentTenantCount)
+      ? Number(finalData.currentTenantCount)
+      : 0,
+    subscriptionStartDate: toEpochMillisOrNull(finalData.subscriptionStartDate),
+    subscriptionExpiry: toEpochMillisOrNull(finalData.subscriptionExpiry),
+    cashfreeOrderId: finalData.cashfreeOrderId || null,
+    cashfreeSubscriptionId: finalData.cashfreeSubscriptionId || null,
+  };
+});
+
+exports.activateOwnerFreeSubscription = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const ownerId = context.auth.uid;
+  const requestedOwnerId = String(data?.ownerId || ownerId).trim();
+  if (requestedOwnerId !== ownerId) {
+    throw new functions.https.HttpsError('permission-denied', 'Invalid owner scope');
+  }
+
+  await assertOwnerAccessOrThrow(ownerId);
+
+  await db.collection('owners').doc(ownerId).set({
+    ownerId,
+    subscriptionPlan: 'free',
+    paymentStatus: 'active',
+    tenantLimit: 2,
+    subscriptionExpiry: null,
+    subscriptionStartDate: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  return { ok: true, subscriptionPlan: 'free', tenantLimit: 2, paymentStatus: 'active' };
+});
+
+exports.createOwnerSubscriptionPaymentIntent = functions.https.onCall(async (data, context) => {
+  // Production-grade Cashfree payment intent creation
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const ownerId = context.auth.uid;
+  await assertOwnerAccessOrThrow(ownerId);
+
+  const planCode = String(data?.planCode || '').trim().toLowerCase();
+  
+  // Plan configurations with Cashfree amounts in paise (amount * 100)
+  const plans = {
+    basic: { 
+      amountInPaise: 9900,  // ₹99
+      tenantLimit: 10,
+      displayName: 'Basic Plan'
+    },
+    pro: { 
+      amountInPaise: 49900,  // ₹499
+      tenantLimit: 50,
+      displayName: 'Pro Plan'
+    },
+  };
+
+  const plan = plans[planCode];
+  if (!plan) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Only paid plans (basic/pro) can create subscription payment intents',
+    );
+  }
+
+  const { appId, secretKey, isSandbox } = getCashfreeConfig();
+  if (!appId || !secretKey) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Cashfree not configured. Set cashfree.app_id and cashfree.secret_key in Firebase config.',
+    );
+  }
+
+  try {
+    const currency = 'INR';
+    const paymentId = `sub_${ownerId}_${Date.now()}`;
+    const cashfreeOrderId = `order_${paymentId}`;
+    const cashfreeBaseUrl = isSandbox
+      ? 'https://test.cashfree.com'
+      : 'https://api.cashfree.com';
+
+    // Create Cashfree payment session token
+    const tokenResponse = await fetch(`${cashfreeBaseUrl}/api/v2/cftoken/order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-client-id': appId,
+        'x-client-secret': secretKey,
+      },
+      body: JSON.stringify({
+        orderId: cashfreeOrderId,
+        orderAmount: (plan.amountInPaise / 100).toFixed(2),
+        orderCurrency: currency,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const errText = await tokenResponse.text();
+      functions.logger.error('Cashfree token creation failed', { 
+        status: tokenResponse.status, 
+        error: errText 
+      });
+      throw new functions.https.HttpsError(
+        'internal',
+        `Cashfree token creation failed: ${errText}`,
+      );
+    }
+
+    const tokenData = await tokenResponse.json();
+    if (tokenData.status !== 'OK') {
+      throw new functions.https.HttpsError(
+        'internal',
+        `Cashfree error: ${tokenData.message || 'Unknown error'}`,
+      );
+    }
+
+    const paymentSessionId = tokenData.cftoken;
+
+    // Store payment intent in Firestore for tracking
+    await db.collection('subscriptionPayments').doc(paymentId).set({
+      paymentId,
+      ownerId,
+      planCode,
+      tenantLimit: plan.tenantLimit,
+      amountInPaise: plan.amountInPaise,
+      currency,
+      gateway: 'cashfree',
+      status: 'pending',
+      cashfreeOrderId,
+      cashfreePaymentSessionId: paymentSessionId,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      expiresAt: Timestamp.fromDate(new Date(Date.now() + 15 * 60 * 1000)), // 15 min expiry
+    });
+
+    functions.logger.info('Payment intent created', { 
+      paymentId, 
+      ownerId, 
+      planCode 
+    });
+
+    return {
+      paymentId,
+      orderId: cashfreeOrderId,
+      paymentSessionId,
+      keyId: appId,
+      amountInPaise: plan.amountInPaise,
+      currency,
+      planCode,
+      tenantLimit: plan.tenantLimit,
+    };
+  } catch (error) {
+    functions.logger.error('Payment intent creation error', { 
+      error: error.message,
+      ownerId,
+      planCode
+    });
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});
+
+exports.verifyOwnerSubscriptionPayment = functions.https.onCall(async (data, context) => {
+  // Production-grade Cashfree payment verification
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const ownerId = context.auth.uid;
+  await assertOwnerAccessOrThrow(ownerId);
+
+  const paymentId = String(data?.paymentId || '').trim();
+  if (!paymentId) {
+    throw new functions.https.HttpsError('invalid-argument', 'paymentId is required');
+  }
+
+  try {
+    const paymentRef = db.collection('subscriptionPayments').doc(paymentId);
+    const paymentDoc = await paymentRef.get();
+    
+    if (!paymentDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Subscription payment not found');
+    }
+
+    const paymentData = paymentDoc.data();
+    if (paymentData.ownerId !== ownerId) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Payment does not belong to current owner',
+      );
+    }
+
+    // Check if payment already processed
+    if (paymentData.status === 'verified' || paymentData.status === 'paid') {
+      functions.logger.info('Payment already verified', { paymentId, ownerId });
+      return { ok: true, status: 'already_verified' };
+    }
+
+    const cashfreeOrderId = paymentData.cashfreeOrderId;
+    if (!cashfreeOrderId) {
+      throw new functions.https.HttpsError('failed-precondition', 'Cashfree order ID not found');
+    }
+
+    const { appId, secretKey, isSandbox } = getCashfreeConfig();
+    if (!appId || !secretKey) {
+      throw new functions.https.HttpsError('failed-precondition', 'Cashfree not configured');
+    }
+
+    const cashfreeBaseUrl = isSandbox
+      ? 'https://test.cashfree.com'
+      : 'https://api.cashfree.com';
+
+    // Fetch order status from Cashfree
+    const orderRes = await fetch(
+      `${cashfreeBaseUrl}/api/v2/orders/${cashfreeOrderId}`,
+      {
+        method: 'GET',
+        headers: {
+          'x-client-id': appId,
+          'x-client-secret': secretKey,
+        },
+      }
+    );
+
+    if (!orderRes.ok) {
+      const errText = await orderRes.text();
+      functions.logger.error('Cashfree order fetch failed', { 
+        status: orderRes.status, 
+        error: errText 
+      });
+      throw new functions.https.HttpsError(
+        'internal',
+        `Cashfree order fetch failed: ${errText}`,
+      );
+    }
+
+    const orderData = await orderRes.json();
+    if (orderData.orderStatus !== 'PAID') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        `Payment not completed. Status: ${orderData.orderStatus}`,
+      );
+    }
+
+    // Payment verified! Update Firestore with subscription
+    const planCode = String(paymentData.planCode || 'free');
+    const tenantLimit = Number(paymentData.tenantLimit || 2);
+    const now = new Date();
+    const expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const cfTransactionId = orderData.referenceId?.toString() || cashfreeOrderId;
+
+    // Use transaction to ensure consistency
+    await db.runTransaction(async (txn) => {
+      // Update payment record
+      txn.set(
+        paymentRef,
+        {
+          status: 'paid',
+          transactionId: cfTransactionId,
+          paidAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // Update owner subscription
+      txn.set(
+        db.collection('owners').doc(ownerId),
+        {
+          ownerId,
+          subscriptionPlan: planCode,
+          tenantLimit,
+          paymentStatus: 'active',
+          subscriptionStartDate: FieldValue.serverTimestamp(),
+          subscriptionExpiry: Timestamp.fromDate(expiryDate),
+          cashfreeOrderId,
+          cashfreeSubscriptionId: cfTransactionId,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    });
+
+    functions.logger.info('Payment verified and subscription activated', { 
+      paymentId, 
+      ownerId, 
+      planCode,
+      transactionId: cfTransactionId
+    });
+
+    return {
+      ok: true,
+      status: 'active',
+      subscriptionPlan: planCode,
+      tenantLimit,
+      paymentId,
+    };
+  } catch (error) {
+    functions.logger.error('Payment verification error', { 
+      error: error.message,
+      paymentId,
+      ownerId
+    });
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});
+
+function trustStatusLabel(score) {
+  const clamped = Math.max(0, Math.min(100, Number(score) || 0));
+  if (clamped >= 80) return 'Highly Trusted';
+  if (clamped >= 60) return 'Reliable';
+  if (clamped >= 40) return 'Average Risk';
+  if (clamped >= 20) return 'High Risk';
+  return 'Very Risky Tenant';
+}
+
+exports.lookupTenantTrustScore = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const ownerId = context.auth.uid;
+  await assertOwnerAccessOrThrow(ownerId);
+
+  const rawPhone = String(data?.phoneNumber || '').trim();
+  const digits = rawPhone.replace(/\D/g, '');
+  let localPhone = '';
+  if (digits.length === 10 && /^[6-9]/.test(digits)) {
+    localPhone = digits;
+  } else if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) {
+    localPhone = digits.slice(2);
+  }
+
+  if (!localPhone) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid phone number format');
+  }
+
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const quotaRef = db.collection('ownerTrustScoreLookupQuota').doc(`${ownerId}_${dayKey}`);
+  const eventRef = db.collection('ownerTrustScoreLookupEvents').doc();
+
+  await db.runTransaction(async (txn) => {
+    const quotaDoc = await txn.get(quotaRef);
+    const currentCount = quotaDoc.exists ? Number(quotaDoc.data()?.count || 0) : 0;
+    if (currentCount >= 30) {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        'Daily lookup limit reached (30/day).',
+      );
+    }
+
+    txn.set(quotaRef, {
+      ownerId,
+      dayKey,
+      count: currentCount + 1,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(quotaDoc.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+    }, { merge: true });
+  });
+
+  const normalized91 = `91${localPhone}`;
+
+  const snapshots = [];
+  snapshots.push(await db.collection('tenants').where('phoneNumber', '==', localPhone).limit(5).get());
+  if (snapshots[snapshots.length - 1].empty) {
+    snapshots.push(await db.collection('tenants').where('phoneNumber', '==', normalized91).limit(5).get());
+  }
+  if (snapshots[snapshots.length - 1].empty) {
+    snapshots.push(await db.collection('tenants').where('phone', '==', localPhone).limit(5).get());
+  }
+  if (snapshots[snapshots.length - 1].empty) {
+    snapshots.push(await db.collection('tenants').where('phone', '==', normalized91).limit(5).get());
+  }
+
+  const docsById = new Map();
+  snapshots.forEach((snap) => {
+    snap.docs.forEach((doc) => {
+      docsById.set(doc.id, doc);
+    });
+  });
+
+  const matches = Array.from(docsById.values());
+  matches.sort((a, b) => {
+    const as = Number(a.data()?.trustScore ?? -1);
+    const bs = Number(b.data()?.trustScore ?? -1);
+    return bs - as;
+  });
+
+  const best = matches[0] || null;
+  let response;
+
+  if (!best) {
+    response = {
+      found: false,
+      displayScore: 'Unknown',
+      trustScore: null,
+      statusLabel: 'Unknown',
+      tenantName: 'Tenant',
+      multipleMatches: false,
+      matchCount: 0,
+      message: 'No tenant record found for this phone number.',
+    };
+  } else {
+    const bestData = best.data() || {};
+    const trustScore = bestData.trustScore;
+    const hasScore = Number.isFinite(Number(trustScore));
+    const score = hasScore ? Math.max(0, Math.min(100, Number(trustScore))) : null;
+    const tenantName = String(bestData.fullName || bestData.name || 'Tenant');
+
+    response = {
+      found: true,
+      displayScore: hasScore ? String(score) : 'N/A',
+      trustScore: hasScore ? score : null,
+      statusLabel: hasScore ? trustStatusLabel(score) : 'Unknown',
+      tenantName,
+      multipleMatches: matches.length > 1,
+      matchCount: matches.length,
+      message: hasScore ? 'Trust score fetched successfully.' : 'Trust score unavailable.',
+    };
+  }
+
+  await eventRef.set({
+    ownerId,
+    dayKey,
+    phoneLast4: localPhone.slice(-4),
+    found: response.found,
+    hasScore: response.trustScore != null,
+    matchCount: response.matchCount,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  return response;
 });
 
 // ==========================================================
@@ -1494,4 +2205,101 @@ exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {
 
 exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
   res.status(501).send('Stripe webhook not configured');
+});
+
+// ==========================================================
+// CASHFREE WEBHOOK
+// ==========================================================
+
+exports.cashfreeWebhook = functions.https.onRequest(async (req, res) => {
+  const { webhookSecret } = getCashfreeConfig();
+  if (!webhookSecret) {
+    res.status(500).send('Cashfree webhook secret not configured');
+    return;
+  }
+
+  const signature = req.get('x-webhook-signature');
+  const timestamp = req.get('x-webhook-timestamp');
+  if (!signature || !timestamp) {
+    res.status(401).send('Missing signature headers');
+    return;
+  }
+
+  // Cashfree HMAC-SHA256: base64(HMAC(timestamp + rawBody, secret))
+  const rawBody = req.rawBody?.toString('utf8') || JSON.stringify(req.body);
+  const crypto = require('crypto');
+  const expectedSig = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(timestamp + rawBody)
+    .digest('base64');
+
+  if (expectedSig !== signature) {
+    res.status(401).send('Invalid signature');
+    return;
+  }
+
+  const event = req.body?.type;
+  const data = req.body?.data || {};
+
+  if (event === 'PAYMENT_SUCCESS_WEBHOOK') {
+    const order = data?.order || {};
+    const payment = data?.payment || {};
+    const cashfreeOrderId = order.order_id;
+    const cfTransactionId = payment.cf_payment_id?.toString() || cashfreeOrderId;
+
+    if (cashfreeOrderId) {
+      const snap = await db
+        .collection('payments')
+        .where('cashfreeOrderId', '==', cashfreeOrderId)
+        .limit(1)
+        .get();
+
+      if (!snap.empty) {
+        const paymentId = snap.docs[0].id;
+        const now = FieldValue.serverTimestamp();
+        await db.collection('payments').doc(paymentId).set(
+          {
+            status: 'paid',
+            method: 'online',
+            transactionId: cfTransactionId,
+            cashfreeOrderId,
+            paidAt: now,
+            updatedAt: now,
+          },
+          { merge: true },
+        );
+      }
+    }
+  } else if (event === 'PAYMENT_FAILED_WEBHOOK') {
+    const order = data?.order || {};
+    const payment = data?.payment || {};
+    const cashfreeOrderId = order.order_id;
+    const failureMsg = payment.payment_message || 'Payment failed';
+
+    if (cashfreeOrderId) {
+      const snap = await db
+        .collection('payments')
+        .where('cashfreeOrderId', '==', cashfreeOrderId)
+        .limit(1)
+        .get();
+
+      if (!snap.empty) {
+        const paymentId = snap.docs[0].id;
+        await db
+          .collection('messages')
+          .doc(`${paymentId}_cfailed`)
+          .set({
+            type: 'reminder',
+            title: 'Payment failed',
+            body: `Cashfree payment failed (${failureMsg}).`,
+            severity: 'warn',
+            paymentId,
+            createdAt: FieldValue.serverTimestamp(),
+            read: false,
+          });
+      }
+    }
+  }
+
+  res.json({ received: true });
 });

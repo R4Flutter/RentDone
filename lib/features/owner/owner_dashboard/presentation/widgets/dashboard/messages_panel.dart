@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_dashboard/domain/entities/app_message.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/providers/messages_provider.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
 
 class MessagesPanel extends ConsumerWidget {
@@ -15,13 +16,15 @@ class MessagesPanel extends ConsumerWidget {
     final async = ref.watch(messagesProvider);
 
     final allMessages = async.asData?.value ?? const <AppMessage>[];
-    final messages =
-        allMessages.where(_isPaymentMessage).toList(growable: false);
+    final messages = allMessages
+        .where(_isPaymentMessage)
+        .toList(growable: false);
     final useFallback = messages.isEmpty;
     final items = useFallback ? _fallbackMessages() : messages;
 
     return DashboardCard(
       useGradient: false,
+      backgroundColor: OwnerDashboardColors.activityCardBackground(context),
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,15 +40,9 @@ class MessagesPanel extends ConsumerWidget {
                 ),
               ),
               if (async.hasError)
-                _StatusPill(
-                  label: 'Offline',
-                  color: scheme.error,
-                )
+                _StatusPill(label: 'Offline', color: scheme.error)
               else if (!async.isLoading && useFallback)
-                _StatusPill(
-                  label: 'Sample',
-                  color: scheme.primary,
-                ),
+                _StatusPill(label: 'Sample', color: scheme.primary),
             ],
           ),
           const SizedBox(height: 12),
@@ -131,17 +128,18 @@ class _MessageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final color = _severityColor(scheme, message.severity);
+    final color = _severityColor(context, message.severity);
     final icon = _typeIcon(message.type);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: OwnerDashboardColors.activityCardBackground(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: OwnerDashboardColors.activityCardBorder(context),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +172,7 @@ class _MessageTile extends StatelessWidget {
                     Text(
                       _timeAgo(message.createdAt),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.6),
+                        color: OwnerDashboardColors.textSecondary(context),
                       ),
                     ),
                   ],
@@ -185,7 +183,7 @@ class _MessageTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.75),
+                    color: OwnerDashboardColors.textSecondary(context),
                   ),
                 ),
               ],
@@ -207,14 +205,14 @@ class _MessageTile extends StatelessWidget {
     }
   }
 
-  Color _severityColor(ColorScheme scheme, String severity) {
+  Color _severityColor(BuildContext context, String severity) {
     switch (severity) {
       case 'critical':
-        return scheme.error;
+        return Theme.of(context).colorScheme.error;
       case 'warn':
-        return Colors.orange;
+        return OwnerDashboardColors.pendingTone(context).iconColor;
       default:
-        return scheme.primary;
+        return OwnerDashboardColors.brandPrimary(context);
     }
   }
 
@@ -231,10 +229,7 @@ class _StatusPill extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _StatusPill({
-    required this.label,
-    required this.color,
-  });
+  const _StatusPill({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -248,10 +243,10 @@ class _StatusPill extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-            ),
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 11,
+        ),
       ),
     );
   }

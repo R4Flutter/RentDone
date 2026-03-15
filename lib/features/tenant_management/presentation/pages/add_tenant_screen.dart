@@ -616,13 +616,13 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? scheme.error : Colors.transparent,
+                color: error != null ? scheme.error : AppColors.transparent,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? scheme.error : Colors.transparent,
+                color: error != null ? scheme.error : AppColors.transparent,
               ),
             ),
             contentPadding: const EdgeInsets.symmetric(
@@ -712,7 +712,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
               color: scheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: error != null ? scheme.error : Colors.transparent,
+                color: error != null ? scheme.error : AppColors.transparent,
               ),
             ),
             child: Text(

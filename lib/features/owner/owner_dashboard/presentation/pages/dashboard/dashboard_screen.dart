@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_body.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -6,10 +7,8 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface, // 🔥 near-black in dark
+      backgroundColor: OwnerDashboardColors.pageBackground(context),
       body: const DashboardBody(),
     );
   }

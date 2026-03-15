@@ -12,7 +12,9 @@ import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_
 import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_property.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_property_tenants.dart';
 
-final propertyFirebaseServiceProvider = Provider<PropertyFirebaseService>((ref) {
+final propertyFirebaseServiceProvider = Provider<PropertyFirebaseService>((
+  ref,
+) {
   return PropertyFirebaseService();
 });
 

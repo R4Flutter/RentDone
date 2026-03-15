@@ -65,7 +65,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
         Center(
           child: Text(
             'Profile load failed',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+            style: TextStyle(color: AppColors.white.withValues(alpha: 0.9)),
           ),
         ),
       ),
@@ -84,7 +84,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                     Text(
                       'Profile sync is in progress. Details will appear automatically.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: AppColors.white),
                     ),
                   ],
                 ),
@@ -166,9 +166,9 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.transparent,
+                          AppColors.transparent,
                           _ProfileTokens.highlightAccent.withValues(alpha: 0.7),
-                          Colors.transparent,
+                          AppColors.transparent,
                         ],
                       ),
                     ),
@@ -193,8 +193,8 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                       side: BorderSide(
                         color: _ProfileTokens.danger.withValues(alpha: 0.5),
                       ),
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.white.withValues(alpha: 0.03),
+                      foregroundColor: AppColors.white,
+                      backgroundColor: AppColors.white.withValues(alpha: 0.03),
                       minimumSize: const Size.fromHeight(50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -262,7 +262,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
   Future<void> _showQuickActionsSheet(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) => Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 18),
         padding: const EdgeInsets.all(14),
@@ -271,9 +271,9 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
           gradient: const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF17263D), Color(0xFF101A2D)],
+            colors: [AppColors.cFF17263D, AppColors.cFF101A2D],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
         ),
         child: SafeArea(
           child: Column(
@@ -330,7 +330,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
 
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         return Container(
@@ -341,9 +341,9 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFF17263D), Color(0xFF101A2D)],
+              colors: [AppColors.cFF17263D, AppColors.cFF101A2D],
             ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            border: Border.all(color: AppColors.white.withValues(alpha: 0.14)),
           ),
           child: SafeArea(
             top: false,
@@ -356,7 +356,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                     children: [
                       const Icon(
                         Icons.insights_rounded,
-                        color: Colors.white,
+                        color: AppColors.white,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -364,7 +364,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                         child: Text(
                           'How Your Trust Score Is Calculated',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                           ),
@@ -391,7 +391,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                   const Text(
                     'Score Rules (Per Payment)',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -406,7 +406,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                   const Text(
                     'Consistency Bonus',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -421,7 +421,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                   const Text(
                     'Badge Levels',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -445,7 +445,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                     child: const Text(
                       'Tip: Pay rent on or before your due day each month to earn points and streak bonuses.',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontWeight: FontWeight.w600,
                         height: 1.3,
                       ),
@@ -643,14 +643,14 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
 }
 
 class _ProfileTokens {
-  static const Color bgTop = Color(0xFF0B1220);
-  static const Color bgMiddle = Color(0xFF0F1C2E);
-  static const Color bgBottom = Color(0xFF111C30);
+  static const Color bgTop = AppColors.cFF0B1220;
+  static const Color bgMiddle = AppColors.cFF0F1C2E;
+  static const Color bgBottom = AppColors.cFF111C30;
 
-  static const Color primaryAccent = Color(0xFF4F7CFF);
-  static const Color secondaryAccent = Color(0xFF7A5CFF);
-  static const Color highlightAccent = Color(0xFF3FE0FF);
-  static const Color danger = Color(0xFFFF5A5F);
+  static const Color primaryAccent = AppColors.cFF4F7CFF;
+  static const Color secondaryAccent = AppColors.cFF7A5CFF;
+  static const Color highlightAccent = AppColors.cFF3FE0FF;
+  static const Color danger = AppColors.cFFFF5A5F;
 }
 
 class _ProfileGlowOrb extends StatelessWidget {
@@ -717,7 +717,7 @@ class _HeroIdentityCard extends StatelessWidget {
                   : null,
               backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.28),
               child: (profileImageUrl ?? '').isEmpty
-                  ? const Icon(Icons.person, color: Colors.white, size: 30)
+                  ? const Icon(Icons.person, color: AppColors.white, size: 30)
                   : null,
             ),
           ),
@@ -732,7 +732,7 @@ class _HeroIdentityCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.2,
@@ -746,9 +746,9 @@ class _HeroIdentityCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
-                    color: Colors.white.withValues(alpha: 0.14),
+                    color: AppColors.white.withValues(alpha: 0.14),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.28),
+                      color: AppColors.white.withValues(alpha: 0.28),
                     ),
                   ),
                   child: Row(
@@ -756,14 +756,14 @@ class _HeroIdentityCard extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.verified_rounded,
-                        color: Colors.white,
+                        color: AppColors.white,
                         size: 14,
                       ),
                       const SizedBox(width: 5),
                       Text(
                         trustBadge,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
                         ),
@@ -785,7 +785,7 @@ class _HeroIdentityCard extends StatelessWidget {
                 Text(
                   'Tap to view rules',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.75),
+                    color: AppColors.white.withValues(alpha: 0.75),
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
@@ -831,7 +831,7 @@ class _EditablePersonalDetailsCard extends StatelessWidget {
               validator: (value) =>
                   (value ?? '').trim().isEmpty ? 'Name is required' : null,
             ),
-            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            Divider(color: AppColors.white.withValues(alpha: 0.1), height: 18),
             _ProfileInputField(
               controller: tenantEmailController,
               icon: Icons.email_outlined,
@@ -844,7 +844,7 @@ class _EditablePersonalDetailsCard extends StatelessWidget {
                 return null;
               },
             ),
-            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            Divider(color: AppColors.white.withValues(alpha: 0.1), height: 18),
             _ProfileInputField(
               controller: tenantPhoneController,
               icon: Icons.phone_outlined,
@@ -861,7 +861,7 @@ class _EditablePersonalDetailsCard extends StatelessWidget {
                 onPressed: isSaving ? null : onSave,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.7),
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.white,
                 ),
                 icon: isSaving
                     ? const SizedBox(
@@ -905,11 +905,11 @@ class _ProfileInputField extends StatelessWidget {
           height: 36,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.08),
+            color: AppColors.white.withValues(alpha: 0.08),
           ),
           child: Icon(
             icon,
-            color: Colors.white.withValues(alpha: 0.85),
+            color: AppColors.white.withValues(alpha: 0.85),
             size: 18,
           ),
         ),
@@ -919,7 +919,7 @@ class _ProfileInputField extends StatelessWidget {
             controller: controller,
             keyboardType: keyboardType,
             validator: validator,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: AppColors.white),
             decoration: tenantGlassInputDecoration(context, label: label),
           ),
         ),
@@ -971,7 +971,7 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
                   ? 'Property name is required'
                   : null,
             ),
-            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            Divider(color: AppColors.white.withValues(alpha: 0.1), height: 18),
             _ProfileInputField(
               controller: roomNumberController,
               icon: Icons.meeting_room_outlined,
@@ -980,7 +980,7 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
                   ? 'Room number is required'
                   : null,
             ),
-            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            Divider(color: AppColors.white.withValues(alpha: 0.1), height: 18),
             _ProfileInputField(
               controller: monthlyRentController,
               icon: Icons.currency_rupee,
@@ -992,7 +992,7 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
                 return null;
               },
             ),
-            Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+            Divider(color: AppColors.white.withValues(alpha: 0.1), height: 18),
             _ProfileInputField(
               controller: rentDueDayController,
               icon: Icons.payments_outlined,
@@ -1016,23 +1016,23 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: AppColors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.14),
+                    color: AppColors.white.withValues(alpha: 0.14),
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.event_outlined,
-                      color: Colors.white.withValues(alpha: 0.82),
+                      color: AppColors.white.withValues(alpha: 0.82),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         allocationText,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: AppColors.white),
                       ),
                     ),
                   ],
@@ -1047,7 +1047,7 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
                 onPressed: isSaving ? null : onSave,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.7),
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.white,
                 ),
                 icon: isSaving
                     ? const SizedBox(
@@ -1089,7 +1089,7 @@ class _TrustScoreRing extends StatelessWidget {
               child: CircularProgressIndicator(
                 value: value,
                 strokeWidth: 7,
-                backgroundColor: Colors.white.withValues(alpha: 0.15),
+                backgroundColor: AppColors.white.withValues(alpha: 0.15),
                 valueColor: const AlwaysStoppedAnimation(
                   _ProfileTokens.highlightAccent,
                 ),
@@ -1100,7 +1100,7 @@ class _TrustScoreRing extends StatelessWidget {
               height: 66,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: AppColors.white.withValues(alpha: 0.08),
                 boxShadow: [
                   BoxShadow(
                     color: _ProfileTokens.primaryAccent.withValues(alpha: 0.32),
@@ -1116,7 +1116,7 @@ class _TrustScoreRing extends StatelessWidget {
                   Text(
                     score.toString(),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
                     ),
@@ -1124,7 +1124,7 @@ class _TrustScoreRing extends StatelessWidget {
                   Text(
                     'TRUST',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.72),
+                      color: AppColors.white.withValues(alpha: 0.72),
                       fontSize: 8,
                       letterSpacing: 0.2,
                     ),
@@ -1161,7 +1161,7 @@ class _PaymentReliabilityCard extends StatelessWidget {
           const Text(
             'Payment Reliability',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontWeight: FontWeight.w700,
               fontSize: 15,
             ),
@@ -1212,9 +1212,9 @@ class _PaymentRateTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: AppColors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1226,7 +1226,7 @@ class _PaymentRateTile extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: AppColors.white.withValues(alpha: 0.9),
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
@@ -1237,7 +1237,7 @@ class _PaymentRateTile extends StatelessWidget {
           Text(
             '${rate.toStringAsFixed(1)}%',
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontWeight: FontWeight.w800,
               fontSize: 18,
             ),
@@ -1248,7 +1248,7 @@ class _PaymentRateTile extends StatelessWidget {
             child: LinearProgressIndicator(
               value: rate / 100,
               minHeight: 7,
-              backgroundColor: Colors.white.withValues(alpha: 0.14),
+              backgroundColor: AppColors.white.withValues(alpha: 0.14),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
@@ -1268,7 +1268,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: const TextStyle(
-        color: Colors.white,
+        color: AppColors.white,
         fontSize: 17,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.2,
@@ -1292,12 +1292,12 @@ class _TrustMetaRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.78)),
+            style: TextStyle(color: AppColors.white.withValues(alpha: 0.78)),
           ),
           Text(
             value,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1322,14 +1322,14 @@ class _RuleLine extends StatelessWidget {
           Text(
             '• ',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.82),
+              color: AppColors.white.withValues(alpha: 0.82),
               fontWeight: FontWeight.w700,
             ),
           ),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+              style: TextStyle(color: AppColors.white.withValues(alpha: 0.9)),
             ),
           ),
         ],
@@ -1363,7 +1363,7 @@ class _SettingsCard extends StatelessWidget {
             value: biometricEnabled,
             onChanged: onBiometricChanged,
           ),
-          Divider(color: Colors.white.withValues(alpha: 0.1), height: 18),
+          Divider(color: AppColors.white.withValues(alpha: 0.1), height: 18),
           _PremiumToggleTile(
             icon: Icons.dark_mode_outlined,
             title: 'Dark Appearance',
@@ -1398,11 +1398,11 @@ class _PremiumToggleTile extends StatelessWidget {
           height: 36,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.08),
+            color: AppColors.white.withValues(alpha: 0.08),
           ),
           child: Icon(
             icon,
-            color: Colors.white.withValues(alpha: 0.86),
+            color: AppColors.white.withValues(alpha: 0.86),
             size: 18,
           ),
         ),
@@ -1411,7 +1411,7 @@ class _PremiumToggleTile extends StatelessWidget {
           child: Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1434,11 +1434,11 @@ class _PremiumToggleTile extends StatelessWidget {
                       ],
                     )
                   : null,
-              color: value ? null : Colors.white.withValues(alpha: 0.1),
+              color: value ? null : AppColors.white.withValues(alpha: 0.1),
               border: Border.all(
                 color: value
-                    ? Colors.white.withValues(alpha: 0.3)
-                    : Colors.white.withValues(alpha: 0.2),
+                    ? AppColors.white.withValues(alpha: 0.3)
+                    : AppColors.white.withValues(alpha: 0.2),
               ),
               boxShadow: value
                   ? [
@@ -1458,7 +1458,7 @@ class _PremiumToggleTile extends StatelessWidget {
                 width: 22,
                 height: 22,
                 decoration: const BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.white,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -1500,7 +1500,7 @@ class _QuickActionsFab extends StatelessWidget {
             ),
             child: const Icon(
               Icons.bolt_rounded,
-              color: Colors.white,
+              color: AppColors.white,
               size: 28,
             ),
           ),
@@ -1541,21 +1541,21 @@ class _QuickActionItem extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: _ProfileTokens.primaryAccent.withValues(alpha: 0.22),
               ),
-              child: Icon(icon, color: Colors.white, size: 18),
+              child: Icon(icon, color: AppColors.white, size: 18),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: Colors.white.withValues(alpha: 0.75),
+              color: AppColors.white.withValues(alpha: 0.75),
             ),
           ],
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/providers/owner_tenants_provider.dart';
@@ -340,7 +341,7 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
                                 errorBuilder: (context, error, stackTrace) =>
                                     Container(
                                       height: 300,
-                                      color: Colors.grey[300],
+                                      color: AppColors.grey[300],
                                       child: const Center(
                                         child: Icon(
                                           Icons.broken_image_outlined,

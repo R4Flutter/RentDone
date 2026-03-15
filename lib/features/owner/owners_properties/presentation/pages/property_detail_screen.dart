@@ -93,7 +93,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
   Widget _statChip(ThemeData theme, String label, String value) {
     return Chip(
       label: Text('$label: $value', style: theme.textTheme.bodySmall),
-      backgroundColor: Colors.white.withAlpha(20),
+      backgroundColor: AppColors.white.withAlpha(20),
     );
   }
 
@@ -156,7 +156,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
               : Text(
                   'Vacant',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.orange,
+                    color: AppColors.orange,
                   ),
                 ),
           const Spacer(),
@@ -194,7 +194,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Tenant not found'),
-                            backgroundColor: Colors.orange,
+                            backgroundColor: AppColors.orange,
                           ),
                         );
                       }

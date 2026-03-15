@@ -72,7 +72,7 @@ class _TenantTenancyDetailsScreenState
           padding: const EdgeInsets.all(24),
           child: Text(
             'Unable to load tenancy details: $e',
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: AppColors.white),
             textAlign: TextAlign.center,
           ),
         ),
@@ -91,7 +91,7 @@ class _TenantTenancyDetailsScreenState
                   Text(
                     'Syncing tenant allocation details. Please wait...',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppColors.white),
                   ),
                 ],
               ),
@@ -423,7 +423,7 @@ class _TenantTenancyDetailsScreenState
         controller: controller,
         keyboardType: keyboardType,
         validator: validator,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppColors.white),
         decoration: InputDecoration(labelText: label, hintText: hintText)
             .copyWith(
               labelStyle: tenantGlassInputDecoration(
@@ -491,21 +491,21 @@ class _TenantTenancyDetailsScreenState
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: AppColors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            border: Border.all(color: AppColors.white.withValues(alpha: 0.14)),
           ),
           child: Row(
             children: [
               Icon(
                 Icons.event_outlined,
-                color: Colors.white.withValues(alpha: 0.82),
+                color: AppColors.white.withValues(alpha: 0.82),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   dateText,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppColors.white),
                 ),
               ),
             ],
@@ -601,14 +601,16 @@ class _HeaderCard extends StatelessWidget {
                 const Text(
                   'RentDone Tenancy Details',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
                   ),
                 ),
                 Text(
                   summaryName,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+                  style: TextStyle(
+                    color: AppColors.white.withValues(alpha: 0.8),
+                  ),
                 ),
               ],
             ),
@@ -635,7 +637,7 @@ class _EditableSection extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -663,7 +665,7 @@ class _InfoSection extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.white,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -693,7 +695,7 @@ class _ReadOnlyInfoTile extends StatelessWidget {
             flex: 2,
             child: Text(
               label,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+              style: TextStyle(color: AppColors.white.withValues(alpha: 0.72)),
             ),
           ),
           const SizedBox(width: 8),
@@ -703,7 +705,7 @@ class _ReadOnlyInfoTile extends StatelessWidget {
               normalized,
               textAlign: TextAlign.right,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.white,
                 fontWeight: FontWeight.w600,
               ),
             ),

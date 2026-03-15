@@ -99,7 +99,7 @@ class OwnerBankDetailsScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: AppTheme.blueSurfaceGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +109,7 @@ class OwnerBankDetailsScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: AppColors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: theme.colorScheme.onPrimary),
@@ -189,14 +189,14 @@ class OwnerBankDetailsScreen extends ConsumerWidget {
       labelStyle: TextStyle(color: labelColor),
       helperStyle: TextStyle(color: helperColor),
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.08),
+      fillColor: AppColors.white.withValues(alpha: 0.08),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        borderSide: BorderSide(color: AppColors.white.withValues(alpha: 0.12)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+        borderSide: BorderSide(color: AppColors.white.withValues(alpha: 0.4)),
       ),
     );
   }

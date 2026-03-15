@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/shared/widgets/dialogs/modern_dialog_text_field.dart';
@@ -133,7 +134,7 @@ Future<void> showForgotPasswordDialog({
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                              AppColors.white,
                             ),
                           ),
                         )

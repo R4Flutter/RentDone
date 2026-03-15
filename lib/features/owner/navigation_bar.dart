@@ -5,10 +5,7 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 class RentDoneNavigation extends StatelessWidget {
   final Widget child;
 
-  const RentDoneNavigation({
-    super.key,
-    required this.child,
-  });
+  const RentDoneNavigation({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {

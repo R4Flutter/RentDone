@@ -53,7 +53,7 @@ class PaymentBadge extends StatelessWidget {
       case 'pending':
         return AppTheme.warningAmber;
       default:
-        return Colors.white70;
+        return AppColors.white70;
     }
   }
 

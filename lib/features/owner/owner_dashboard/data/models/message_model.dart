@@ -31,6 +31,7 @@ class AppMessageDto {
       if (value is DateTime) return value;
       return DateTime.now();
     }
+
     return AppMessageDto(
       id: doc.id,
       type: data['type'] ?? 'reminder',

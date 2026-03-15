@@ -128,7 +128,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                             labelText: "Property Name",
                             hintText: "e.g., Sunshine Residency",
                             filled: true,
-                            fillColor: Colors.white.withValues(alpha: 0.08),
+                            fillColor: AppColors.white.withValues(alpha: 0.08),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide.none,
@@ -144,7 +144,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                             labelText: "Address",
                             hintText: "e.g., 123 Main Street, City",
                             filled: true,
-                            fillColor: Colors.white.withValues(alpha: 0.08),
+                            fillColor: AppColors.white.withValues(alpha: 0.08),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide.none,
@@ -161,7 +161,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                           decoration: InputDecoration(
                             labelText: "Total Rooms/Units",
                             filled: true,
-                            fillColor: Colors.white.withValues(alpha: 0.08),
+                            fillColor: AppColors.white.withValues(alpha: 0.08),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide.none,
@@ -192,7 +192,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                                         decoration: InputDecoration(
                                           labelText: "Room #",
                                           filled: true,
-                                          fillColor: Colors.white.withValues(
+                                          fillColor: AppColors.white.withValues(
                                             alpha: 0.08,
                                           ),
                                           border: OutlineInputBorder(
@@ -215,7 +215,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                                         decoration: InputDecoration(
                                           labelText: "Room Name",
                                           filled: true,
-                                          fillColor: Colors.white.withValues(
+                                          fillColor: AppColors.white.withValues(
                                             alpha: 0.08,
                                           ),
                                           border: OutlineInputBorder(

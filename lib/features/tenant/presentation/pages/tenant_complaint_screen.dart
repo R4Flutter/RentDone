@@ -79,7 +79,7 @@ class _TenantComplaintScreenState extends ConsumerState<TenantComplaintScreen> {
               Text(
                 'Complaint Box',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -92,7 +92,7 @@ class _TenantComplaintScreenState extends ConsumerState<TenantComplaintScreen> {
                     Text(
                       'Raise an Issue',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -100,7 +100,7 @@ class _TenantComplaintScreenState extends ConsumerState<TenantComplaintScreen> {
                     Text(
                       'Track maintenance and service requests quickly.',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.74),
+                        color: AppColors.white.withValues(alpha: 0.74),
                       ),
                     ),
                   ],
@@ -111,7 +111,7 @@ class _TenantComplaintScreenState extends ConsumerState<TenantComplaintScreen> {
                 child: DropdownButtonFormField<String>(
                   initialValue: _selectedCategory,
                   dropdownColor: AppTheme.nearBlack,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppColors.white),
                   items: _categories
                       .map(
                         (category) => DropdownMenuItem(
@@ -136,7 +136,7 @@ class _TenantComplaintScreenState extends ConsumerState<TenantComplaintScreen> {
                 child: TextField(
                   controller: _descriptionController,
                   maxLines: 6,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppColors.white),
                   decoration: tenantGlassInputDecoration(
                     context,
                     label: 'Complaint Description',
@@ -154,7 +154,7 @@ class _TenantComplaintScreenState extends ConsumerState<TenantComplaintScreen> {
                     backgroundColor: AppTheme.primaryBlue.withValues(
                       alpha: 0.6,
                     ),
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.white,
                   ),
                   icon: isSubmitting
                       ? const SizedBox(

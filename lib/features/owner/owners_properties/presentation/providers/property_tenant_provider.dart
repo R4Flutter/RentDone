@@ -101,10 +101,7 @@ class RemoveTenantNotifier extends Notifier<TenantActionState> {
         successMessage: 'Tenant removed and room marked as vacant',
       );
     } catch (error) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: error.toString(),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: error.toString());
       rethrow;
     }
   }
@@ -116,5 +113,5 @@ class RemoveTenantNotifier extends Notifier<TenantActionState> {
 
 final removeTenantNotifierProvider =
     NotifierProvider<RemoveTenantNotifier, TenantActionState>(
-  RemoveTenantNotifier.new,
-);
+      RemoveTenantNotifier.new,
+    );

@@ -29,9 +29,7 @@ class PropertyOverviewScreen extends StatelessWidget {
                   children: [
                     _summarySection(theme),
                     const SizedBox(height: 32),
-                    Expanded(
-                      child: _propertyGrid(isDesktop),
-                    ),
+                    Expanded(child: _propertyGrid(isDesktop)),
                   ],
                 ),
               ),
@@ -49,17 +47,11 @@ class PropertyOverviewScreen extends StatelessWidget {
   Widget _summarySection(ThemeData theme) {
     return Row(
       children: [
-        Expanded(
-          child: _summaryCard(theme, "Total Properties", "12"),
-        ),
+        Expanded(child: _summaryCard(theme, "Total Properties", "12")),
         const SizedBox(width: 16),
-        Expanded(
-          child: _summaryCard(theme, "Occupied", "8"),
-        ),
+        Expanded(child: _summaryCard(theme, "Occupied", "8")),
         const SizedBox(width: 16),
-        Expanded(
-          child: _summaryCard(theme, "Vacant", "4"),
-        ),
+        Expanded(child: _summaryCard(theme, "Vacant", "4")),
       ],
     );
   }
@@ -134,21 +126,13 @@ class PropertyOverviewScreen extends StatelessWidget {
           const SizedBox(height: 16),
 
           if (isVacant) ...[
-            Text(
-              "Status: Vacant",
-              style: theme.textTheme.bodyLarge,
-            ),
+            Text("Status: Vacant", style: theme.textTheme.bodyLarge),
             const Spacer(),
-            ElevatedButton(
-              onPressed: () {},
-              child: const Text("Add Tenant"),
-            ),
+            ElevatedButton(onPressed: () {}, child: const Text("Add Tenant")),
           ] else ...[
-            Text("Tenant: $tenantName",
-                style: theme.textTheme.bodyLarge),
+            Text("Tenant: $tenantName", style: theme.textTheme.bodyLarge),
             const SizedBox(height: 8),
-            Text("Phone: $phone",
-                style: theme.textTheme.bodyMedium),
+            Text("Phone: $phone", style: theme.textTheme.bodyMedium),
             const Spacer(),
             Row(
               children: [

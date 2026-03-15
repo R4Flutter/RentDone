@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/features/payment/data/datasources/lease_firestore_datasource.dart';
 import 'package:rentdone/features/payment/data/datasources/payment_firestore_datasource.dart';
 import 'package:rentdone/features/payment/data/datasources/payment_functions_datasource.dart';
-import 'package:rentdone/features/payment/data/gateways/razorpay_service.dart';
+import 'package:rentdone/features/payment/data/datasources/transaction_firestore_datasource.dart';
+import 'package:rentdone/features/payment/data/gateways/cashfree_service.dart';
 import 'package:rentdone/features/payment/data/gateways/stripe_service.dart';
 import 'package:rentdone/features/payment/data/repositories/payment_repository_impl.dart';
 import 'package:rentdone/features/payment/domain/repositories/payment_repository.dart';
@@ -13,32 +15,39 @@ import 'package:rentdone/features/payment/domain/usecases/get_transaction_histor
 import 'package:rentdone/features/payment/domain/usecases/prevent_duplicate_payment.dart';
 import 'package:rentdone/features/payment/domain/usecases/verify_payment.dart';
 
-final paymentFirestoreDataSourceProvider = Provider<PaymentFirestoreDataSource>(
-  (ref) {
-    return PaymentFirestoreDataSource();
-  },
+final leaseFirestoreDataSourceProvider = Provider<LeaseFirestoreDataSource>(
+  (ref) => LeaseFirestoreDataSource(),
 );
 
+final paymentFirestoreDataSourceProvider = Provider<PaymentFirestoreDataSource>(
+  (ref) => PaymentFirestoreDataSource(),
+);
+
+final transactionFirestoreDataSourceProvider =
+    Provider<TransactionFirestoreDataSource>(
+      (ref) => TransactionFirestoreDataSource(),
+    );
+
 final paymentFunctionsDataSourceProvider = Provider<PaymentFunctionsDataSource>(
-  (ref) {
-    return PaymentFunctionsDataSource();
-  },
+  (ref) => PaymentFunctionsDataSource(),
 );
 
 final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
   return PaymentRepositoryImpl(
+    ref.watch(leaseFirestoreDataSourceProvider),
     ref.watch(paymentFirestoreDataSourceProvider),
+    ref.watch(transactionFirestoreDataSourceProvider),
     ref.watch(paymentFunctionsDataSourceProvider),
     FirebaseAuth.instance,
   );
 });
 
-final razorpayGatewayProvider = Provider<RazorpayService>((ref) {
-  return RazorpayService();
-});
-
 final stripeGatewayProvider = Provider<StripeService>((ref) {
   return StripeService();
+});
+
+final cashfreeGatewayProvider = Provider<CashfreeService>((ref) {
+  return CashfreeService();
 });
 
 final getCurrentDueUseCaseProvider = Provider<GetCurrentDue>((ref) {

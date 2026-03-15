@@ -2,10 +2,7 @@ class DashboardPropertyDto {
   final String id;
   final List<Map<String, dynamic>> rooms;
 
-  const DashboardPropertyDto({
-    required this.id,
-    required this.rooms,
-  });
+  const DashboardPropertyDto({required this.id, required this.rooms});
 
   factory DashboardPropertyDto.fromMap(String id, Map<String, dynamic> map) {
     final roomsRaw = map['rooms'];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/sidebar_item.dart';
 
 class DriveStyleTile extends StatefulWidget {
@@ -39,7 +40,7 @@ class _DriveStyleTileState extends State<DriveStyleTile> {
         Color.lerp(baseBg, accent, isDark ? 0.18 : 0.08) ?? baseBg;
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: widget.onTap,
@@ -72,14 +73,14 @@ class _DriveStyleTileState extends State<DriveStyleTile> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color:
-                      Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                  color: AppColors.black.withValues(
+                    alpha: isDark ? 0.45 : 0.12,
+                  ),
                   blurRadius: raised ? 26 : 18,
                   offset: Offset(0, raised ? 14 : 10),
                 ),
                 BoxShadow(
-                  color:
-                      Colors.white.withValues(alpha: isDark ? 0.06 : 0.7),
+                  color: AppColors.white.withValues(alpha: isDark ? 0.06 : 0.7),
                   blurRadius: 12,
                   offset: const Offset(-4, -4),
                 ),
@@ -107,8 +108,9 @@ class _DriveStyleTileState extends State<DriveStyleTile> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight:
-                          widget.selected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight: widget.selected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
                       color: textColor,
                     ),
                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
 
 class StatCard extends StatelessWidget {
@@ -6,7 +7,7 @@ class StatCard extends StatelessWidget {
   final String value;
   final String subtitle;
   final IconData icon;
-  final Color color;
+  final OwnerDashboardTone tone;
   final String? assetPath;
 
   const StatCard({
@@ -15,17 +16,27 @@ class StatCard extends StatelessWidget {
     required this.value,
     required this.subtitle,
     required this.icon,
-    required this.color,
+    required this.tone,
     this.assetPath,
   });
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    final isDark = OwnerDashboardColors.isDark(context);
+    final onSurface = OwnerDashboardColors.textPrimary(context);
+    final secondary = OwnerDashboardColors.textSecondary(context);
+    final bubbleBase = OwnerDashboardColors.brandPrimary(
+      context,
+    ).withValues(alpha: 0.14);
+    final bubbleBorder = OwnerDashboardColors.brandPrimary(
+      context,
+    ).withValues(alpha: 0.3);
+    final bubbleText = OwnerDashboardColors.brandPrimary(context);
 
     return DashboardCard(
-      useGradient: true,
+      useGradient: false,
+      backgroundColor: OwnerDashboardColors.cardBackground(context),
       padding: const EdgeInsets.all(10),
       child: Stack(
         children: [
@@ -40,69 +51,85 @@ class StatCard extends StatelessWidget {
                   height: 80,
                   width: 80,
                   fit: BoxFit.contain,
-                  color: Colors.white,
+                  color: OwnerDashboardColors.brandPrimary(
+                    context,
+                  ).withValues(alpha: isDark ? 0.24 : 0.18),
                   colorBlendMode: BlendMode.srcIn,
                 ),
               ),
             ),
           Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.16),
+                      color: bubbleBase,
                       borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: bubbleBorder),
                     ),
-                    child: Icon(icon, color: onPrimary, size: 20),
+                    child: Icon(icon, color: bubbleText, size: 20),
                   ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.labelLarge?.copyWith(
-                        color: onPrimary.withValues(alpha: 0.9),
-                        fontSize: 11,
-                        letterSpacing: 0.3,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: bubbleBase,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: textTheme.labelLarge?.copyWith(
+                          color: bubbleText,
+                          fontSize: 11,
+                          letterSpacing: 0.3,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  style: textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: onPrimary,
-                    letterSpacing: -0.4,
+              SizedBox(
+                height: 56,
+                width: 140,
+                child: Center(
+                  child: FittedBox(
+                    alignment: Alignment.center,
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: textTheme.displayMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: onSurface,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
+                textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: textTheme.bodySmall?.copyWith(
-                  color: onPrimary.withValues(alpha: 0.85),
+                  color: secondary,
                   height: 1.2,
                 ),
               ),
@@ -111,7 +138,7 @@ class StatCard extends StatelessWidget {
                 height: 4,
                 width: 44,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.9),
+                  color: OwnerDashboardColors.brandPrimary(context),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),

@@ -1,7 +1,5 @@
 import 'package:rentdone/features/owner/owner_dashboard/domain/entities/dashboard_summary.dart';
 
-
-
 class DashboardSummaryDto {
   final Map<String, dynamic> json;
 

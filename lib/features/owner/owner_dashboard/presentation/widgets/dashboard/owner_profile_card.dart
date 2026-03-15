@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
 
 class OwnerProfileCard extends StatelessWidget {
@@ -22,11 +23,15 @@ class OwnerProfileCard extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFD3A84), Color(0xFF8B5CF6), Color(0xFF22D3EE)],
+            colors: [
+              AppColors.cFFFD3A84,
+              AppColors.cFF8B5CF6,
+              AppColors.cFF22D3EE,
+            ],
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFD3A84).withValues(alpha: 0.25),
+              color: AppColors.cFFFD3A84.withValues(alpha: 0.25),
               blurRadius: 30,
               offset: const Offset(0, 18),
             ),
@@ -38,7 +43,11 @@ class OwnerProfileCard extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF1A1B2F), Color(0xFF2F1D46), Color(0xFF111827)],
+              colors: [
+                AppColors.cFF1A1B2F,
+                AppColors.cFF2F1D46,
+                AppColors.cFF111827,
+              ],
             ),
           ),
           child: Stack(
@@ -53,8 +62,8 @@ class OwnerProfileCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withValues(alpha: 0.18),
-                        Colors.transparent,
+                        AppColors.white.withValues(alpha: 0.18),
+                        AppColors.transparent,
                       ],
                     ),
                   ),
@@ -70,8 +79,8 @@ class OwnerProfileCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        Colors.black.withValues(alpha: 0.35),
-                        Colors.transparent,
+                        AppColors.black.withValues(alpha: 0.35),
+                        AppColors.transparent,
                       ],
                     ),
                   ),
@@ -87,8 +96,8 @@ class OwnerProfileCard extends StatelessWidget {
                       children: [
                         _NeonChip(
                           label: 'RentDone Elite',
-                          background: Colors.white.withValues(alpha: 0.12),
-                          border: Colors.white.withValues(alpha: 0.25),
+                          background: AppColors.white.withValues(alpha: 0.12),
+                          border: AppColors.white.withValues(alpha: 0.25),
                         ),
                         const Spacer(),
                         Container(
@@ -96,9 +105,9 @@ class OwnerProfileCard extends StatelessWidget {
                           width: 34,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.12),
+                            color: AppColors.white.withValues(alpha: 0.12),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: AppColors.white.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Icon(
@@ -118,12 +127,12 @@ class OwnerProfileCard extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Colors.white.withValues(alpha: 0.18),
-                            Colors.white.withValues(alpha: 0.06),
+                            AppColors.white.withValues(alpha: 0.18),
+                            AppColors.white.withValues(alpha: 0.06),
                           ],
                         ),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: AppColors.white.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Center(
@@ -162,7 +171,7 @@ class OwnerProfileCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Icon(
                           Icons.verified_rounded,
-                          color: Colors.white.withValues(alpha: 0.85),
+                          color: AppColors.white.withValues(alpha: 0.85),
                           size: 18,
                         ),
                       ],
@@ -306,9 +315,9 @@ class _TagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: AppColors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.18)),
       ),
       child: Text(
         label,

@@ -44,8 +44,8 @@ class TenantGlassCard extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withValues(alpha: 0.09),
-                Colors.white.withValues(alpha: 0.05),
+                AppColors.white.withValues(alpha: 0.09),
+                AppColors.white.withValues(alpha: 0.05),
               ],
             ),
       border: Border.all(
@@ -56,7 +56,7 @@ class TenantGlassCard extends StatelessWidget {
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.18),
+          color: AppColors.black.withValues(alpha: 0.18),
           blurRadius: 18,
           offset: const Offset(0, 10),
         ),
@@ -82,7 +82,7 @@ class TenantGlassCard extends StatelessWidget {
     }
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       borderRadius: radius,
       child: InkWell(onTap: onTap, borderRadius: radius, child: content),
     );
@@ -94,12 +94,12 @@ InputDecoration tenantGlassInputDecoration(
   required String label,
   String? hint,
 }) {
-  final hintColor = Colors.white.withValues(alpha: 0.45);
-  final labelColor = Colors.white.withValues(alpha: 0.72);
-  final fillColor = Colors.white.withValues(alpha: 0.05);
+  final hintColor = AppColors.white.withValues(alpha: 0.45);
+  final labelColor = AppColors.white.withValues(alpha: 0.72);
+  final fillColor = AppColors.white.withValues(alpha: 0.05);
   final border = OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+    borderSide: BorderSide(color: AppColors.white.withValues(alpha: 0.14)),
   );
 
   return InputDecoration(

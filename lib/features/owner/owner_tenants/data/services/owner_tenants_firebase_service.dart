@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -130,6 +131,25 @@ class OwnerTenantsFirebaseService {
     }
 
     return docsById.values.map(_toTrustLookup).toList();
+  }
+
+  Future<Map<String, dynamic>> lookupTenantTrustScoreByPhone(
+    String phoneInput,
+  ) async {
+    final ownerId = _auth.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) {
+      throw StateError('Owner session not found. Please sign in again.');
+    }
+
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'lookupTenantTrustScore',
+    );
+
+    final result = await callable.call(<String, dynamic>{
+      'phoneNumber': phoneInput.trim(),
+    });
+
+    return Map<String, dynamic>.from(result.data as Map);
   }
 
   TenantTrustLookup _toTrustLookup(

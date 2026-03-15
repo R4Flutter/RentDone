@@ -62,10 +62,7 @@ class DashboardnewBody extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 24),
-                    const Expanded(
-                      flex: 2,
-                      child: AlertsPanel(),
-                    ),
+                    const Expanded(flex: 2, child: AlertsPanel()),
                   ],
                 );
               },

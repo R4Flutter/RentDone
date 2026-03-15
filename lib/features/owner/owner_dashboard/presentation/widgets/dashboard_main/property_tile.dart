@@ -31,7 +31,7 @@ class PropertyTile extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: colors.onSurface.withValues(alpha:0.12), // theme-safe border
+          color: colors.onSurface.withValues(alpha: 0.12), // theme-safe border
           width: 1,
         ),
       ),
@@ -53,7 +53,8 @@ class PropertyTile extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isVacant
-                    ? colors.error // vacant = error
+                    ? colors
+                          .error // vacant = error
                     : AppTheme.successGreen, // paid = success
               ),
             ),
@@ -72,9 +73,7 @@ class PropertyTile extends StatelessWidget {
                     name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: text.titleLarge?.copyWith(
-                      color: colors.onSurface,
-                    ),
+                    style: text.titleLarge?.copyWith(color: colors.onSurface),
                   ),
 
                   const SizedBox(height: 6),
@@ -87,7 +86,7 @@ class PropertyTile extends StatelessWidget {
                     style: text.bodyMedium?.copyWith(
                       color: isVacant
                           ? colors.error
-                          : colors.onSurface.withValues(alpha:0.75),
+                          : colors.onSurface.withValues(alpha: 0.75),
                     ),
                   ),
                 ],
@@ -104,9 +103,7 @@ class PropertyTile extends StatelessWidget {
               children: [
                 Text(
                   rent,
-                  style: text.labelLarge?.copyWith(
-                    color: colors.onSurface,
-                  ),
+                  style: text.labelLarge?.copyWith(color: colors.onSurface),
                 ),
 
                 const SizedBox(height: 4),
@@ -114,9 +111,7 @@ class PropertyTile extends StatelessWidget {
                 Text(
                   isVacant ? 'Vacant' : 'Paid',
                   style: text.bodyMedium?.copyWith(
-                    color: isVacant
-                        ? colors.error
-                        : AppTheme.successGreen,
+                    color: isVacant ? colors.error : AppTheme.successGreen,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_notifications/presentation/providers/owner_notifications_provider.dart';
 
@@ -80,7 +81,7 @@ class OwnerNotificationsScreen extends ConsumerWidget {
       case 'critical':
         return scheme.error;
       case 'warn':
-        return Colors.orange;
+        return AppColors.orange;
       default:
         return scheme.primary;
     }

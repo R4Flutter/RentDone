@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/owner_profile_card.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
 
@@ -31,6 +31,10 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
     final profile = ref.watch(ownerProfileProvider);
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final panelColor =
+        Color.lerp(scheme.surface, AppColors.white, isDark ? 0.04 : 0.26) ??
+        scheme.surface;
 
     return CompositedTransformTarget(
       link: _layerLink,
@@ -41,13 +45,21 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
           margin: const EdgeInsets.fromLTRB(16, 24, 16, 16),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            gradient: AppTheme.blueSurfaceGradient,
+            color: panelColor,
             borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppColors.white.withValues(alpha: isDark ? 0.08 : 0.42),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
+                color: AppColors.black.withValues(alpha: isDark ? 0.3 : 0.14),
                 blurRadius: 18,
-                offset: const Offset(0, 10),
+                offset: const Offset(8, 10),
+              ),
+              BoxShadow(
+                color: AppColors.white.withValues(alpha: isDark ? 0.03 : 0.72),
+                blurRadius: 16,
+                offset: const Offset(-8, -8),
               ),
             ],
           ),
@@ -68,7 +80,7 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: scheme.onPrimary,
+                        color: scheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -77,7 +89,7 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onPrimary.withValues(alpha: 0.8),
+                        color: scheme.onSurface.withValues(alpha: 0.72),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -87,16 +99,16 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
+                        color: scheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: scheme.primary.withValues(alpha: 0.22),
                         ),
                       ),
                       child: Text(
                         'View Profile Card',
                         style: textTheme.labelLarge?.copyWith(
-                          color: scheme.onPrimary.withValues(alpha: 0.9),
+                          color: scheme.primary,
                           fontSize: 11,
                         ),
                       ),
@@ -106,7 +118,7 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: scheme.onPrimary.withValues(alpha: 0.8),
+                color: scheme.onSurface.withValues(alpha: 0.65),
               ),
             ],
           ),
@@ -129,9 +141,11 @@ class _AvatarPreview extends StatelessWidget {
       width: 52,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -188,7 +202,7 @@ class _ProfileOverlayState extends ConsumerState<_ProfileOverlay>
     final profile = ref.watch(ownerProfileProvider);
 
     return Material(
-      color: Colors.black.withValues(alpha: 0.45),
+      color: AppColors.black.withValues(alpha: 0.45),
       child: GestureDetector(
         onTap: widget.onClose,
         child: SafeArea(
@@ -223,10 +237,10 @@ class _ProfileOverlayState extends ConsumerState<_ProfileOverlay>
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.black.withValues(alpha: 0.5),
+                    color: AppColors.black.withValues(alpha: 0.5),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: const Icon(Icons.close, color: AppColors.white),
                     onPressed: widget.onClose,
                   ),
                 ),

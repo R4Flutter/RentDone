@@ -1,3 +1,4 @@
+import 'package:rentdone/app/app_theme.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -15,10 +16,12 @@ import 'package:rentdone/features/owner/owner_payment/presentation/pages/payment
 import 'package:rentdone/features/owner/owner_profile/presentation/pages/profile_screen.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_bank_details_screen.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_settings_screen.dart';
+import 'package:rentdone/features/owner/owner_subscription/presentation/pages/owner_subscription_screen.dart';
 import 'package:rentdone/features/owner/owner_support/presentation/pages/support_screen.dart';
 import 'package:rentdone/features/owner/owner_notifications/presentation/pages/owner_notifications_screen.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/pages/manage_tenants_screen.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/pages/tenant_trust_search_screen.dart';
+import 'package:rentdone/features/owner/owner_tenants/presentation/pages/tenant_trust_score_screen.dart';
 import 'package:rentdone/features/owner/owners_properties/presentation/pages/manage_property_screen.dart';
 import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/reports/presentation/pages/report_screen.dart';
@@ -383,6 +386,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           /// ⚙️ Settings - User Preferences & Configuration
           GoRoute(
+            path: '/owner/subscription',
+            name: 'ownerSubscription',
+            builder: (context, state) => const OwnerSubscriptionScreen(),
+          ),
+
+          GoRoute(
+            path: '/owner/trust-score',
+            name: 'ownerTrustScore',
+            builder: (context, state) => const TenantTrustScoreScreen(),
+          ),
+
+          GoRoute(
             path: '/owner/settings',
             name: 'ownerSettings',
             builder: (context, state) => const SettingsScreen(),
@@ -413,7 +428,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const Icon(Icons.error_outline, size: 64, color: AppColors.red),
               const SizedBox(height: 16),
               const Text(
                 'Page Not Found',
@@ -422,7 +437,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               const SizedBox(height: 8),
               Text(
                 'Requested path: ${state.uri}',
-                style: const TextStyle(color: Colors.grey),
+                style: const TextStyle(color: AppColors.grey),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

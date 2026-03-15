@@ -13,8 +13,8 @@ class PropertyRepositoryImpl implements PropertyRepository {
   @override
   Stream<List<Property>> watchAllProperties() {
     return _service.watchAllProperties().map(
-          (items) => items.map((dto) => dto.toEntity()).toList(),
-        );
+      (items) => items.map((dto) => dto.toEntity()).toList(),
+    );
   }
 
   @override
@@ -40,15 +40,15 @@ class PropertyRepositoryImpl implements PropertyRepository {
   @override
   Stream<List<Tenant>> watchAllTenants() {
     return _service.watchAllTenants().map(
-          (items) => items.map((dto) => dto.toEntity()).toList(),
-        );
+      (items) => items.map((dto) => dto.toEntity()).toList(),
+    );
   }
 
   @override
   Stream<List<Tenant>> watchTenantsForProperty(String propertyId) {
-    return _service.watchPropertyTenants(propertyId).map(
-          (items) => items.map((dto) => dto.toEntity()).toList(),
-        );
+    return _service
+        .watchPropertyTenants(propertyId)
+        .map((items) => items.map((dto) => dto.toEntity()).toList());
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
 
 class RecentActivity extends StatelessWidget {
@@ -7,11 +8,11 @@ class RecentActivity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return DashboardCard(
       useGradient: false,
+      backgroundColor: OwnerDashboardColors.activityCardBackground(context),
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -20,7 +21,7 @@ class RecentActivity extends StatelessWidget {
             'Recent Activity',
             style: textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
+              color: OwnerDashboardColors.textPrimary(context),
             ),
           ),
           const SizedBox(height: 12),
@@ -28,21 +29,21 @@ class RecentActivity extends StatelessWidget {
             icon: Icons.payments_rounded,
             text: 'Payment received from Flat 203',
             time: 'Just now',
-            color: scheme.primary,
+            color: OwnerDashboardColors.brandPrimary(context),
           ),
           const SizedBox(height: 10),
           _ActivityRow(
             icon: Icons.person_add_alt_1_rounded,
             text: 'New tenant added',
             time: '2h ago',
-            color: Colors.green,
+            color: OwnerDashboardColors.brandPrimary(context),
           ),
           const SizedBox(height: 10),
           _ActivityRow(
             icon: Icons.build_circle_outlined,
             text: 'Maintenance request submitted',
             time: '1d ago',
-            color: Colors.orange,
+            color: OwnerDashboardColors.brandPrimary(context),
           ),
         ],
       ),
@@ -66,7 +67,6 @@ class _ActivityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,7 +88,7 @@ class _ActivityRow extends StatelessWidget {
               Text(
                 text,
                 style: textTheme.bodyMedium?.copyWith(
-                  color: onSurface,
+                  color: color,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -96,7 +96,7 @@ class _ActivityRow extends StatelessWidget {
               Text(
                 time,
                 style: textTheme.bodySmall?.copyWith(
-                  color: onSurface.withValues(alpha: 0.6),
+                  color: OwnerDashboardColors.textSecondary(context),
                 ),
               ),
             ],

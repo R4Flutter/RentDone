@@ -457,7 +457,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: BoxDecoration(
         gradient: AppTheme.blueSurfaceGradient,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,7 +467,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: AppColors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -644,7 +644,7 @@ class _CharacterOption extends StatelessWidget {
         border: Border.all(color: borderColor, width: selected ? 2 : 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: AppColors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -659,7 +659,7 @@ class _CharacterOption extends StatelessWidget {
               height: 72,
               width: 72,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: scheme.onSurface.withValues(alpha: 0.1),

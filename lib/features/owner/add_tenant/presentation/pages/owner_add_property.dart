@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -223,7 +224,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                         decoration: InputDecoration(
                           hintText: "Select a property",
                           filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.08),
+                          fillColor: AppColors.white.withValues(alpha: 0.08),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide.none,
@@ -277,9 +278,9 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.1),
+            color: AppColors.orange.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+            border: Border.all(color: AppColors.orange.withValues(alpha: 0.3)),
           ),
           child: Text(
             "No vacant rooms in this property",
@@ -295,7 +296,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
         decoration: InputDecoration(
           hintText: "Select a room",
           filled: true,
-          fillColor: Colors.white.withValues(alpha: 0.08),
+          fillColor: AppColors.white.withValues(alpha: 0.08),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -495,7 +496,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
         leading: const Icon(Icons.description),
         title: Text("Document ${index + 1}"),
         trailing: IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
+          icon: const Icon(Icons.delete, color: AppColors.red),
           onPressed: () {
             ref.read(addTenantNotifierProvider.notifier).removeDocument(index);
             ref.read(documentUploadProvider.notifier).removeUploadedUrl(url);
@@ -578,7 +579,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.08),
+        fillColor: AppColors.white.withValues(alpha: 0.08),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -593,7 +594,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   Widget _dateTile(ThemeData theme) {
     return ListTile(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      tileColor: Colors.white.withValues(alpha: 0.08),
+      tileColor: AppColors.white.withValues(alpha: 0.08),
       title: const Text("Move-in Date"),
       subtitle: Text(
         "${moveInDate.day}-${moveInDate.month}-${moveInDate.year}",
@@ -625,11 +626,21 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   }
 
   void _save() async {
+    final limitError = await _validateOwnerTenantLimit();
+    if (!mounted) return;
+
+    if (limitError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(limitError), backgroundColor: AppColors.red),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please fill all required fields"),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
         ),
       );
       return;
@@ -639,7 +650,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please select a property and room"),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
         ),
       );
       return;
@@ -650,7 +661,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     final docError = _validator.validateDocuments(documentUrls);
     if (docError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(docError), backgroundColor: Colors.red),
+        SnackBar(content: Text(docError), backgroundColor: AppColors.red),
       );
       return;
     }
@@ -670,7 +681,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           content: Text(
             'Please set and verify owner UPI once in Settings before adding tenants.',
           ),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
         ),
       );
       return;
@@ -750,11 +761,39 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Error: ${e.toString()}"),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
           duration: const Duration(seconds: 3),
         ),
       );
     }
+  }
+
+  Future<String?> _validateOwnerTenantLimit() async {
+    final ownerId = FirebaseAuth.instance.currentUser?.uid;
+    if (ownerId == null || ownerId.isEmpty) {
+      return 'Owner session not found. Please sign in again.';
+    }
+
+    final ownerDoc = await FirebaseFirestore.instance
+        .collection('owners')
+        .doc(ownerId)
+        .get();
+
+    final data = ownerDoc.data() ?? <String, dynamic>{};
+    final tenantLimit = (data['tenantLimit'] as num?)?.toInt() ?? 2;
+    final currentCount = (data['currentTenantCount'] as num?)?.toInt() ?? 0;
+    final paymentStatus = (data['paymentStatus'] as String? ?? 'active')
+        .toLowerCase();
+
+    if (paymentStatus == 'pending') {
+      return 'Payment is pending. Complete subscription payment to add tenants.';
+    }
+
+    if (currentCount >= tenantLimit) {
+      return 'You have reached your tenant limit. Upgrade your plan to add more tenants.';
+    }
+
+    return null;
   }
 
   Future<void> _pickDocument() async {
@@ -772,7 +811,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Could not access selected file.'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
           duration: Duration(seconds: 3),
         ),
       );
@@ -787,7 +826,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selected file is no longer available.'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
           duration: Duration(seconds: 3),
         ),
       );
@@ -828,7 +867,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Document uploaded successfully.'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.green,
             duration: Duration(seconds: 2),
           ),
         );
@@ -841,7 +880,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(uploadState.errorMessage ?? 'Document upload failed.'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.red,
           duration: const Duration(seconds: 4),
         ),
       );

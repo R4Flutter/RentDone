@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -63,10 +64,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final isDark = theme.brightness == Brightness.dark;
     final isOwner = widget.selectedRole == UserRole.owner;
 
-    final bg60Color = isDark
-        ? const Color(0xFF0A0E27)
-        : const Color(0xFFF5F7FA);
-    final accent30Color = const Color(0xFF2563EB);
+    final bg60Color = isDark ? AppColors.cFF0A0E27 : AppColors.cFFF5F7FA;
+    final accent30Color = AppColors.cFF2563EB;
 
     return Scaffold(
       body: Container(
@@ -76,7 +75,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             end: Alignment.bottomCenter,
             colors: [
               bg60Color,
-              isDark ? const Color(0xFF1A1F3A) : const Color(0xFFFBFDFF),
+              isDark ? AppColors.cFF1A1F3A : AppColors.cFFFBFDFF,
             ],
           ),
         ),
@@ -141,12 +140,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                  color: AppColors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   isOwner ? Icons.apartment_rounded : Icons.home_work_rounded,
-                  color: Colors.white,
+                  color: AppColors.white,
                   size: 28,
                 ),
               ),
@@ -155,7 +154,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: Text(
                   '${widget.selectedRole.label} Access',
                   style: theme.textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
                   ),
@@ -167,7 +166,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           Text(
             'Secure login for ${widget.selectedRole.label.toLowerCase()} dashboard',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.85),
+              color: AppColors.white.withValues(alpha: 0.85),
               height: 1.4,
             ),
           ),
@@ -177,8 +176,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               OutlinedButton(
                 onPressed: () => context.goNamed('roleSelection'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white38, width: 1),
+                  foregroundColor: AppColors.white,
+                  side: const BorderSide(color: AppColors.white38, width: 1),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -210,8 +209,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: isDark
-            ? const Color(0xFF1A1F3A).withValues(alpha: 0.8)
-            : Colors.white.withValues(alpha: 0.95),
+            ? AppColors.cFF1A1F3A.withValues(alpha: 0.8)
+            : AppColors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: accent30Color.withValues(alpha: 0.1),
@@ -220,8 +219,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black26
-                : Colors.black.withValues(alpha: 0.08),
+                ? AppColors.black26
+                : AppColors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -241,7 +240,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           Text(
             'Sign in with your phone number and create account easily',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? Colors.white54 : Colors.black54,
+              color: isDark ? AppColors.white54 : AppColors.black54,
               height: 1.5,
             ),
           ),
@@ -252,7 +251,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             Text(
               _phoneError!,
               style: TextStyle(
-                color: Colors.red[400],
+                color: AppColors.red[400],
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -273,14 +272,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red[50],
+                color: AppColors.red[50],
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red[200]!, width: 1),
+                border: Border.all(color: AppColors.red[200]!, width: 1),
               ),
               child: Text(
                 authState.errorMessage!,
                 style: TextStyle(
-                  color: Colors.red[700],
+                  color: AppColors.red[700],
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
@@ -322,7 +321,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         counterText: '',
         filled: true,
         fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.05)
+            ? AppColors.white.withValues(alpha: 0.05)
             : accent30Color.withValues(alpha: 0.04),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -363,7 +362,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         prefixIcon: Icon(Icons.alternate_email_rounded, color: accent30Color),
         filled: true,
         fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.05)
+            ? AppColors.white.withValues(alpha: 0.05)
             : accent30Color.withValues(alpha: 0.04),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -408,7 +407,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         filled: true,
         fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.05)
+            ? AppColors.white.withValues(alpha: 0.05)
             : accent30Color.withValues(alpha: 0.04),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -435,7 +434,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     bool isDark,
     Color accent30Color,
   ) {
-    const Color googleBlue = Color(0xFF4285F4);
+    const Color googleBlue = AppColors.cFF4285F4;
 
     return SizedBox(
       height: 52,
@@ -454,7 +453,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         label: Text(
           'Continue with Google',
           style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
+            color: isDark ? AppColors.white : AppColors.black87,
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -468,7 +467,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       children: [
         Expanded(
           child: Divider(
-            color: isDark ? Colors.white12 : Colors.black12,
+            color: isDark ? AppColors.white12 : AppColors.black12,
             thickness: 1,
           ),
         ),
@@ -477,7 +476,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           child: Text(
             'or continue with email',
             style: TextStyle(
-              color: isDark ? Colors.white54 : Colors.black54,
+              color: isDark ? AppColors.white54 : AppColors.black54,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -485,7 +484,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         Expanded(
           child: Divider(
-            color: isDark ? Colors.white12 : Colors.black12,
+            color: isDark ? AppColors.white12 : AppColors.black12,
             thickness: 1,
           ),
         ),
@@ -515,7 +514,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
                 ),
               )
             : Text(
@@ -546,7 +545,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: const Color(0xFF2563EB),
+          color: AppColors.cFF2563EB,
         ),
       ),
     );

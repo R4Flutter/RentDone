@@ -11,10 +11,7 @@ class DashboardLayoutState {
     required this.isSidebarOpen,
   });
 
-  DashboardLayoutState copyWith({
-    int? index,
-    bool? isSidebarOpen,
-  }) {
+  DashboardLayoutState copyWith({int? index, bool? isSidebarOpen}) {
     return DashboardLayoutState(
       index: index ?? this.index,
       isSidebarOpen: isSidebarOpen ?? this.isSidebarOpen,
@@ -22,14 +19,10 @@ class DashboardLayoutState {
   }
 }
 
-class DashboardLayoutNotifier
-    extends Notifier<DashboardLayoutState> {
+class DashboardLayoutNotifier extends Notifier<DashboardLayoutState> {
   @override
   DashboardLayoutState build() {
-    return const DashboardLayoutState(
-      index: 0,
-      isSidebarOpen: false,
-    );
+    return const DashboardLayoutState(index: 0, isSidebarOpen: false);
   }
 
   void toggleSidebar() {
@@ -59,5 +52,5 @@ class DashboardLayoutNotifier
 
 final dashboardLayoutProvider =
     NotifierProvider<DashboardLayoutNotifier, DashboardLayoutState>(
-  DashboardLayoutNotifier.new,
-);
+      DashboardLayoutNotifier.new,
+    );

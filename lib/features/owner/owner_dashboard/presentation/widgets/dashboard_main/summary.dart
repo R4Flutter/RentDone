@@ -27,7 +27,7 @@ class SummaryCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: colors.onSurface.withValues(alpha:0.12), // theme-safe border
+          color: colors.onSurface.withValues(alpha: 0.12), // theme-safe border
           width: 1,
         ),
       ),
@@ -45,10 +45,7 @@ class SummaryCard extends StatelessWidget {
             SizedBox(
               width: 40,
               height: 40,
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.contain,
-              ),
+              child: Image.asset(imagePath, fit: BoxFit.contain),
             ),
 
             const SizedBox(width: 12),
@@ -67,7 +64,7 @@ class SummaryCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: text.labelLarge?.copyWith(
-                      color: colors.onSurface.withValues(alpha:0.8),
+                      color: colors.onSurface.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -96,7 +93,7 @@ class SummaryCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: text.bodyMedium?.copyWith(
-                      color: colors.onSurface.withValues(alpha:0.65),
+                      color: colors.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
                 ],

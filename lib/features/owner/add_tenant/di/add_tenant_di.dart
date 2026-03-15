@@ -4,8 +4,9 @@ import 'package:rentdone/features/owner/add_tenant/data/services/add_tenant_fire
 import 'package:rentdone/features/owner/add_tenant/domain/repositories/add_tenant.dart';
 import 'package:rentdone/features/owner/add_tenant/domain/usecases/add_tenant_usecases.dart';
 
-final addTenantFirebaseServiceProvider =
-    Provider<AddTenantFirebaseService>((ref) {
+final addTenantFirebaseServiceProvider = Provider<AddTenantFirebaseService>((
+  ref,
+) {
   return AddTenantFirebaseService();
 });
 

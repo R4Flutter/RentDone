@@ -9,6 +9,7 @@ class PaymentIntentDto {
   final String? orderId;
   final String? clientSecret;
   final String? keyId;
+  final String? paymentSessionId;
 
   const PaymentIntentDto({
     required this.paymentId,
@@ -19,6 +20,7 @@ class PaymentIntentDto {
     this.orderId,
     this.clientSecret,
     this.keyId,
+    this.paymentSessionId,
   });
 
   factory PaymentIntentDto.fromMap(Map<String, dynamic> data) {
@@ -31,6 +33,7 @@ class PaymentIntentDto {
       orderId: data['orderId'] as String?,
       clientSecret: data['clientSecret'] as String?,
       keyId: data['keyId'] as String?,
+      paymentSessionId: data['paymentSessionId'] as String?,
     );
   }
 
@@ -44,6 +47,7 @@ class PaymentIntentDto {
       orderId: orderId,
       clientSecret: clientSecret,
       keyId: keyId,
+      paymentSessionId: paymentSessionId,
     );
   }
 }

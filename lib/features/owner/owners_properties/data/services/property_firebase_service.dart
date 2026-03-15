@@ -12,6 +12,9 @@ class PropertyFirebaseService {
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
 
+  static const String _defaultPlan = 'free';
+  static const int _defaultTenantLimit = 2;
+
   PropertyFirebaseService({
     FirebaseFirestore? firestore,
     FirebaseFunctions? functions,
@@ -170,6 +173,11 @@ class PropertyFirebaseService {
   Future<void> addTenant(TenantDto tenant) async {
     final tenantRef = _db.collection('tenants').doc(tenant.id);
     final propertyRef = _db.collection('properties').doc(tenant.propertyId);
+    final ownerId = (tenant.ownerId ?? '').trim();
+    if (ownerId.isEmpty) {
+      throw StateError('Owner ID is required to add tenant');
+    }
+    final ownerRef = _db.collection('owners').doc(ownerId);
     final tenantMap = tenant.toMap();
     final normalizedPhone = _normalizePhone(tenant.phone);
     tenantMap['phoneHash'] = _hashPhone(normalizedPhone);
@@ -196,6 +204,27 @@ class PropertyFirebaseService {
         throw StateError('Selected property does not exist');
       }
 
+      final ownerDoc = await txn.get(ownerRef);
+      final ownerData = ownerDoc.data() ?? <String, dynamic>{};
+      final tenantLimit =
+          (ownerData['tenantLimit'] as num?)?.toInt() ?? _defaultTenantLimit;
+      final currentCount =
+          (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
+      final paymentStatus = (ownerData['paymentStatus'] as String? ?? 'active')
+          .toLowerCase();
+
+      if (paymentStatus == 'pending') {
+        throw StateError(
+          'Payment is pending. Complete subscription payment to add tenants.',
+        );
+      }
+
+      if (currentCount >= tenantLimit) {
+        throw StateError(
+          'You have reached your tenant limit. Upgrade your plan to add more tenants.',
+        );
+      }
+
       final data = propertyDoc.data();
       final rooms = _normalizeRooms(data?['rooms']);
       final roomIndex = rooms.indexWhere((room) => room['id'] == tenant.roomId);
@@ -216,6 +245,18 @@ class PropertyFirebaseService {
 
       txn.set(tenantRef, tenantMap);
       txn.update(propertyRef, {'rooms': rooms});
+
+      final nextCount = currentCount + 1;
+      txn.set(ownerRef, {
+        'ownerId': ownerId,
+        'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
+        'tenantLimit': tenantLimit,
+        'currentTenantCount': nextCount,
+        'paymentStatus': ownerData['paymentStatus'] ?? 'active',
+        'subscriptionStartDate':
+            ownerData['subscriptionStartDate'] ?? FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     });
   }
 
@@ -228,6 +269,13 @@ class PropertyFirebaseService {
     final propertyRef = _db.collection('properties').doc(propertyId);
 
     await _db.runTransaction((txn) async {
+      final tenantDoc = await txn.get(tenantRef);
+      final tenantData = tenantDoc.data() ?? <String, dynamic>{};
+      final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
+      final ownerRef = ownerId.isEmpty
+          ? null
+          : _db.collection('owners').doc(ownerId);
+
       final propertyDoc = await txn.get(propertyRef);
       if (!propertyDoc.exists) {
         throw StateError('Selected property does not exist');
@@ -245,6 +293,25 @@ class PropertyFirebaseService {
       rooms[roomIndex] = {...room, 'isOccupied': false, 'tenantId': null};
 
       txn.update(propertyRef, {'rooms': rooms});
+
+      if (ownerRef != null) {
+        final ownerDoc = await txn.get(ownerRef);
+        final ownerData = ownerDoc.data() ?? <String, dynamic>{};
+        final currentCount =
+            (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
+        final nextCount = currentCount > 0 ? currentCount - 1 : 0;
+
+        txn.set(ownerRef, {
+          'ownerId': ownerId,
+          'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
+          'tenantLimit':
+              (ownerData['tenantLimit'] as num?)?.toInt() ??
+              _defaultTenantLimit,
+          'currentTenantCount': nextCount,
+          'paymentStatus': ownerData['paymentStatus'] ?? 'active',
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
     });
 
     try {

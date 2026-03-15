@@ -550,7 +550,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
     if (clamped >= 90) return AppTheme.successGreen;
     if (clamped >= 70) return AppTheme.primaryBlue;
     if (clamped >= 50) return AppTheme.warningAmber;
-    if (clamped >= 20) return Colors.orange;
+    if (clamped >= 20) return AppColors.orange;
     return AppTheme.errorRed;
   }
 

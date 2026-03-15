@@ -8,6 +8,9 @@ import '../models/tenant_dto.dart';
 class TenantFirestoreService {
   final FirebaseFirestore _firestore;
 
+  static const String _defaultPlan = 'free';
+  static const int _defaultTenantLimit = 2;
+
   TenantFirestoreService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
@@ -21,10 +24,50 @@ class TenantFirestoreService {
       (map['trustScore'] as num?)?.toInt() ?? 50,
     );
 
-    await _firestore
-        .collection('tenants')
-        .doc(tenantDTO.id)
-        .set(map, SetOptions(merge: false));
+    final ownerId = tenantDTO.ownerId.trim();
+    if (ownerId.isEmpty) {
+      throw StateError('Owner ID is required to add tenant');
+    }
+
+    final tenantRef = _firestore.collection('tenants').doc(tenantDTO.id);
+    final ownerRef = _firestore.collection('owners').doc(ownerId);
+
+    await _firestore.runTransaction((txn) async {
+      final ownerDoc = await txn.get(ownerRef);
+      final ownerData = ownerDoc.data() ?? <String, dynamic>{};
+      final tenantLimit =
+          (ownerData['tenantLimit'] as num?)?.toInt() ?? _defaultTenantLimit;
+      final currentCount =
+          (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
+      final paymentStatus = (ownerData['paymentStatus'] as String? ?? 'active')
+          .toLowerCase();
+
+      if (paymentStatus == 'pending') {
+        throw StateError(
+          'Payment is pending. Complete subscription payment to add tenants.',
+        );
+      }
+
+      if (currentCount >= tenantLimit) {
+        throw StateError(
+          'You have reached your tenant limit. Upgrade your plan to add more tenants.',
+        );
+      }
+
+      txn.set(tenantRef, map, SetOptions(merge: false));
+
+      final nextCount = currentCount + 1;
+      txn.set(ownerRef, {
+        'ownerId': ownerId,
+        'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
+        'tenantLimit': tenantLimit,
+        'currentTenantCount': nextCount,
+        'paymentStatus': ownerData['paymentStatus'] ?? 'active',
+        'subscriptionStartDate':
+            ownerData['subscriptionStartDate'] ?? FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    });
   }
 
   /// Get tenant by ID
@@ -117,9 +160,46 @@ class TenantFirestoreService {
   /// Deactivate tenant
   Future<void> deactivateTenant(String tenantId) async {
     try {
-      await _firestore.collection('tenants').doc(tenantId).update({
-        'status': 'inactive',
-        'updatedAt': FieldValue.serverTimestamp(),
+      final tenantRef = _firestore.collection('tenants').doc(tenantId);
+      await _firestore.runTransaction((txn) async {
+        final tenantDoc = await txn.get(tenantRef);
+        if (!tenantDoc.exists) {
+          throw StateError('Tenant not found');
+        }
+
+        final tenantData = tenantDoc.data() ?? <String, dynamic>{};
+        final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
+        final status = (tenantData['status'] as String? ?? '').toLowerCase();
+        final isActiveFlag = tenantData['isActive'] == true;
+        final wasActive = status == 'active' || isActiveFlag;
+
+        txn.update(tenantRef, {
+          'status': 'inactive',
+          'isActive': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        if (ownerId.isEmpty || !wasActive) {
+          return;
+        }
+
+        final ownerRef = _firestore.collection('owners').doc(ownerId);
+        final ownerDoc = await txn.get(ownerRef);
+        final ownerData = ownerDoc.data() ?? <String, dynamic>{};
+        final currentCount =
+            (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
+        final nextCount = currentCount > 0 ? currentCount - 1 : 0;
+
+        txn.set(ownerRef, {
+          'ownerId': ownerId,
+          'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
+          'tenantLimit':
+              (ownerData['tenantLimit'] as num?)?.toInt() ??
+              _defaultTenantLimit,
+          'currentTenantCount': nextCount,
+          'paymentStatus': ownerData['paymentStatus'] ?? 'active',
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
       });
     } catch (e) {
       rethrow;
@@ -129,9 +209,62 @@ class TenantFirestoreService {
   /// Activate tenant
   Future<void> activateTenant(String tenantId) async {
     try {
-      await _firestore.collection('tenants').doc(tenantId).update({
-        'status': 'active',
-        'updatedAt': FieldValue.serverTimestamp(),
+      final tenantRef = _firestore.collection('tenants').doc(tenantId);
+      await _firestore.runTransaction((txn) async {
+        final tenantDoc = await txn.get(tenantRef);
+        if (!tenantDoc.exists) {
+          throw StateError('Tenant not found');
+        }
+
+        final tenantData = tenantDoc.data() ?? <String, dynamic>{};
+        final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
+        if (ownerId.isEmpty) {
+          throw StateError('Tenant owner not found');
+        }
+
+        final status = (tenantData['status'] as String? ?? '').toLowerCase();
+        final isActiveFlag = tenantData['isActive'] == true;
+        final alreadyActive = status == 'active' || isActiveFlag;
+
+        final ownerRef = _firestore.collection('owners').doc(ownerId);
+        final ownerDoc = await txn.get(ownerRef);
+        final ownerData = ownerDoc.data() ?? <String, dynamic>{};
+        final tenantLimit =
+            (ownerData['tenantLimit'] as num?)?.toInt() ?? _defaultTenantLimit;
+        final currentCount =
+            (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
+        final paymentStatus =
+            (ownerData['paymentStatus'] as String? ?? 'active').toLowerCase();
+
+        if (paymentStatus == 'pending') {
+          throw StateError(
+            'Payment is pending. Complete subscription payment to activate tenants.',
+          );
+        }
+
+        if (!alreadyActive && currentCount >= tenantLimit) {
+          throw StateError(
+            'You have reached your tenant limit. Upgrade your plan to add more tenants.',
+          );
+        }
+
+        txn.update(tenantRef, {
+          'status': 'active',
+          'isActive': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        if (!alreadyActive) {
+          final nextCount = currentCount + 1;
+          txn.set(ownerRef, {
+            'ownerId': ownerId,
+            'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
+            'tenantLimit': tenantLimit,
+            'currentTenantCount': nextCount,
+            'paymentStatus': ownerData['paymentStatus'] ?? 'active',
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
       });
     } catch (e) {
       rethrow;

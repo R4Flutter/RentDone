@@ -58,7 +58,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
         Center(
           child: Text(
             'Error: $e',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
+            style: TextStyle(color: AppColors.white.withValues(alpha: 0.85)),
           ),
         ),
       ),
@@ -77,7 +77,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                       'Profile sync in progress. We are refreshing automatically.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: AppColors.white.withValues(alpha: 0.9),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -264,7 +264,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                 Text(
                   'Document Vault',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.2,
@@ -274,7 +274,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                 Text(
                   'Secure • Encrypted • Private',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.76),
+                    color: AppColors.white.withValues(alpha: 0.76),
                     fontSize: 13,
                     letterSpacing: 0.3,
                   ),
@@ -345,7 +345,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
               Text(
                 '${(progress * 100).toStringAsFixed(1)}%',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppColors.white.withValues(alpha: 0.8),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -363,7 +363,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
       borderRadius: BorderRadius.circular(18),
       child: TextField(
         controller: _descriptionController,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: AppColors.white),
         decoration: tenantGlassInputDecoration(
           context,
           label: 'File description (optional)',
@@ -399,11 +399,13 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                         ],
                       )
                     : null,
-                color: selected ? null : Colors.white.withValues(alpha: 0.05),
+                color: selected
+                    ? null
+                    : AppColors.white.withValues(alpha: 0.05),
                 border: Border.all(
                   color: selected
-                      ? Colors.white.withValues(alpha: 0.28)
-                      : Colors.white.withValues(alpha: 0.12),
+                      ? AppColors.white.withValues(alpha: 0.28)
+                      : AppColors.white.withValues(alpha: 0.12),
                 ),
                 boxShadow: selected
                     ? [
@@ -420,7 +422,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
               child: Text(
                 category,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 12,
                   letterSpacing: 0.2,
@@ -491,11 +493,11 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.expand_more_rounded, color: Colors.white70),
+                Icon(Icons.expand_more_rounded, color: AppColors.white70),
                 SizedBox(width: 6),
                 Text(
                   'Load more documents',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: AppColors.white70),
                 ),
               ],
             ),
@@ -523,7 +525,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
             const Text(
               'No Documents Yet',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
               ),
@@ -533,7 +535,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
               'Your secure files will appear here',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.72),
+                color: AppColors.white.withValues(alpha: 0.72),
                 fontSize: 13,
               ),
             ),
@@ -560,9 +562,9 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () => _showUploadOptionsSheet(tenantId),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.transparent,
+                    shadowColor: AppColors.transparent,
+                    foregroundColor: AppColors.white,
                   ),
                   icon: const Icon(Icons.cloud_upload_outlined),
                   label: const Text('Upload Document'),
@@ -585,8 +587,10 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
             height: 120 + (index.isEven ? 20 : 0),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              color: Colors.white.withValues(alpha: 0.05),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              color: AppColors.white.withValues(alpha: 0.05),
+              border: Border.all(
+                color: AppColors.white.withValues(alpha: 0.08),
+              ),
             ),
           ),
         ),
@@ -607,7 +611,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
           const SizedBox(height: 10),
           Text(
             errorText,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
+            style: TextStyle(color: AppColors.white.withValues(alpha: 0.85)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -637,7 +641,11 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                 ),
               ],
             ),
-            child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+            child: const Icon(
+              Icons.add_rounded,
+              color: AppColors.white,
+              size: 28,
+            ),
           ),
         )
         .animate(onPlay: (controller) => controller.repeat(reverse: true))
@@ -692,7 +700,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
   Future<void> _showUploadOptionsSheet(String tenantId) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) {
         return Container(
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 18),
@@ -702,9 +710,9 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
             gradient: const LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFF16263C), Color(0xFF111C30)],
+              colors: [AppColors.cFF16263C, AppColors.cFF111C30],
             ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
           ),
           child: SafeArea(
             child: Column(
@@ -1002,15 +1010,15 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
 }
 
 class _VaultTokens {
-  static const Color bgTop = Color(0xFF0B1220);
-  static const Color bgMiddle = Color(0xFF0E1A2B);
-  static const Color bgBottom = Color(0xFF111C30);
+  static const Color bgTop = AppColors.cFF0B1220;
+  static const Color bgMiddle = AppColors.cFF0E1A2B;
+  static const Color bgBottom = AppColors.cFF111C30;
 
-  static const Color primaryAccent = Color(0xFF4F7CFF);
-  static const Color secondaryAccent = Color(0xFF7A5CFF);
-  static const Color highlightAccent = Color(0xFF3FE0FF);
-  static const Color danger = Color(0xFFFF5A5F);
-  static const Color success = Color(0xFF22C55E);
+  static const Color primaryAccent = AppColors.cFF4F7CFF;
+  static const Color secondaryAccent = AppColors.cFF7A5CFF;
+  static const Color highlightAccent = AppColors.cFF3FE0FF;
+  static const Color danger = AppColors.cFFFF5A5F;
+  static const Color success = AppColors.cFF22C55E;
 
   static const double outerMargin = 20;
   static const double sectionSpacing = 24;
@@ -1066,7 +1074,7 @@ class _NeonCircleButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child: Icon(icon, color: AppColors.white, size: 20),
       ),
     );
   }
@@ -1090,18 +1098,22 @@ class _MetricTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: Colors.white.withValues(alpha: 0.04),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          color: AppColors.white.withValues(alpha: 0.04),
+          border: Border.all(color: AppColors.white.withValues(alpha: 0.08)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.white.withValues(alpha: 0.85), size: 16),
+            Icon(
+              icon,
+              color: AppColors.white.withValues(alpha: 0.85),
+              size: 16,
+            ),
             const SizedBox(height: 8),
             Text(
               value,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
@@ -1110,7 +1122,7 @@ class _MetricTile extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.66),
+                color: AppColors.white.withValues(alpha: 0.66),
                 fontSize: 11,
               ),
             ),
@@ -1132,7 +1144,7 @@ class _NeonProgressBar extends StatelessWidget {
       height: 10,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: Colors.white.withValues(alpha: 0.08),
+        color: AppColors.white.withValues(alpha: 0.08),
       ),
       child: Stack(
         children: [
@@ -1215,9 +1227,9 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: AppColors.white.withValues(alpha: 0.06),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: AppColors.white.withValues(alpha: 0.08),
                   ),
                 ),
                 child: ClipRRect(
@@ -1231,7 +1243,7 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                             errorBuilder: (context, error, stackTrace) =>
                                 const Icon(
                                   Icons.broken_image_outlined,
-                                  color: Colors.white70,
+                                  color: AppColors.white70,
                                   size: 34,
                                 ),
                           )
@@ -1240,7 +1252,7 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                                 ? Icons.picture_as_pdf_rounded
                                 : Icons.insert_drive_file_rounded,
                             size: 40,
-                            color: Colors.white.withValues(alpha: 0.82),
+                            color: AppColors.white.withValues(alpha: 0.82),
                           ),
                   ),
                 ),
@@ -1256,7 +1268,7 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1264,9 +1276,9 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                   PopupMenuButton<String>(
                     icon: Icon(
                       Icons.more_horiz_rounded,
-                      color: Colors.white.withValues(alpha: 0.78),
+                      color: AppColors.white.withValues(alpha: 0.78),
                     ),
-                    color: const Color(0xFF152238),
+                    color: AppColors.cFF152238,
                     onSelected: (value) {
                       if (value == 'open') {
                         widget.onOpen();
@@ -1285,7 +1297,7 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
               Text(
                 widget.uploadedAtLabel,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.65),
+                  color: AppColors.white.withValues(alpha: 0.65),
                   fontSize: 11,
                 ),
               ),
@@ -1324,21 +1336,21 @@ class _UploadOptionTile extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: _VaultTokens.primaryAccent.withValues(alpha: 0.22),
               ),
-              child: Icon(icon, color: Colors.white, size: 18),
+              child: Icon(icon, color: AppColors.white, size: 18),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: Colors.white.withValues(alpha: 0.75),
+              color: AppColors.white.withValues(alpha: 0.75),
             ),
           ],
         ),

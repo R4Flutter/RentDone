@@ -1,3 +1,4 @@
+import 'package:rentdone/app/app_theme.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -49,7 +50,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
         child: Center(
           child: Text(
             'Failed to load dashboard',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
+            style: TextStyle(color: AppColors.white.withValues(alpha: 0.85)),
           ),
         ),
       ),
@@ -59,7 +60,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
             child: Center(
               child: Text(
                 'Setting up your account...',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.white),
               ),
             ),
           );
@@ -208,16 +209,16 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
 }
 
 class _DashboardPalette {
-  static const Color bgA = Color(0xFF0B1220);
-  static const Color bgB = Color(0xFF0F1C2E);
-  static const Color bgC = Color(0xFF111C30);
+  static const Color bgA = AppColors.cFF0B1220;
+  static const Color bgB = AppColors.cFF0F1C2E;
+  static const Color bgC = AppColors.cFF111C30;
 
-  static const Color primaryAccent = Color(0xFF4F7CFF);
-  static const Color secondaryAccent = Color(0xFF7A5CFF);
-  static const Color highlightAccent = Color(0xFF3FE0FF);
+  static const Color primaryAccent = AppColors.cFF4F7CFF;
+  static const Color secondaryAccent = AppColors.cFF7A5CFF;
+  static const Color highlightAccent = AppColors.cFF3FE0FF;
 
-  static const Color success = Color(0xFF22C55E);
-  static const Color warning = Color(0xFFFACC15);
+  static const Color success = AppColors.cFF22C55E;
+  static const Color warning = AppColors.cFFFACC15;
 
   static LinearGradient get backgroundGradient => const LinearGradient(
     begin: Alignment.topLeft,
@@ -228,7 +229,7 @@ class _DashboardPalette {
   static LinearGradient get heroGradient => const LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1C2D52), Color(0xFF1B2B49), Color(0xFF151E36)],
+    colors: [AppColors.cFF1C2D52, AppColors.cFF1B2B49, AppColors.cFF151E36],
   );
 
   static LinearGradient get ctaGradient => const LinearGradient(
@@ -354,7 +355,7 @@ class _TopBar extends StatelessWidget {
           ),
         ),
         Material(
-          color: Colors.transparent,
+          color: AppColors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(999),
             onTap: () => Scaffold.maybeOf(context)?.openDrawer(),
@@ -363,8 +364,10 @@ class _TopBar extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                color: AppColors.white.withValues(alpha: 0.08),
+                border: Border.all(
+                  color: AppColors.white.withValues(alpha: 0.14),
+                ),
               ),
               child: Icon(
                 Icons.menu_rounded,
@@ -502,8 +505,8 @@ class _ActiveDuesCard extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.09),
-          Colors.white.withValues(alpha: 0.04),
+          AppColors.white.withValues(alpha: 0.09),
+          AppColors.white.withValues(alpha: 0.04),
         ],
       ),
       glowColor: isOverdue
@@ -616,7 +619,7 @@ class _MetricCard extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.09),
+          AppColors.white.withValues(alpha: 0.09),
           accentColor.withValues(alpha: 0.07),
         ],
       ),
@@ -660,7 +663,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.95),
+        color: AppColors.white.withValues(alpha: 0.95),
         fontSize: 18,
         fontWeight: FontWeight.w600,
       ),
@@ -706,7 +709,7 @@ class _QuickActionTileState extends State<_QuickActionTile> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white.withValues(alpha: 0.08),
+              AppColors.white.withValues(alpha: 0.08),
               _DashboardPalette.primaryAccent.withValues(alpha: 0.05),
             ],
           ),
@@ -779,7 +782,7 @@ class _SystemStatusCard extends StatelessWidget {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.09),
+          AppColors.white.withValues(alpha: 0.09),
           _DashboardPalette.success.withValues(alpha: 0.05),
         ],
       ),
@@ -794,7 +797,7 @@ class _SystemStatusCard extends StatelessWidget {
             ),
             child: const Icon(
               Icons.shield_outlined,
-              color: Colors.white,
+              color: AppColors.white,
               size: 18,
             ),
           ),
@@ -959,7 +962,7 @@ class _ExpandableCommandFabState extends State<_ExpandableCommandFab>
                   offset: const Offset(0, 12),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
+                  color: AppColors.black.withValues(alpha: 0.45),
                   blurRadius: 30,
                   offset: const Offset(0, 18),
                 ),
@@ -971,7 +974,7 @@ class _ExpandableCommandFabState extends State<_ExpandableCommandFab>
               curve: Curves.easeOut,
               child: const Icon(
                 Icons.add_rounded,
-                color: Colors.white,
+                color: AppColors.white,
                 size: 34,
               ),
             ),
@@ -996,26 +999,30 @@ class _MiniFabAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.09),
+            color: AppColors.white.withValues(alpha: 0.09),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+            border: Border.all(color: AppColors.white.withValues(alpha: 0.16)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.white.withValues(alpha: 0.95), size: 17),
+              Icon(
+                icon,
+                color: AppColors.white.withValues(alpha: 0.95),
+                size: 17,
+              ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.92),
+                  color: AppColors.white.withValues(alpha: 0.92),
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1071,14 +1078,14 @@ class _CommandGlassCard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withValues(alpha: 0.08),
-                    Colors.white.withValues(alpha: 0.04),
+                    AppColors.white.withValues(alpha: 0.08),
+                    AppColors.white.withValues(alpha: 0.04),
                   ],
                 ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            border: Border.all(color: AppColors.white.withValues(alpha: 0.12)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.42),
+                color: AppColors.black.withValues(alpha: 0.42),
                 blurRadius: 60,
                 offset: const Offset(0, 20),
               ),
@@ -1100,7 +1107,7 @@ class _CommandGlassCard extends StatelessWidget {
     }
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(borderRadius: radius, onTap: onTap, child: content),
     );
   }
@@ -1142,7 +1149,7 @@ class _PrimaryGradientButtonState extends State<_PrimaryGradientButton>
       builder: (context, child) {
         final glow = 0.25 + (_pulseController.value * 0.15);
         return Material(
-          color: Colors.transparent,
+          color: AppColors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(30),
             onTap: widget.onTap,
@@ -1167,14 +1174,14 @@ class _PrimaryGradientButtonState extends State<_PrimaryGradientButton>
                   Text(
                     widget.text,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(width: 8),
                   const Icon(
                     Icons.arrow_forward_rounded,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: 18,
                   ),
                 ],
@@ -1197,14 +1204,14 @@ class _InfoPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: AppColors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.16)),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.86),
+          color: AppColors.white.withValues(alpha: 0.86),
           fontSize: 11,
         ),
       ),
@@ -1230,7 +1237,7 @@ class _StatusTag extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.9),
+          color: AppColors.white.withValues(alpha: 0.9),
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -1280,14 +1287,14 @@ class _ShimmerLineState extends State<_ShimmerLine>
                   begin: Alignment(-1 + (_controller.value * 2), 0),
                   end: Alignment(1 + (_controller.value * 2), 0),
                   colors: [
-                    Colors.white.withValues(alpha: 0.12),
-                    Colors.white.withValues(alpha: 0.4),
-                    Colors.white.withValues(alpha: 0.12),
+                    AppColors.white.withValues(alpha: 0.12),
+                    AppColors.white.withValues(alpha: 0.4),
+                    AppColors.white.withValues(alpha: 0.12),
                   ],
                 ).createShader(bounds);
               },
               blendMode: BlendMode.srcATop,
-              child: Container(color: Colors.white.withValues(alpha: 0.2)),
+              child: Container(color: AppColors.white.withValues(alpha: 0.2)),
             );
           },
         ),
@@ -1361,7 +1368,7 @@ class _SkeletonGlassCard extends StatelessWidget {
 class _NoisePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.02);
+    final paint = Paint()..color = AppColors.white.withValues(alpha: 0.02);
     const step = 14.0;
     for (double x = 0; x < size.width; x += step) {
       for (double y = 0; y < size.height; y += step) {

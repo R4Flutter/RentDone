@@ -13,12 +13,16 @@ class DashboardSkeleton extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final columns = width >= 1200 ? 4 : width >= 900 ? 3 : 2;
+            final columns = width >= 1200
+                ? 4
+                : width >= 900
+                ? 3
+                : 2;
             final aspect = width >= 1200
                 ? 1.35
                 : width >= 900
-                    ? 1.2
-                    : 0.96;
+                ? 1.2
+                : 0.96;
 
             return GridView.count(
               shrinkWrap: true,
@@ -27,10 +31,7 @@ class DashboardSkeleton extends StatelessWidget {
               mainAxisSpacing: 16,
               physics: const NeverScrollableScrollPhysics(),
               childAspectRatio: aspect,
-              children: List.generate(
-                4,
-                (index) => const _SkeletonCard(),
-              ),
+              children: List.generate(4, (index) => const _SkeletonCard()),
             );
           },
         ),
@@ -62,10 +63,7 @@ class DashboardSkeleton extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: 24),
-                Expanded(
-                  flex: 2,
-                  child: _SkeletonCard(height: 240),
-                ),
+                Expanded(flex: 2, child: _SkeletonCard(height: 240)),
               ],
             );
           },
@@ -97,10 +95,7 @@ class _SkeletonBox extends StatelessWidget {
   final double height;
   final double width;
 
-  const _SkeletonBox({
-    required this.height,
-    required this.width,
-  });
+  const _SkeletonBox({required this.height, required this.width});
 
   @override
   Widget build(BuildContext context) {

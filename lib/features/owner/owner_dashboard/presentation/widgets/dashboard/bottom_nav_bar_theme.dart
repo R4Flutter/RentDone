@@ -4,10 +4,7 @@ class NavPainter extends CustomPainter {
   final int index;
   final Color backgroundColor;
 
-  NavPainter({
-    required this.index,
-    required this.backgroundColor,
-  });
+  NavPainter({required this.index, required this.backgroundColor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -22,15 +19,10 @@ class NavPainter extends CustomPainter {
     path.moveTo(0, 0);
 
     /// Left side to curve start
-    path.lineTo(centerX - 45, 0);
+    path.lineTo(centerX - 36, 0);
 
     /// Curve Down
-    path.quadraticBezierTo(
-      centerX,
-      55,
-      centerX + 45,
-      0,
-    );
+    path.quadraticBezierTo(centerX, 44, centerX + 36, 0);
 
     /// Continue line
     path.lineTo(size.width, 0);
@@ -43,6 +35,7 @@ class NavPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant NavPainter oldDelegate) {
-    return oldDelegate.index != index;
+    return oldDelegate.index != index ||
+        oldDelegate.backgroundColor != backgroundColor;
   }
 }

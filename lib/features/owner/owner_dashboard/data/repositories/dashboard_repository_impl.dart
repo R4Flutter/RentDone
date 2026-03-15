@@ -20,9 +20,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
   @override
   Stream<List<AppMessage>> watchRecentMessages({int limit = 6}) {
-    return _service.watchRecentMessages(limit: limit).map(
-          (items) => items.map((item) => item.toEntity()).toList(),
-        );
+    return _service
+        .watchRecentMessages(limit: limit)
+        .map((items) => items.map((item) => item.toEntity()).toList());
   }
 
   Future<DashboardSummary> _buildSummary() async {
@@ -46,10 +46,14 @@ class DashboardRepositoryImpl implements DashboardRepository {
         .where((p) => isSameMonth(p.dueDate))
         .toList();
 
-    final collectedAmount =
-        collectedPayments.fold<int>(0, (sum, item) => sum + item.amount);
-    final pendingAmount =
-        pendingPayments.fold<int>(0, (sum, item) => sum + item.amount);
+    final collectedAmount = collectedPayments.fold<int>(
+      0,
+      (sum, item) => sum + item.amount,
+    );
+    final pendingAmount = pendingPayments.fold<int>(
+      0,
+      (sum, item) => sum + item.amount,
+    );
 
     final pendingTenants = pendingPayments
         .map((item) => item.tenantId)

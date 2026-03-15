@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_tenants/di/owner_tenants_di.dart';
 import 'package:rentdone/features/owner/owner_tenants/domain/entities/tenant_trust_lookup.dart';
@@ -194,10 +195,10 @@ class _TrustProfileCard extends StatelessWidget {
 
   Color _badgeColor(int score) {
     final clamped = score.clamp(0, 100);
-    if (clamped >= 90) return Colors.green;
-    if (clamped >= 70) return Colors.blue;
-    if (clamped >= 50) return Colors.amber.shade800;
-    if (clamped >= 20) return Colors.orange;
-    return Colors.red;
+    if (clamped >= 90) return AppColors.green;
+    if (clamped >= 70) return AppColors.blue;
+    if (clamped >= 50) return AppColors.amber.shade800;
+    if (clamped >= 20) return AppColors.orange;
+    return AppColors.red;
   }
 }

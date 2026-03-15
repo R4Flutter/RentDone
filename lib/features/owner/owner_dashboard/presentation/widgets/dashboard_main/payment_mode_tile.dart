@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class PaymentModeTile extends StatelessWidget {
-  const PaymentModeTile({super.key, 
+  const PaymentModeTile({
+    super.key,
     required this.icon,
     required this.label,
     required this.amount,
@@ -25,7 +26,7 @@ class PaymentModeTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withValues(alpha :0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: color),

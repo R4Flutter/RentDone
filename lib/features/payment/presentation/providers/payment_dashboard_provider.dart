@@ -108,6 +108,13 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
         throw const ServerFailure('Payment gateway not configured');
       }
 
+      if (gateway == 'cashfree' &&
+          (intent.paymentSessionId == null ||
+              intent.keyId == null ||
+              intent.orderId == null)) {
+        throw const ServerFailure('Cashfree payment session not available');
+      }
+
       final gatewayResult = await paymentGateway.initializePayment(
         PaymentGatewayRequest(
           orderId: intent.orderId ?? '',
@@ -117,6 +124,7 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
           paymentId: intent.paymentId,
           tenantEmail: tenantEmail,
           tenantPhone: tenantPhone,
+          paymentSessionId: intent.paymentSessionId,
         ),
       );
 

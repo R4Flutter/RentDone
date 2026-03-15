@@ -404,7 +404,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                         border: Border.all(
                           color: _fieldErrors.containsKey('month')
                               ? scheme.error
-                              : Colors.transparent,
+                              : AppColors.transparent,
                         ),
                       ),
                       child: Row(
@@ -577,13 +577,13 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? scheme.error : Colors.transparent,
+                color: error != null ? scheme.error : AppColors.transparent,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: error != null ? scheme.error : Colors.transparent,
+                color: error != null ? scheme.error : AppColors.transparent,
               ),
             ),
             contentPadding: const EdgeInsets.symmetric(
@@ -673,7 +673,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
               color: scheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: error != null ? scheme.error : Colors.transparent,
+                color: error != null ? scheme.error : AppColors.transparent,
               ),
             ),
             child: Row(
