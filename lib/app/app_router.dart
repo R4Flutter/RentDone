@@ -14,6 +14,8 @@ import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_screen.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/owner_dashboard.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/pages/payment_screen.dart';
+import 'package:rentdone/features/owner/owner_payment/presentation/pages/tenant_list_screen.dart';
+import 'package:rentdone/features/owner/owner_payment/presentation/pages/tenant_payment_history_screen.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/pages/profile_screen.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_bank_details_screen.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_settings_screen.dart';
@@ -367,6 +369,40 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               initialPropertyId: state.uri.queryParameters['propertyId'],
               initialTenantName: state.uri.queryParameters['tenantName'],
             ),
+          ),
+
+          GoRoute(
+            path: '/owner/payments/property/:propertyId',
+            name: 'ownerPaymentTenants',
+            builder: (context, state) {
+              final propertyId = state.pathParameters['propertyId'] ?? '';
+              return OwnerPaymentTenantListScreen(
+                propertyId: propertyId,
+                propertyName: state.uri.queryParameters['propertyName'],
+              );
+            },
+          ),
+
+          GoRoute(
+            path: '/owner/payments/property/:propertyId/tenant/:tenantId',
+            name: 'ownerTenantPaymentHistory',
+            builder: (context, state) {
+              final propertyId = state.pathParameters['propertyId'] ?? '';
+              final tenantId = state.pathParameters['tenantId'] ?? '';
+              final rentAmount = int.tryParse(
+                state.uri.queryParameters['rentAmount'] ?? '',
+              );
+
+              return TenantPaymentHistoryScreen(
+                propertyId: propertyId,
+                tenantId: tenantId,
+                propertyName: state.uri.queryParameters['propertyName'],
+                tenantName: state.uri.queryParameters['tenantName'],
+                roomNumber: state.uri.queryParameters['roomNumber'],
+                rentAmount: rentAmount,
+                phone: state.uri.queryParameters['phone'],
+              );
+            },
           ),
 
           /// 🧾 Owner Transactions

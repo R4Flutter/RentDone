@@ -5,7 +5,7 @@ class GetReportYearOptions {
 
   const GetReportYearOptions(this._repository);
 
-  Future<List<String>> call() {
+  Future<List<int>> call() {
     return _repository.getYearOptions();
   }
 }

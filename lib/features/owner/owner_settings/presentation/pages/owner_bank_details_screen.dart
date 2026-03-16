@@ -240,7 +240,7 @@ class _OwnerBankDetailsScreenState
     return Column(
       children: [
         DropdownButtonFormField<String>(
-          value: activeMode,
+          initialValue: activeMode,
           onChanged: (value) {
             if (value != null) {
               settingsNotifier.updateDefaultPaymentMode(value);

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
@@ -9,224 +11,337 @@ class OwnerProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-    final width = _cardWidth(MediaQuery.of(context).size.width);
+    return LiquidProfileCard(profile: profile);
+  }
+}
 
-    return SizedBox(
-      width: width,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.cFFFD3A84,
-              AppColors.cFF8B5CF6,
-              AppColors.cFF22D3EE,
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.cFFFD3A84.withValues(alpha: 0.25),
-              blurRadius: 30,
-              offset: const Offset(0, 18),
-            ),
-          ],
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(26),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.cFF1A1B2F,
-                AppColors.cFF2F1D46,
-                AppColors.cFF111827,
+class LiquidProfileCard extends StatefulWidget {
+  const LiquidProfileCard({super.key, required this.profile});
+
+  final OwnerProfileState profile;
+
+  @override
+  State<LiquidProfileCard> createState() => _LiquidProfileCardState();
+}
+
+class _LiquidProfileCardState extends State<LiquidProfileCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+
+    _pulse = Tween<double>(begin: 0.94, end: 1.06).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
+    final isDark = OwnerDashboardColors.isDark(context);
+    final width = _cardWidth(MediaQuery.of(context).size.width);
+    final profile = widget.profile;
+
+    final normalizedEmail = profile.email.trim().toLowerCase();
+    final avatarSeed = normalizedEmail.isNotEmpty
+        ? normalizedEmail
+        : (profile.memberId.trim().isNotEmpty
+              ? profile.memberId.trim()
+              : profile.fullName.trim());
+    final diceBearUrl =
+        'https://api.dicebear.com/7.x/identicon/png?seed=${Uri.encodeComponent(avatarSeed)}';
+
+    final cardBackground = AppColors.white.withValues(
+      alpha: isDark ? 0.08 : 0.06,
+    );
+    final borderColors = <Color>[
+      AppColors.cFF8B5CF6.withValues(alpha: 0.70),
+      AppColors.cFF3B82F6.withValues(alpha: 0.70),
+      AppColors.cFF22D3EE.withValues(alpha: 0.70),
+    ];
+
+    return RepaintBoundary(
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 460),
+        curve: Curves.easeOutCubic,
+        tween: Tween<double>(begin: 0.92, end: 1),
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.scale(scale: value, child: child),
+          );
+        },
+        child: SizedBox(
+          width: width,
+          child: Container(
+            padding: const EdgeInsets.all(1.5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: borderColors,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.cFF8B5CF6.withValues(
+                    alpha: isDark ? 0.28 : 0.20,
+                  ),
+                  blurRadius: 26,
+                  offset: const Offset(0, 14),
+                ),
               ],
             ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: -40,
-                left: -20,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
                 child: Container(
-                  width: 140,
-                  height: 140,
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    color: cardBackground,
+                    borderRadius: BorderRadius.circular(28),
                     gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                       colors: [
-                        AppColors.white.withValues(alpha: 0.18),
-                        AppColors.transparent,
+                        AppColors.white.withValues(alpha: isDark ? 0.11 : 0.16),
+                        AppColors.white.withValues(alpha: isDark ? 0.05 : 0.07),
                       ],
                     ),
                   ),
-                ),
-              ),
-              Positioned(
-                bottom: -60,
-                right: -40,
-                child: Container(
-                  width: 180,
-                  height: 180,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.black.withValues(alpha: 0.35),
-                        AppColors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        _NeonChip(
-                          label: 'RentDone Elite',
-                          background: AppColors.white.withValues(alpha: 0.12),
-                          border: AppColors.white.withValues(alpha: 0.25),
-                        ),
-                        const Spacer(),
-                        Container(
-                          height: 34,
-                          width: 34,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.white.withValues(alpha: 0.12),
-                            border: Border.all(
-                              color: AppColors.white.withValues(alpha: 0.2),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _GlassPill(
+                            label: 'RentDone Elite',
+                            textColor: textPrimary,
+                            background: AppColors.white.withValues(alpha: 0.13),
+                            border: AppColors.white.withValues(alpha: 0.26),
+                          ),
+                          const Spacer(),
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.white.withValues(alpha: 0.12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.cFF22D3EE.withValues(
+                                    alpha: 0.30,
+                                  ),
+                                  blurRadius: 16,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.verified_rounded,
+                              color: AppColors.cFF22D3EE,
+                              size: 18,
                             ),
                           ),
-                          child: Icon(
-                            Icons.stars_rounded,
-                            color: scheme.onPrimary,
-                            size: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      height: 210,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.white.withValues(alpha: 0.18),
-                            AppColors.white.withValues(alpha: 0.06),
-                          ],
-                        ),
-                        border: Border.all(
-                          color: AppColors.white.withValues(alpha: 0.2),
-                        ),
+                        ],
                       ),
-                      child: Center(
-                        child: profile.photoUrl.isNotEmpty
-                            ? Image.network(
-                                profile.photoUrl,
+                      const SizedBox(height: 18),
+                      Center(
+                        child: AnimatedBuilder(
+                          animation: _pulse,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _pulse.value,
+                              child: child,
+                            );
+                          },
+                          child: Container(
+                            width: 102,
+                            height: 102,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColors.cFF8B5CF6,
+                                  AppColors.cFF22D3EE,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.cFF8B5CF6.withValues(
+                                    alpha: 0.35,
+                                  ),
+                                  blurRadius: 20,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: Image.network(
+                                diceBearUrl,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
-                                  return Image.asset(
-                                    profile.avatar.assetPath,
-                                    fit: BoxFit.contain,
-                                  );
+                                  return profile.photoUrl.trim().isNotEmpty
+                                      ? Image.network(
+                                          profile.photoUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Image.asset(
+                                                  profile.avatar.assetPath,
+                                                  fit: BoxFit.cover,
+                                                );
+                                              },
+                                        )
+                                      : Image.asset(
+                                          profile.avatar.assetPath,
+                                          fit: BoxFit.cover,
+                                        );
                                 },
-                              )
-                            : Image.asset(
-                                profile.avatar.assetPath,
-                                fit: BoxFit.contain,
                               ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            profile.fullName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.titleLarge?.copyWith(
-                              color: scheme.onPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 22,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.verified_rounded,
-                          color: AppColors.white.withValues(alpha: 0.85),
-                          size: 18,
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: Text(
+                          profile.fullName.trim().isEmpty
+                              ? 'Raj Naik'
+                              : profile.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: textPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 22,
+                          ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      profile.role,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: scheme.onPrimary.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _InfoRow(icon: Icons.phone_outlined, text: profile.phone),
-                    const SizedBox(height: 6),
-                    _InfoRow(icon: Icons.email_outlined, text: profile.email),
-                    const SizedBox(height: 6),
-                    _InfoRow(
-                      icon: Icons.location_on_outlined,
-                      text: profile.location,
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Status: ${profile.status}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onPrimary.withValues(alpha: 0.8),
+                      const SizedBox(height: 4),
+                      Center(
+                        child: Text(
+                          profile.role,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: textSecondary.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Member: ${profile.memberId}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: scheme.onPrimary.withValues(alpha: 0.7),
+                      const SizedBox(height: 16),
+                      _InfoRow(icon: Icons.phone_outlined, text: profile.phone),
+                      const SizedBox(height: 8),
+                      _InfoRow(icon: Icons.email_outlined, text: profile.email),
+                      const SizedBox(height: 8),
+                      _InfoRow(
+                        icon: Icons.location_on_outlined,
+                        text: _displayLocation(profile.location),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: const [
-                        _TagChip(label: '#rentdone'),
-                        _TagChip(label: '#owner'),
-                        _TagChip(label: '#dashboard'),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.successGreen.withValues(
+                                alpha: 0.16,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: AppTheme.successGreen.withValues(
+                                  alpha: 0.50,
+                                ),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.successGreen.withValues(
+                                    alpha: 0.30,
+                                  ),
+                                  blurRadius: 12,
+                                ),
+                              ],
+                            ),
+                            child: const Text(
+                              'Active',
+                              style: TextStyle(
+                                color: AppTheme.successGreen,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            _memberId(profile.memberId),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _TagChip(label: '#rentdone', textColor: textPrimary),
+                          _TagChip(label: '#owner', textColor: textPrimary),
+                          _TagChip(label: '#dashboard', textColor: textPrimary),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  String _memberId(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return '#RD-AWCE';
+    return value.startsWith('#') ? value : '#$value';
+  }
+
+  String _displayLocation(String rawLocation) {
+    final value = rawLocation.trim();
+    if (value.isEmpty) return 'Location unavailable';
+
+    final coordinatePattern = RegExp(
+      r'^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$',
+    );
+    if (coordinatePattern.hasMatch(value)) {
+      return 'Goa, India';
+    }
+    return value;
   }
 
   double _cardWidth(double screenWidth) {
@@ -245,21 +360,19 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
 
     return Row(
       children: [
-        Icon(icon, size: 16, color: scheme.onPrimary.withValues(alpha: 0.8)),
+        Icon(icon, size: 16, color: textSecondary),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.onPrimary.withValues(alpha: 0.8),
-            ),
+            style: textTheme.bodySmall?.copyWith(color: textSecondary),
           ),
         ),
       ],
@@ -267,13 +380,15 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _NeonChip extends StatelessWidget {
+class _GlassPill extends StatelessWidget {
   final String label;
+  final Color textColor;
   final Color background;
   final Color border;
 
-  const _NeonChip({
+  const _GlassPill({
     required this.label,
+    required this.textColor,
     required this.background,
     required this.border,
   });
@@ -281,7 +396,6 @@ class _NeonChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -293,7 +407,7 @@ class _NeonChip extends StatelessWidget {
       child: Text(
         label,
         style: textTheme.labelLarge?.copyWith(
-          color: onPrimary,
+          color: textColor,
           fontSize: 11,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
@@ -305,13 +419,12 @@ class _NeonChip extends StatelessWidget {
 
 class _TagChip extends StatelessWidget {
   final String label;
+  final Color textColor;
 
-  const _TagChip({required this.label});
+  const _TagChip({required this.label, required this.textColor});
 
   @override
   Widget build(BuildContext context) {
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -322,7 +435,7 @@ class _TagChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: onPrimary.withValues(alpha: 0.9),
+          color: textColor,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),

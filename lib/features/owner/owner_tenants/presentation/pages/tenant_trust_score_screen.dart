@@ -1,1030 +1,600 @@
-import 'dart:ui';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
+import 'package:rentdone/features/owner/owner_tenants/data/services/tenant_trust_service.dart';
+import 'package:rentdone/features/owner/owner_tenants/domain/models/tenant_trust.dart';
+import 'package:rentdone/features/owner/owner_tenants/domain/utils/phone_normalizer.dart';
 
-class TenantTrustScoreScreen extends StatefulWidget {
+class TenantTrustScoreScreen extends StatelessWidget {
   const TenantTrustScoreScreen({super.key});
 
   @override
-  State<TenantTrustScoreScreen> createState() => _TenantTrustScoreScreenState();
+  Widget build(BuildContext context) {
+    return const TenantTrustFinderScreen();
+  }
 }
 
-class _TenantTrustScoreScreenState extends State<TenantTrustScoreScreen>
-    with SingleTickerProviderStateMixin {
-  final _firestore = FirebaseFirestore.instance;
-  final TextEditingController _phoneController = TextEditingController();
-  late final AnimationController _bgController;
-
-  bool _isButtonPressed = false;
-  bool _isLoading = false;
-  bool _hasSearched = false;
-  String? _errorMessage;
-  TenantTrustProfile? _result;
+class TenantTrustFinderScreen extends StatefulWidget {
+  const TenantTrustFinderScreen({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _bgController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 18),
-    )..repeat(reverse: true);
-  }
+  State<TenantTrustFinderScreen> createState() =>
+      _TenantTrustFinderScreenState();
+}
+
+class _TenantTrustFinderScreenState extends State<TenantTrustFinderScreen> {
+  final TextEditingController _phoneController = TextEditingController();
+  final TenantTrustService _service = TenantTrustService();
+
+  Future<TenantTrust?>? _lookupFuture;
+  String _lastNormalizedPhone = '';
 
   @override
   void dispose() {
-    _bgController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
 
-  Future<void> _search() async {
-    final normalized = _normalizeIndianPhone(_phoneController.text);
+  void _search() {
+    FocusScope.of(context).unfocus();
 
-    if (normalized == null || !_isValidIndianLocalPhone(normalized)) {
-      setState(() {
-        _errorMessage = 'Please enter a valid 10-digit Indian phone number.';
-        _result = null;
-        _hasSearched = true;
-      });
+    final normalized = normalizePhone(_phoneController.text);
+    if (!_isValidIndianPhone(normalized)) {
+      _showSnackBar('Please enter a valid 10-digit phone number.');
       return;
     }
 
-    final phoneDocId = '+91$normalized';
-
     setState(() {
-      _isLoading = true;
-      _hasSearched = true;
-      _errorMessage = null;
-      _result = null;
+      _lastNormalizedPhone = normalized;
+      _lookupFuture = _service.getTrustScore(_phoneController.text);
     });
-
-    try {
-      final doc = await _firestore.collection('tenants').doc(phoneDocId).get();
-
-      DocumentSnapshot<Map<String, dynamic>> effectiveDoc = doc;
-      if (!doc.exists) {
-        final localDoc = await _firestore
-            .collection('tenants')
-            .doc(normalized)
-            .get();
-        if (localDoc.exists) {
-          effectiveDoc = localDoc;
-        }
-      }
-
-      if (!effectiveDoc.exists) {
-        if (!mounted) return;
-        setState(() {
-          _errorMessage = 'Tenant record not found.';
-          _result = null;
-        });
-        return;
-      }
-
-      final data = effectiveDoc.data() ?? <String, dynamic>{};
-      final phoneFromDoc =
-          (data['phone'] as String?) ??
-          (data['phoneNumber'] as String?) ??
-          effectiveDoc.id;
-
-      if (!mounted) return;
-
-      setState(() {
-        _result = TenantTrustProfile.fromMap(
-          id: effectiveDoc.id,
-          data: data,
-          fallbackPhone: phoneFromDoc,
-        );
-        _errorMessage = null;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage =
-            'Unable to fetch trust score right now. Please try again.';
-        _result = null;
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 
-  String? _normalizeIndianPhone(String input) {
-    final digits = input.replaceAll(RegExp(r'\D'), '');
-    if (digits.length == 10) {
-      return digits;
-    }
-    if (digits.length == 12 && digits.startsWith('91')) {
-      return digits.substring(2);
-    }
-    return null;
-  }
-
-  bool _isValidIndianLocalPhone(String value) {
+  bool _isValidIndianPhone(String value) {
     return RegExp(r'^[6-9][0-9]{9}$').hasMatch(value);
   }
 
-  String _riskLabel(int score) {
-    if (score >= 80) return 'Trusted Tenant';
-    if (score >= 60) return 'Moderate Risk';
-    return 'High Risk';
-  }
-
-  Color _riskColor(int score) {
-    if (score >= 80) return AppTheme.successGreen;
-    if (score >= 60) return AppTheme.warningAmber;
-    return AppTheme.errorRed;
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
+
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
-      body: AnimatedBuilder(
-        animation: _bgController,
-        builder: (context, _) {
-          final t = _bgController.value;
-
-          return Stack(
+      backgroundColor: AppColors.transparent,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: OwnerDashboardColors.ownerPageBackgroundGradient(
+                  context,
+                ),
+              ),
+            ),
+          ),
+          _BackgroundBlobs(isDark: isDark),
+          ListView(
+            padding: const EdgeInsets.all(24),
             children: [
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: const [
-                        AppTheme.nearBlack,
-                        AppTheme.darkBackground,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              _floatingBubble(
-                bottom: -70 + (t * 16),
-                right: -46 + (t * 12),
-                size: 260,
-                blurSigma: 90,
-                opacity: 0.20,
-                colors: const [AppTheme.liquidPrimaryStart, AppTheme.infoBlue],
-              ),
-              _floatingBubble(
-                bottom: -52 - (t * 12),
-                left: -34 + (t * 8),
-                size: 180,
-                blurSigma: 70,
-                opacity: 0.15,
-                colors: const [AppTheme.liquidPrimaryEnd, AppTheme.primaryBlue],
-              ),
-              SafeArea(
-                child: Column(
-                  children: [
-                    _buildTopGlassBar(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        physics: const ClampingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _buildHeader(),
-                            const SizedBox(height: 18),
-                            _buildSearchCard(),
-                            const SizedBox(height: 14),
-                            _buildSearchButton(),
-                            const SizedBox(height: 20),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 320),
-                              switchInCurve: Curves.easeOutCubic,
-                              switchOutCurve: Curves.easeInCubic,
-                              child: _buildResultState(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const _HeaderCard(),
+              const SizedBox(height: 16),
+              _TrustFinderCard(controller: _phoneController, onSearch: _search),
+              const SizedBox(height: 16),
+              _buildResultArea(),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultArea() {
+    if (_lookupFuture == null) {
+      return const _InfoCard(
+        icon: Icons.verified_user_outlined,
+        title: 'Ready to search',
+        message: 'Enter a tenant phone number to fetch trust insights.',
+      );
+    }
+
+    return FutureBuilder<TenantTrust?>(
+      future: _lookupFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingCard();
+        }
+
+        if (snapshot.hasError) {
+          final message = _errorMessage(snapshot.error);
+          return _InfoCard(
+            icon: Icons.warning_amber_rounded,
+            title: 'Lookup issue',
+            message: message,
+            tint: AppTheme.warningAmber,
           );
-        },
-      ),
+        }
+
+        final data = snapshot.data;
+        if (data == null) {
+          return const _InfoCard(
+            icon: Icons.person_search_rounded,
+            title: 'Tenant not found',
+            message: 'No trust data found for this tenant.',
+          );
+        }
+
+        return _ResultCard(trust: data, normalizedPhone: _lastNormalizedPhone);
+      },
     );
   }
 
-  Widget _buildTopGlassBar() {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: 62,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppTheme.pureWhite.withOpacity(0.05),
-            border: Border(
-              bottom: BorderSide(color: AppTheme.pureWhite.withOpacity(0.12)),
-            ),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => Scaffold.maybeOf(context)?.openDrawer(),
-                icon: const Icon(Icons.menu_rounded, color: AppTheme.pureWhite),
-              ),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(
-                      Icons.home_work_rounded,
-                      size: 18,
-                      color: AppTheme.infoBlue,
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      'RentDone',
-                      style: TextStyle(
-                        color: AppTheme.pureWhite,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.pureWhite.withOpacity(0.09),
-                  border: Border.all(
-                    color: AppTheme.pureWhite.withOpacity(0.18),
-                  ),
-                ),
-                child: const Icon(
-                  Icons.person_outline_rounded,
-                  size: 18,
-                  color: AppTheme.pureWhite,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  String _errorMessage(Object? error) {
+    if (error is TenantTrustAuthException) {
+      return error.message;
+    }
+    if (error is TenantTrustPermissionException) {
+      return 'Access permission denied.';
+    }
+    if (error is TenantTrustNetworkException) {
+      return 'Please check internet connection.';
+    }
+    if (error is TenantTrustValidationException) {
+      return error.message;
+    }
+    if (error is TenantTrustDataException) {
+      return error.message;
+    }
+    return 'Unable to fetch trust score right now. Please try again.';
   }
+}
 
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        const Text(
-          'Tenant Trust Score',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.pureWhite,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Check tenant trust score using phone number',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppTheme.darkTextSecondary.withOpacity(0.82),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
+class _HeaderCard extends StatelessWidget {
+  const _HeaderCard();
 
-  Widget _buildSearchCard() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-          decoration: BoxDecoration(
-            color: AppTheme.pureWhite.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppTheme.pureWhite.withOpacity(0.14)),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryBlue.withOpacity(0.20),
-                blurRadius: 20,
-                spreadRadius: -3,
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: AppTheme.pureWhite.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppTheme.pureWhite.withOpacity(0.10),
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.search,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[0-9+\s-]')),
-                        LengthLimitingTextInputFormatter(14),
-                      ],
-                      style: const TextStyle(
-                        color: AppTheme.pureWhite,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'Phone Number',
-                        hintStyle: TextStyle(
-                          color: AppTheme.darkTextSecondary.withOpacity(0.78),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.phone_rounded,
-                          color: AppTheme.infoBlue.withOpacity(0.95),
-                        ),
-                      ),
-                      onSubmitted: (_) => _search(),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Enter tenant phone number to check trust score',
-                style: TextStyle(
-                  color: AppTheme.darkTextSecondary.withOpacity(0.72),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchButton() {
-    return AnimatedScale(
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
-      scale: _isButtonPressed ? 0.97 : 1,
-      child: SizedBox(
-        height: 56,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Material(
-            color: Colors.transparent,
-            child: Ink(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [AppTheme.liquidPrimaryStart, AppTheme.infoBlue],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryBlue.withOpacity(0.30),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: GestureDetector(
-                onTapDown: _isLoading
-                    ? null
-                    : (_) => setState(() => _isButtonPressed = true),
-                onTapUp: _isLoading
-                    ? null
-                    : (_) => setState(() => _isButtonPressed = false),
-                onTapCancel: _isLoading
-                    ? null
-                    : () => setState(() => _isButtonPressed = false),
-                onTap: _isLoading ? null : _search,
-                child: Center(
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppTheme.pureWhite,
-                            ),
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.search_rounded,
-                              color: AppTheme.pureWhite,
-                              size: 19,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Search Trust Score',
-                              style: TextStyle(
-                                color: AppTheme.pureWhite,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
+  @override
+  Widget build(BuildContext context) {
+    return DashboardCard(
+      radius: 22,
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: OwnerDashboardColors.brandPrimary(
+                context,
+              ).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: OwnerDashboardColors.brandPrimary(
+                  context,
+                ).withValues(alpha: 0.26),
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResultState() {
-    if (_isLoading) {
-      return const _LoadingSkeleton(key: ValueKey('loading'));
-    }
-    if (_errorMessage != null) {
-      return _WarningCard(
-        key: const ValueKey('warning'),
-        message: _errorMessage!,
-      );
-    }
-    if (_result != null) {
-      return _ResultCard(
-        key: const ValueKey('result'),
-        profile: _result!,
-        riskLabel: _riskLabel(_result!.trustScore),
-        riskColor: _riskColor(_result!.trustScore),
-      );
-    }
-    if (!_hasSearched) {
-      return const _EmptyState(key: ValueKey('empty'));
-    }
-    return const _EmptyState(
-      key: ValueKey('empty-after'),
-      message: 'No tenant searched yet',
-    );
-  }
-
-  Widget _floatingBubble({
-    double? top,
-    double? left,
-    double? bottom,
-    double? right,
-    required double size,
-    required double blurSigma,
-    required double opacity,
-    required List<Color> colors,
-  }) {
-    return Positioned(
-      top: top,
-      left: left,
-      right: right,
-      bottom: bottom,
-      child: IgnorePointer(
-        child: ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-          child: Opacity(
-            opacity: opacity,
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: colors,
-                ),
-              ),
+            child: Icon(
+              Icons.verified_user_rounded,
+              color: OwnerDashboardColors.brandPrimary(context),
             ),
           ),
-        ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tenant Trust Finder',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: OwnerDashboardColors.textPrimary(context),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Secure lookup by normalized phone in tenantTrust',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: OwnerDashboardColors.textSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class TenantTrustProfile {
-  const TenantTrustProfile({
-    required this.name,
-    required this.phone,
-    required this.city,
-    required this.trustScore,
-    required this.totalRentals,
-    required this.latePayments,
-    required this.disputes,
-    required this.verified,
-  });
+class _TrustFinderCard extends StatelessWidget {
+  const _TrustFinderCard({required this.controller, required this.onSearch});
 
-  final String name;
-  final String phone;
-  final String city;
-  final int trustScore;
-  final int totalRentals;
-  final int latePayments;
-  final int disputes;
-  final bool verified;
+  final TextEditingController controller;
+  final VoidCallback onSearch;
 
-  factory TenantTrustProfile.fromMap({
-    required String id,
-    required Map<String, dynamic> data,
-    required String fallbackPhone,
-  }) {
-    final score = ((data['trustScore'] as num?)?.toInt() ?? 0).clamp(0, 100);
-    return TenantTrustProfile(
-      name: (data['name'] as String?)?.trim().isNotEmpty == true
-          ? (data['name'] as String).trim()
-          : (data['fullName'] as String?)?.trim().isNotEmpty == true
-          ? (data['fullName'] as String).trim()
-          : 'Tenant',
-      phone:
-          (data['phone'] as String?) ??
-          (data['phoneNumber'] as String?) ??
-          fallbackPhone,
-      city: (data['city'] as String?)?.trim().isNotEmpty == true
-          ? (data['city'] as String).trim()
-          : 'Unknown City',
-      trustScore: score,
-      totalRentals: (data['totalRentals'] as num?)?.toInt() ?? 0,
-      latePayments: (data['latePayments'] as num?)?.toInt() ?? 0,
-      disputes: (data['disputes'] as num?)?.toInt() ?? 0,
-      verified: data['verified'] == true,
+  @override
+  Widget build(BuildContext context) {
+    return DashboardCard(
+      radius: 22,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Find tenant by phone',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: OwnerDashboardColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.search,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9+\s-]')),
+              LengthLimitingTextInputFormatter(14),
+            ],
+            onSubmitted: (_) => onSearch(),
+            style: TextStyle(color: OwnerDashboardColors.textPrimary(context)),
+            decoration: InputDecoration(
+              hintText: '8668531537 or +91 8668531537',
+              hintStyle: TextStyle(
+                color: OwnerDashboardColors.textSecondary(context),
+              ),
+              prefixIcon: Icon(
+                Icons.phone_rounded,
+                color: OwnerDashboardColors.brandPrimary(context),
+              ),
+              filled: true,
+              fillColor: OwnerDashboardColors.brandPrimary(context).withValues(
+                alpha: OwnerDashboardColors.isDark(context) ? 0.10 : 0.05,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: OwnerDashboardColors.border(context),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: OwnerDashboardColors.brandPrimary(context),
+                  width: 1.2,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Normalization supports 10-digit, +91, and 91 prefix formats.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: OwnerDashboardColors.textSecondary(context),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onSearch,
+              icon: const Icon(Icons.search_rounded),
+              label: const Text('Search Trust Score'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: OwnerDashboardColors.brandPrimary(context),
+                foregroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({
-    super.key,
-    required this.profile,
-    required this.riskLabel,
-    required this.riskColor,
-  });
+  const _ResultCard({required this.trust, required this.normalizedPhone});
 
-  final TenantTrustProfile profile;
-  final String riskLabel;
-  final Color riskColor;
+  final TenantTrust trust;
+  final String normalizedPhone;
 
   @override
   Widget build(BuildContext context) {
-    final progress = profile.trustScore / 100;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeOutCubic,
-      builder: (context, v, child) {
-        return Opacity(
-          opacity: v,
-          child: Transform.translate(
-            offset: Offset(0, (1 - v) * 18),
-            child: child,
-          ),
-        );
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.pureWhite.withOpacity(0.07),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppTheme.pureWhite.withOpacity(0.14)),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryBlue.withOpacity(0.16),
-                  blurRadius: 24,
-                  spreadRadius: -4,
+    final trustColor = _scoreColor(trust.trustScore);
+
+    return DashboardCard(
+      radius: 22,
+      inset: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: OwnerDashboardColors.brandPrimary(
+                  context,
+                ).withValues(alpha: 0.18),
+                child: Icon(
+                  Icons.person_rounded,
+                  color: OwnerDashboardColors.brandPrimary(context),
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppTheme.pureWhite.withOpacity(0.10),
-                        border: Border.all(
-                          color: AppTheme.pureWhite.withOpacity(0.18),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.person_rounded,
-                        color: AppTheme.pureWhite,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            profile.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppTheme.pureWhite,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            profile.phone,
-                            style: TextStyle(
-                              color: AppTheme.darkTextSecondary.withOpacity(
-                                0.92,
-                              ),
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            profile.city,
-                            style: TextStyle(
-                              color: AppTheme.darkTextSecondary.withOpacity(
-                                0.82,
-                              ),
-                              fontSize: 12.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (profile.verified)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.successGreen.withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: AppTheme.successGreen.withOpacity(0.45),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.verified_rounded,
-                              size: 14,
-                              color: AppTheme.successGreen,
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              'Verified',
-                              style: TextStyle(
-                                color: AppTheme.successGreen,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.pureWhite.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppTheme.pureWhite.withOpacity(0.10),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Trust Score: ${profile.trustScore} / 100',
-                        style: const TextStyle(
-                          color: AppTheme.pureWhite,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: progress),
-                          duration: const Duration(milliseconds: 700),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, _) {
-                            return LinearProgressIndicator(
-                              value: value,
-                              minHeight: 9,
-                              backgroundColor: AppTheme.pureWhite.withOpacity(
-                                0.10,
-                              ),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                riskColor,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        label: 'Total Rentals',
-                        value: '${profile.totalRentals}',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _StatCard(
-                        label: 'Late Payments',
-                        value: '${profile.latePayments}',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _StatCard(
-                        label: 'Disputes',
-                        value: '${profile.disputes}',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: riskColor.withOpacity(0.20),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: riskColor.withOpacity(0.60)),
-                    ),
-                    child: Text(
-                      riskLabel,
-                      style: TextStyle(
-                        color: riskColor,
+                    Text(
+                      normalizedPhone,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: OwnerDashboardColors.textPrimary(context),
                         fontWeight: FontWeight.w700,
-                        fontSize: 12,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Payment Reliability: ${trust.paymentReliability}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: OwnerDashboardColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              _TagPill(label: 'Trust ${trust.trustScore}', color: trustColor),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: trust.trustScore / 100,
+              minHeight: 10,
+              backgroundColor: OwnerDashboardColors.brandPrimary(
+                context,
+              ).withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(trustColor),
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _MetricPill(
+                label: 'Total Properties Stayed',
+                value: '${trust.propertiesStayed}',
+              ),
+              _MetricPill(
+                label: 'Late Payments',
+                value: '${trust.latePayments}',
+              ),
+              _MetricPill(
+                label: 'On-time Payment Rate',
+                value: '${trust.onTimeRate}%',
+              ),
+              _MetricPill(label: 'Complaints', value: '${trust.complaints}'),
+              _MetricPill(
+                label: 'Total Payments',
+                value: '${trust.totalPayments}',
+              ),
+              _MetricPill(
+                label: 'Last Updated',
+                value: trust.lastUpdated == null
+                    ? 'NA'
+                    : DateFormat(
+                        'dd MMM yyyy, hh:mm a',
+                      ).format(trust.lastUpdated!),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
+
+  Color _scoreColor(int score) {
+    if (score >= 80) return AppTheme.successGreen;
+    if (score >= 60) return AppTheme.warningAmber;
+    return AppTheme.errorRed;
+  }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
+class _MetricPill extends StatelessWidget {
+  const _MetricPill({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: AppTheme.pureWhite.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.pureWhite.withOpacity(0.10)),
-          ),
-          child: Column(
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: AppTheme.pureWhite,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppTheme.darkTextSecondary.withOpacity(0.82),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: OwnerDashboardColors.brandPrimary(
+          context,
+        ).withValues(alpha: OwnerDashboardColors.isDark(context) ? 0.10 : 0.06),
+        border: Border.all(color: OwnerDashboardColors.border(context)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: OwnerDashboardColors.textPrimary(context),
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 }
 
-class _WarningCard extends StatelessWidget {
-  const _WarningCard({super.key, required this.message});
+class _TagPill extends StatelessWidget {
+  const _TagPill({required this.label, required this.color});
 
-  final String message;
+  final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppTheme.warningAmber.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.warningAmber.withOpacity(0.50)),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: AppTheme.warningAmber,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.tint,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Color? tint;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = tint ?? OwnerDashboardColors.brandPrimary(context);
+
+    return DashboardCard(
+      radius: 18,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: OwnerDashboardColors.textPrimary(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
                   message,
-                  style: const TextStyle(
-                    color: AppTheme.warningAmber,
-                    fontWeight: FontWeight.w600,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: OwnerDashboardColors.textSecondary(context),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({super.key, this.message = 'No tenant searched yet'});
-
-  final String message;
+class _LoadingCard extends StatelessWidget {
+  const _LoadingCard();
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-          decoration: BoxDecoration(
-            color: AppTheme.pureWhite.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppTheme.pureWhite.withOpacity(0.12)),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.search_rounded,
-                size: 42,
-                color: AppTheme.darkTextSecondary.withOpacity(0.85),
+    return DashboardCard(
+      radius: 18,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                OwnerDashboardColors.brandPrimary(context),
               ),
-              const SizedBox(height: 10),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppTheme.darkTextSecondary.withOpacity(0.90),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Looking up tenant trust profile...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: OwnerDashboardColors.textSecondary(context),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _LoadingSkeleton extends StatelessWidget {
-  const _LoadingSkeleton({super.key});
+class _BackgroundBlobs extends StatelessWidget {
+  const _BackgroundBlobs({required this.isDark});
+
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    Widget block({double height = 16, double? width}) {
-      return Container(
-        height: height,
-        width: width,
-        decoration: BoxDecoration(
-          color: AppTheme.pureWhite.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(10),
-        ),
-      );
-    }
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          Positioned(
+            top: -70,
+            left: -56,
+            child: _Blob(size: 270, opacity: isDark ? 0.16 : 0.11),
+          ),
+          Positioned(
+            bottom: -90,
+            right: -60,
+            child: _Blob(size: 250, opacity: isDark ? 0.14 : 0.09),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.pureWhite.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppTheme.pureWhite.withOpacity(0.12)),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppTheme.pureWhite.withOpacity(0.10),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        block(height: 16, width: 130),
-                        const SizedBox(height: 8),
-                        block(height: 14, width: 95),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              block(height: 14),
-              const SizedBox(height: 10),
-              block(height: 42),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: block(height: 62)),
-                  const SizedBox(width: 8),
-                  Expanded(child: block(height: 62)),
-                  const SizedBox(width: 8),
-                  Expanded(child: block(height: 62)),
-                ],
-              ),
-            ],
-          ),
+class _Blob extends StatelessWidget {
+  const _Blob({required this.size, required this.opacity});
+
+  final double size;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            OwnerDashboardColors.brandPrimary(
+              context,
+            ).withValues(alpha: opacity),
+            AppColors.transparent,
+          ],
         ),
       ),
     );

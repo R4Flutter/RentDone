@@ -1,13 +1,20 @@
+import 'package:rentdone/features/owner/reports/domain/entities/report_filter.dart';
 import 'package:rentdone/features/owner/reports/domain/entities/report_data.dart';
 
 abstract class ReportsRepository {
-  Future<List<String>> getYearOptions();
+  Future<List<int>> getYearOptions();
 
-  Future<List<String>> getPropertyOptions();
+  Future<List<ReportPropertyOption>> getPropertyOptions();
 
   Future<ReportData> getReportData({
-    required bool isMonthly,
-    required String year,
-    required String property,
+    required ReportFilter filter,
+    String? propertyId,
+  });
+
+  Future<String> exportReport({
+    required String format,
+    required ReportData data,
+    required ReportFilter filter,
+    String? propertyId,
   });
 }

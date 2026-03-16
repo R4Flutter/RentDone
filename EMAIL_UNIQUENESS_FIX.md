@@ -244,7 +244,6 @@ The duplicate finder functions are read-only and won't cause issues.
 ---
 
 ## Support
-
 If you encounter issues:
 1. Check Firebase Console Logs for detailed errors
 2. Review Cloud Functions logs for authentication failures

@@ -2,37 +2,38 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/reports/di/reports_di.dart';
 import 'package:rentdone/features/owner/reports/domain/entities/report_data.dart';
+import 'package:rentdone/features/owner/reports/domain/entities/report_filter.dart';
 
 @immutable
 class ReportsState {
-  final bool isLoading;
-  final bool isMonthly;
-  final String selectedYear;
-  final String selectedProperty;
-  final List<String> yearOptions;
-  final List<String> propertyOptions;
-  final ReportData? reportData;
-  final String? error;
-
   const ReportsState({
     required this.isLoading,
-    required this.isMonthly,
-    required this.selectedYear,
-    required this.selectedProperty,
-    required this.yearOptions,
+    required this.isExporting,
+    required this.filter,
+    required this.selectedPropertyId,
     required this.propertyOptions,
+    required this.yearOptions,
     required this.reportData,
     required this.error,
   });
 
+  final bool isLoading;
+  final bool isExporting;
+  final ReportFilter filter;
+  final String? selectedPropertyId;
+  final List<ReportPropertyOption> propertyOptions;
+  final List<int> yearOptions;
+  final ReportData? reportData;
+  final String? error;
+
   factory ReportsState.initial() {
-    return const ReportsState(
+    return ReportsState(
       isLoading: true,
-      isMonthly: true,
-      selectedYear: '2026',
-      selectedProperty: 'All Properties',
-      yearOptions: <String>[],
-      propertyOptions: <String>[],
+      isExporting: false,
+      filter: ReportFilter.thisMonth(),
+      selectedPropertyId: null,
+      propertyOptions: const <ReportPropertyOption>[],
+      yearOptions: const <int>[],
       reportData: null,
       error: null,
     );
@@ -40,22 +41,26 @@ class ReportsState {
 
   ReportsState copyWith({
     bool? isLoading,
-    bool? isMonthly,
-    String? selectedYear,
-    String? selectedProperty,
-    List<String>? yearOptions,
-    List<String>? propertyOptions,
-    ReportData? reportData,
+    bool? isExporting,
+    ReportFilter? filter,
+    Object? selectedPropertyId = _sentinel,
+    List<ReportPropertyOption>? propertyOptions,
+    List<int>? yearOptions,
+    Object? reportData = _sentinel,
     Object? error = _sentinel,
   }) {
     return ReportsState(
       isLoading: isLoading ?? this.isLoading,
-      isMonthly: isMonthly ?? this.isMonthly,
-      selectedYear: selectedYear ?? this.selectedYear,
-      selectedProperty: selectedProperty ?? this.selectedProperty,
-      yearOptions: yearOptions ?? this.yearOptions,
+      isExporting: isExporting ?? this.isExporting,
+      filter: filter ?? this.filter,
+      selectedPropertyId: identical(selectedPropertyId, _sentinel)
+          ? this.selectedPropertyId
+          : selectedPropertyId as String?,
       propertyOptions: propertyOptions ?? this.propertyOptions,
-      reportData: reportData ?? this.reportData,
+      yearOptions: yearOptions ?? this.yearOptions,
+      reportData: identical(reportData, _sentinel)
+          ? this.reportData
+          : reportData as ReportData?,
       error: identical(error, _sentinel) ? this.error : error as String?,
     );
   }
@@ -82,68 +87,120 @@ class ReportsNotifier extends Notifier<ReportsState> {
           .read(getReportPropertyOptionsUseCaseProvider)
           .call();
 
-      final selectedYear = years.contains(state.selectedYear)
-          ? state.selectedYear
-          : (years.isNotEmpty ? years.first : state.selectedYear);
-      final selectedProperty = properties.contains(state.selectedProperty)
-          ? state.selectedProperty
-          : (properties.isNotEmpty ? properties.first : state.selectedProperty);
-
       state = state.copyWith(
         yearOptions: years,
         propertyOptions: properties,
-        selectedYear: selectedYear,
-        selectedProperty: selectedProperty,
         error: null,
       );
 
-      await _reload();
-    } catch (error) {
-      state = state.copyWith(isLoading: false, error: error.toString());
+      await reload();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
-  Future<void> setPeriod(bool isMonthly) async {
-    if (state.isMonthly == isMonthly) {
+  Future<void> setFilterType(ReportFilterType type) async {
+    final now = DateTime.now();
+    ReportFilter nextFilter;
+    switch (type) {
+      case ReportFilterType.thisMonth:
+        nextFilter = ReportFilter.thisMonth(now: now);
+        break;
+      case ReportFilterType.thisYear:
+        nextFilter = ReportFilter.thisYear(now: now);
+        break;
+      case ReportFilterType.custom:
+        nextFilter = state.filter.copyWith(type: ReportFilterType.custom);
+        break;
+    }
+
+    state = state.copyWith(filter: nextFilter);
+    await reload();
+  }
+
+  Future<void> setCustomDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final normalizedStart = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    );
+    final normalizedEnd = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      23,
+      59,
+      59,
+    );
+
+    state = state.copyWith(
+      filter: ReportFilter(
+        type: ReportFilterType.custom,
+        startDate: normalizedStart,
+        endDate: normalizedEnd,
+      ),
+    );
+
+    await reload();
+  }
+
+  Future<void> setProperty(String? propertyId) async {
+    final normalized = (propertyId ?? '').trim().isEmpty ? null : propertyId;
+    if (state.selectedPropertyId == normalized) {
       return;
     }
-    state = state.copyWith(isMonthly: isMonthly);
-    await _reload();
+    state = state.copyWith(selectedPropertyId: normalized);
+    await reload();
   }
 
-  Future<void> setYear(String year) async {
-    if (state.selectedYear == year) {
-      return;
-    }
-    state = state.copyWith(selectedYear: year);
-    await _reload();
+  Future<void> setYear(int year) async {
+    final currentType = state.filter.type;
+    final updated = ReportFilter(
+      type: currentType,
+      startDate: DateTime(year, 1, 1),
+      endDate: DateTime(year, 12, 31, 23, 59, 59),
+    );
+
+    state = state.copyWith(filter: updated);
+    await reload();
   }
 
-  Future<void> setProperty(String property) async {
-    if (state.selectedProperty == property) {
-      return;
-    }
-    state = state.copyWith(selectedProperty: property);
-    await _reload();
-  }
-
-  Future<void> retry() async {
-    await _reload();
-  }
-
-  Future<void> _reload() async {
+  Future<void> reload() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final data = await ref
           .read(getReportDataUseCaseProvider)
-          .call(
-            isMonthly: state.isMonthly,
-            year: state.selectedYear,
-            property: state.selectedProperty,
-          );
+          .call(filter: state.filter, propertyId: state.selectedPropertyId);
       state = state.copyWith(isLoading: false, reportData: data, error: null);
-    } catch (error) {
-      state = state.copyWith(isLoading: false, error: error.toString());
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<String?> export(String format) async {
+    final data = state.reportData;
+    if (data == null) {
+      return null;
+    }
+
+    state = state.copyWith(isExporting: true);
+    try {
+      final url = await ref
+          .read(exportReportUseCaseProvider)
+          .call(
+            format: format,
+            data: data,
+            filter: state.filter,
+            propertyId: state.selectedPropertyId,
+          );
+      state = state.copyWith(isExporting: false);
+      return url;
+    } catch (e) {
+      state = state.copyWith(isExporting: false, error: e.toString());
+      return null;
     }
   }
 }
