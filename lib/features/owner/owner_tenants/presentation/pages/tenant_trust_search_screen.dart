@@ -18,6 +18,7 @@ class _TenantTrustSearchScreenState
   bool _isSearching = false;
   String? _errorMessage;
   List<TenantTrustLookup> _results = const [];
+  int _activeSearchToken = 0;
 
   @override
   void dispose() {
@@ -26,6 +27,8 @@ class _TenantTrustSearchScreenState
   }
 
   Future<void> _search() async {
+    if (_isSearching) return;
+
     final input = _phoneController.text.trim();
     if (input.isEmpty) {
       setState(() {
@@ -35,6 +38,8 @@ class _TenantTrustSearchScreenState
       return;
     }
 
+    final searchToken = ++_activeSearchToken;
+
     setState(() {
       _isSearching = true;
       _errorMessage = null;
@@ -43,18 +48,18 @@ class _TenantTrustSearchScreenState
     try {
       final service = ref.read(ownerTenantsFirebaseServiceProvider);
       final data = await service.searchTenantTrustByPhone(input);
-      if (!mounted) return;
+      if (!mounted || searchToken != _activeSearchToken) return;
       setState(() {
         _results = data;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || searchToken != _activeSearchToken) return;
       setState(() {
         _errorMessage = error.toString();
         _results = const [];
       });
     } finally {
-      if (mounted) {
+      if (mounted && searchToken == _activeSearchToken) {
         setState(() {
           _isSearching = false;
         });

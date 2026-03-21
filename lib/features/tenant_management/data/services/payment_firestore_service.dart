@@ -1,13 +1,57 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rentdone/core/trust/tenant_trust_score.dart';
+import 'package:rentdone/core/exceptions/security_exceptions.dart';
 import '../models/payment_dto.dart';
 
 /// Firestore service for payment/transaction data operations
+/// ⚠️ SECURITY: All writes require ownership verification before Firestore rules enforcement
 class PaymentFirestoreService {
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
-  PaymentFirestoreService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  PaymentFirestoreService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  /// Get current authenticated user ID or throw if not authenticated
+  String _getCurrentUserIdOrThrow() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      throw UnauthorizedException('User not authenticated');
+    }
+    return uid;
+  }
+
+  /// Verify payment belongs to current user by checking ownerId
+  /// SECURITY: Defense-in-depth check before Firestore rules
+  Future<String> _verifyPaymentOwnershipOrThrow(String paymentId) async {
+    try {
+      final currentUserId = _getCurrentUserIdOrThrow();
+      final paymentDoc = await _firestore
+          .collection('payments')
+          .doc(paymentId)
+          .get();
+
+      if (!paymentDoc.exists) {
+        throw StateError('Payment not found');
+      }
+
+      final ownerId = paymentDoc.data()?['ownerId'] as String?;
+      if (ownerId != currentUserId) {
+        throw UnauthorizedException(
+          'User does not own this payment. Cannot modify.',
+        );
+      }
+
+      return currentUserId;
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw UnauthorizedException('Permission denied by Firestore rules');
+      }
+      rethrow;
+    }
+  }
 
   /// Record a payment
   Future<void> recordPayment(PaymentDTO paymentDTO) async {
@@ -216,13 +260,30 @@ class PaymentFirestoreService {
     }
   }
 
-  /// Update payment status
+  /// Update payment status with ownership verification and state machine validation
+  /// SECURITY: Verifies ownership and validates status transitions
   Future<void> updatePaymentStatus(String paymentId, String status) async {
     try {
+      // SECURITY: Verify ownership BEFORE write
+      await _verifyPaymentOwnershipOrThrow(paymentId);
+
+      // Validate status is one of allowed values
+      final normalizedStatus = status.trim().toLowerCase();
+      if (!['paid', 'partial', 'unpaid'].contains(normalizedStatus)) {
+        throw ArgumentError(
+          'Invalid status "$status". Allowed: paid, partial, unpaid',
+        );
+      }
+
+      // Update with ownership already verified above
       await _firestore.collection('payments').doc(paymentId).update({
-        'status': status,
+        'status': normalizedStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
-    } catch (e) {
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw UnauthorizedException('Firestore permission denied');
+      }
       rethrow;
     }
   }

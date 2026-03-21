@@ -575,6 +575,67 @@ class ManagePropertiesScreen extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final buttonWidth = (constraints.maxWidth)
+                                          .clamp(104.0, 142.0)
+                                          .toDouble();
+
+                                      return SizedBox(
+                                        width: buttonWidth,
+                                        child: FilledButton.icon(
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor:
+                                                OwnerDashboardColors.managePropertiesActionColor(
+                                                  context,
+                                                ),
+                                            foregroundColor: AppColors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 9,
+                                            ),
+                                            minimumSize: const Size(0, 34),
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            final route = Uri(
+                                              path: '/owner/payments',
+                                              queryParameters: {
+                                                'tenantId': tenant.id,
+                                                'propertyId': property.id,
+                                                'tenantName': tenant.fullName,
+                                              },
+                                            ).toString();
+                                            context.go(route);
+                                          },
+                                          icon: const Icon(
+                                            Icons.receipt_long,
+                                            size: 15,
+                                          ),
+                                          label: Text(
+                                            'Payments',
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.white,
+                                                ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                if ((tenant.email ?? '').isNotEmpty)
+                                  const SizedBox(height: 6),
                                 if ((tenant.email ?? '').isNotEmpty)
                                   Text(
                                     tenant.email!,
@@ -585,136 +646,6 @@ class ManagePropertiesScreen extends ConsumerWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final buttonWidth =
-                                          ((constraints.maxWidth - 8) / 2)
-                                              .clamp(104.0, 142.0)
-                                              .toDouble();
-
-                                      return Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          SizedBox(
-                                            width: buttonWidth,
-                                            child: FilledButton.icon(
-                                              style: FilledButton.styleFrom(
-                                                backgroundColor:
-                                                    OwnerDashboardColors.managePropertiesActionColor(
-                                                      context,
-                                                    ),
-                                                foregroundColor:
-                                                    AppColors.white,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 9,
-                                                    ),
-                                                minimumSize: const Size(0, 34),
-                                                tapTargetSize:
-                                                    MaterialTapTargetSize
-                                                        .shrinkWrap,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        999,
-                                                      ),
-                                                ),
-                                              ),
-                                              onPressed: () {
-                                                final route = Uri(
-                                                  path: '/owner/payments',
-                                                  queryParameters: {
-                                                    'tenantId': tenant.id,
-                                                    'propertyId': property.id,
-                                                    'tenantName':
-                                                        tenant.fullName,
-                                                  },
-                                                ).toString();
-                                                context.go(route);
-                                              },
-                                              icon: const Icon(
-                                                Icons.receipt_long,
-                                                size: 15,
-                                              ),
-                                              label: Text(
-                                                'Payments',
-                                                style: theme
-                                                    .textTheme
-                                                    .labelSmall
-                                                    ?.copyWith(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: AppColors.white,
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          SizedBox(
-                                            width: buttonWidth,
-                                            child: FilledButton.icon(
-                                              style: FilledButton.styleFrom(
-                                                backgroundColor:
-                                                    OwnerDashboardColors.managePropertiesActionColor(
-                                                      context,
-                                                    ),
-                                                foregroundColor:
-                                                    AppColors.white,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 9,
-                                                    ),
-                                                minimumSize: const Size(0, 34),
-                                                tapTargetSize:
-                                                    MaterialTapTargetSize
-                                                        .shrinkWrap,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        999,
-                                                      ),
-                                                ),
-                                              ),
-                                              onPressed: () {
-                                                final route = Uri(
-                                                  path: '/owner/transactions',
-                                                  queryParameters: {
-                                                    'tenantId': tenant.id,
-                                                  },
-                                                ).toString();
-                                                context.go(route);
-                                              },
-                                              icon: const Icon(
-                                                Icons.history,
-                                                size: 15,
-                                              ),
-                                              label: Text(
-                                                'Transactions',
-                                                style: theme
-                                                    .textTheme
-                                                    .labelSmall
-                                                    ?.copyWith(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: AppColors.white,
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
                               ],
                             );
                           },
@@ -790,34 +721,35 @@ class ManagePropertiesScreen extends ConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref, dynamic property) {
+    final screenContext = context;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Delete Property?"),
         content: Text(
           "Are you sure you want to delete ${property.name}? This cannot be undone.",
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Cancel"),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               try {
                 await ref.read(deletePropertyUseCaseProvider).call(property.id);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                if (screenContext.mounted) {
+                  ScaffoldMessenger.of(screenContext).showSnackBar(
                     const SnackBar(
                       content: Text("Property deleted successfully"),
                     ),
                   );
                 }
               } catch (e) {
-                if (context.mounted) {
+                if (screenContext.mounted) {
                   ScaffoldMessenger.of(
-                    context,
+                    screenContext,
                   ).showSnackBar(SnackBar(content: Text("Error: $e")));
                 }
               }

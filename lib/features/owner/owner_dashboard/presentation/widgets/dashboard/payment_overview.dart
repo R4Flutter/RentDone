@@ -111,11 +111,22 @@ class _PaymentMethodCard extends StatelessWidget {
       useGradient: false,
       backgroundColor: OwnerDashboardColors.cardBackground(context),
       padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            height: 44,
-            width: 44,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 260;
+          final amountStyle = compact
+              ? textTheme.titleLarge?.copyWith(
+                  color: OwnerDashboardColors.textPrimary(context),
+                  fontWeight: FontWeight.w800,
+                )
+              : textTheme.displaySmall?.copyWith(
+                  color: OwnerDashboardColors.textPrimary(context),
+                  fontWeight: FontWeight.w800,
+                );
+
+          final iconShell = Container(
+            height: compact ? 40 : 44,
+            width: compact ? 40 : 44,
             decoration: BoxDecoration(
               color: OwnerDashboardColors.brandPrimary(
                 context,
@@ -130,52 +141,62 @@ class _PaymentMethodCard extends StatelessWidget {
             child: Center(
               child: Image.asset(
                 assetPath,
-                height: 22,
-                width: 22,
+                height: compact ? 20 : 22,
+                width: compact ? 20 : 22,
                 color: OwnerDashboardColors.brandPrimary(context),
                 colorBlendMode: BlendMode.srcIn,
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+          );
+
+          final content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: textTheme.titleMedium?.copyWith(
+                  color: OwnerDashboardColors.textPrimary(context),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text('\u20B9${_formatInr(amount)}', style: amountStyle),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: compact ? 2 : 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.bodySmall?.copyWith(
+                  color: OwnerDashboardColors.textSecondary(context),
+                ),
+              ),
+            ],
+          );
+
+          if (compact) {
+            return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  label,
-                  style: textTheme.titleLarge?.copyWith(
-                    color: OwnerDashboardColors.textPrimary(context),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                FittedBox(
-                  alignment: Alignment.centerLeft,
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    '\u20B9${_formatInr(amount)}',
-                    style: textTheme.displaySmall?.copyWith(
-                      color: OwnerDashboardColors.textPrimary(context),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: OwnerDashboardColors.textSecondary(context),
-                  ),
-                ),
+                iconShell,
+                const SizedBox(width: 10),
+                Expanded(child: content),
               ],
-            ),
-          ),
-        ],
+            );
+          }
+
+          return Row(
+            children: [
+              iconShell,
+              const SizedBox(width: 12),
+              Expanded(child: content),
+            ],
+          );
+        },
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0);
   }

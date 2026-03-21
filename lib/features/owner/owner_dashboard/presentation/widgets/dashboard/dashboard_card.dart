@@ -64,20 +64,17 @@ class DashboardCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           decoration: BoxDecoration(
-            color: shellColor.withValues(alpha: isDark ? 0.76 : 0.86),
+            color: shellColor.withValues(alpha: isDark ? 0.72 : 0.82),
             gradient: resolvedGradient,
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(
-              color:
-                  Color.lerp(
-                    OwnerDashboardColors.border(context),
-                    liquidTint,
-                    0.4,
-                  ) ??
-                  OwnerDashboardColors.border(context),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.08),
+              width: 1.2,
             ),
             boxShadow: [
               if (inset)
@@ -99,21 +96,21 @@ class DashboardCard extends StatelessWidget {
               if (!inset)
                 BoxShadow(
                   color: shadowDark,
-                  blurRadius: 20,
-                  offset: const Offset(10, 10),
+                  blurRadius: 24,
+                  offset: const Offset(8, 12),
                 ),
               if (!inset)
                 BoxShadow(
                   color: shadowLight,
-                  blurRadius: 20,
-                  offset: const Offset(-10, -10),
+                  blurRadius: 24,
+                  offset: const Offset(-8, -12),
                 ),
               BoxShadow(
                 color: OwnerDashboardColors.brandPrimary(
                   context,
-                ).withValues(alpha: isDark ? 0.12 : 0.05),
-                blurRadius: 28,
-                offset: const Offset(0, 10),
+                ).withValues(alpha: isDark ? 0.15 : 0.08),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
@@ -203,3 +200,4 @@ class DashboardCard extends StatelessWidget {
     );
   }
 }
+

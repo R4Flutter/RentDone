@@ -8,7 +8,6 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/header.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/messages_panel.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/payment_overview.dart';
-import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/recent_activity.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/stat_grid.dart';
 
 class DashboardnewBody extends ConsumerWidget {
@@ -67,9 +66,6 @@ class DashboardnewBody extends ConsumerWidget {
                 );
               },
             ),
-
-            const SizedBox(height: 32),
-            const RecentActivity(),
           ],
         );
       },

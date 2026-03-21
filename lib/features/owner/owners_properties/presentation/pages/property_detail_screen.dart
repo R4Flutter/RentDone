@@ -185,7 +185,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                 crossAxisCount: isDesktop ? 3 : 1,
                 mainAxisSpacing: 14,
                 crossAxisSpacing: 14,
-                childAspectRatio: isDesktop ? 1.1 : 2.4,
+                childAspectRatio: isDesktop ? 1.1 : 1.55,
               ),
               itemCount: property.rooms.length,
               itemBuilder: (context, index) {
@@ -459,6 +459,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                                         context,
                                       ),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               if ((tenant.email ?? '').isNotEmpty) ...[
                                 const SizedBox(height: 2),
@@ -517,12 +519,10 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               ),
                             );
                             if (context.mounted && allocated == true) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Tenant allocated successfully',
-                                  ),
-                                ),
+                              _showLiquidSnackBar(
+                                context,
+                                message: 'Tenant allocated successfully',
+                                status: _LiquidSnackBarStatus.success,
                               );
                             }
                             return;
@@ -532,11 +532,10 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               .call(room.tenantId!);
                           if (tenant == null) {
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Tenant not found'),
-                                  backgroundColor: AppColors.orange,
-                                ),
+                              _showLiquidSnackBar(
+                                context,
+                                message: 'Tenant not found for this room',
+                                status: _LiquidSnackBarStatus.warning,
                               );
                             }
                             return;
@@ -572,28 +571,9 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                         onPressed: room.isOccupied
                             ? () async {
                                 final tenantId = room.tenantId!;
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (c) => AlertDialog(
-                                    title: const Text('Vacate Room'),
-                                    content: Text(
-                                      'Are you sure you want to vacate Room ${room.roomNumber}?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(c, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      FilledButton(
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: AppColors.red,
-                                        ),
-                                        onPressed: () => Navigator.pop(c, true),
-                                        child: const Text('Vacate'),
-                                      ),
-                                    ],
-                                  ),
+                                final confirmed = await _showVacateRoomDialog(
+                                  context,
+                                  roomNumber: room.roomNumber,
                                 );
                                 if (confirmed == true) {
                                   try {
@@ -607,20 +587,19 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                                           room.id,
                                         );
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(
+                                      _showLiquidSnackBar(
                                         context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Room vacated'),
-                                        ),
+                                        message: 'Room vacated successfully',
+                                        status: _LiquidSnackBarStatus.success,
                                       );
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(
+                                      _showLiquidSnackBar(
                                         context,
-                                      ).showSnackBar(
-                                        SnackBar(content: Text('Error: $e')),
+                                        message:
+                                            'Unable to vacate room. Please try again.',
+                                        status: _LiquidSnackBarStatus.error,
                                       );
                                     }
                                   }
@@ -646,6 +625,60 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showLiquidSnackBar(
+    BuildContext context, {
+    required String message,
+    required _LiquidSnackBarStatus status,
+  }) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 20),
+        duration: Duration(
+          milliseconds: status == _LiquidSnackBarStatus.error ? 3400 : 2600,
+        ),
+        content: _LiquidStatusSnackBar(message: message, status: status),
+      ),
+    );
+  }
+
+  Future<bool?> _showVacateRoomDialog(
+    BuildContext context, {
+    required String roomNumber,
+  }) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    return showGeneralDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: AppColors.black.withValues(alpha: isDark ? 0.48 : 0.24),
+      transitionDuration: const Duration(milliseconds: 360),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return _LiquidVacateDialog(roomNumber: roomNumber);
+      },
+      transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+        final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+        final scale = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeInCubic,
+        );
+
+        return FadeTransition(
+          opacity: fade,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.88, end: 1).animate(scale),
+            child: child,
+          ),
+        );
+      },
     );
   }
 
@@ -698,6 +731,510 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+enum _LiquidSnackBarStatus { success, warning, error }
+
+class _LiquidStatusSnackBar extends StatelessWidget {
+  const _LiquidStatusSnackBar({required this.message, required this.status});
+
+  final String message;
+  final _LiquidSnackBarStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
+    final isError = status == _LiquidSnackBarStatus.error;
+    final isWarning = status == _LiquidSnackBarStatus.warning;
+    final accentA = isError
+        ? const Color(0xFFFF5A78)
+        : isWarning
+        ? const Color(0xFFFFC857)
+        : const Color(0xFF1ED6A0);
+    final accentB = isError
+        ? const Color(0xFFFF2D55)
+        : isWarning
+        ? const Color(0xFFFF9F1A)
+        : const Color(0xFF0AAE84);
+    final icon = isError
+        ? Icons.error_outline_rounded
+        : isWarning
+        ? Icons.warning_amber_rounded
+        : Icons.check_rounded;
+    final title = isError
+        ? 'Action failed'
+        : isWarning
+        ? 'Heads up'
+        : 'Success';
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF102040).withValues(alpha: isDark ? 0.88 : 0.80),
+                const Color(0xFF0A1329).withValues(alpha: isDark ? 0.82 : 0.74),
+              ],
+            ),
+            border: Border.all(
+              color: AppColors.white.withValues(alpha: isDark ? 0.20 : 0.24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: isDark ? 0.30 : 0.12),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [accentA, accentB],
+                  ),
+                  border: Border.all(
+                    color: AppColors.white.withValues(alpha: 0.30),
+                  ),
+                ),
+                child: Icon(icon, size: 18, color: AppColors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      message,
+                      style: TextStyle(
+                        color: textSecondary.withValues(alpha: 0.95),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LiquidVacateDialog extends StatelessWidget {
+  const _LiquidVacateDialog({required this.roomNumber});
+
+  final String roomNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final brandSoft = OwnerDashboardColors.brandPrimarySoft(context);
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
+    final surfaceStart =
+        Color.lerp(OwnerDashboardColors.cardBackground(context), brand, 0.14) ??
+        OwnerDashboardColors.cardBackground(context);
+    final surfaceEnd =
+        Color.lerp(
+          OwnerDashboardColors.elevatedBackground(context),
+          brand,
+          0.20,
+        ) ??
+        OwnerDashboardColors.elevatedBackground(context);
+    final destructiveStart = AppTheme.errorRed;
+    final destructiveEnd =
+        Color.lerp(AppTheme.errorRed, AppColors.black, 0.20) ??
+        AppTheme.errorRed;
+    final shadowColor = OwnerDashboardColors.managePropertiesShadowColor(
+      context,
+    ).withValues(alpha: isDark ? 0.38 : 0.16);
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              color: AppColors.black.withValues(alpha: isDark ? 0.20 : 0.08),
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            surfaceStart.withValues(
+                              alpha: isDark ? 0.94 : 0.88,
+                            ),
+                            surfaceEnd.withValues(alpha: isDark ? 0.90 : 0.82),
+                          ],
+                        ),
+                        border: Border.all(
+                          color: brand.withValues(alpha: isDark ? 0.28 : 0.22),
+                          width: 1.1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: shadowColor,
+                            blurRadius: 34,
+                            offset: const Offset(0, 16),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: -44,
+                            left: -40,
+                            child: _LiquidOrb(
+                              size: 132,
+                              color: brand.withValues(
+                                alpha: isDark ? 0.28 : 0.20,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: -54,
+                            right: -32,
+                            child: _LiquidOrb(
+                              size: 142,
+                              color: brandSoft.withValues(
+                                alpha: isDark ? 0.30 : 0.24,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 68,
+                              decoration: BoxDecoration(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(30),
+                                ),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    AppColors.white.withValues(
+                                      alpha: isDark ? 0.14 : 0.20,
+                                    ),
+                                    AppColors.transparent,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 72,
+                                  height: 72,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        destructiveStart,
+                                        destructiveEnd,
+                                      ],
+                                    ),
+                                    border: Border.all(
+                                      color: AppColors.white.withValues(
+                                        alpha: isDark ? 0.28 : 0.34,
+                                      ),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: destructiveEnd.withValues(
+                                          alpha: isDark ? 0.46 : 0.36,
+                                        ),
+                                        blurRadius: 20,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: AppColors.white,
+                                    size: 34,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  'Vacate Room',
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Are you sure you want to vacate Room $roomNumber?',
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: textSecondary.withValues(
+                                      alpha: 0.98,
+                                    ),
+                                    height: 1.45,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(999),
+                                    color: brand.withValues(
+                                      alpha: isDark ? 0.14 : 0.10,
+                                    ),
+                                    border: Border.all(
+                                      color: brand.withValues(
+                                        alpha: isDark ? 0.34 : 0.24,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'This action cannot be undone',
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _LiquidActionButton(
+                                        label: 'Cancel',
+                                        isPrimary: false,
+                                        onTap: () =>
+                                            Navigator.of(context).pop(false),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _LiquidActionButton(
+                                        label: 'Vacate',
+                                        isPrimary: true,
+                                        onTap: () =>
+                                            Navigator.of(context).pop(true),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LiquidOrb extends StatelessWidget {
+  const _LiquidOrb({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipOval(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                color,
+                color.withValues(alpha: color.a * 0.45),
+                color.withValues(alpha: 0),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LiquidActionButton extends StatefulWidget {
+  const _LiquidActionButton({
+    required this.label,
+    required this.isPrimary,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isPrimary;
+  final VoidCallback onTap;
+
+  @override
+  State<_LiquidActionButton> createState() => _LiquidActionButtonState();
+}
+
+class _LiquidActionButtonState extends State<_LiquidActionButton> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final elevated = OwnerDashboardColors.elevatedBackground(context);
+    final textColor = widget.isPrimary
+        ? AppColors.white
+        : OwnerDashboardColors.textPrimary(context);
+    final destructiveStart = AppTheme.errorRed;
+    final destructiveEnd =
+        Color.lerp(AppTheme.errorRed, AppColors.black, 0.20) ??
+        AppTheme.errorRed;
+    final cancelBg = elevated.withValues(alpha: isDark ? 0.58 : 0.78);
+    final cancelBg2 = elevated.withValues(alpha: isDark ? 0.46 : 0.64);
+    final cancelBorder = brand.withValues(alpha: isDark ? 0.26 : 0.20);
+
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      scale: _pressed ? 0.97 : 1,
+      child: GestureDetector(
+        onTapDown: (_) => _setPressed(true),
+        onTapUp: (_) => _setPressed(false),
+        onTapCancel: () => _setPressed(false),
+        onTap: widget.onTap,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 120),
+          opacity: _pressed ? 0.92 : 1,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  gradient: widget.isPrimary
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [destructiveStart, destructiveEnd],
+                        )
+                      : LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [cancelBg, cancelBg2],
+                        ),
+                  border: Border.all(
+                    color: widget.isPrimary
+                        ? AppColors.white.withValues(alpha: 0.18)
+                        : cancelBorder,
+                    width: 1.0,
+                  ),
+                  boxShadow: widget.isPrimary
+                      ? [
+                          BoxShadow(
+                            color: destructiveEnd.withValues(alpha: 0.34),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: AppColors.black.withValues(alpha: 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

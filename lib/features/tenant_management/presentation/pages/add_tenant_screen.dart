@@ -319,6 +319,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       // Navigate back
       Navigator.of(context).pop(true);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _uploadError = e.toString();
         _isLoading = false;

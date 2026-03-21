@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
+import 'package:rentdone/shared/widgets/back_handler.dart';
 
 class TenantDashboardShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -27,21 +28,25 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
       return 0;
     }
 
-    return Scaffold(
-      backgroundColor: AppTheme.nearBlack,
-      extendBody: true,
-      drawer: const _TenantSideDrawer(),
-      body: SafeArea(
-        bottom: false,
-        child: Container(color: AppTheme.nearBlack, child: widget.child),
+    return BackHandler.root(
+      dialogTitle: 'Exit RentDone?',
+      dialogMessage: 'Are you sure you want to exit?',
+      child: Scaffold(
+        backgroundColor: AppTheme.nearBlack,
+        extendBody: true,
+        drawer: const _TenantSideDrawer(),
+        body: SafeArea(
+          bottom: false,
+          child: Container(color: AppTheme.nearBlack, child: widget.child),
+        ),
+        bottomNavigationBar: isDesktop
+            ? null
+            : _buildBottomNav(
+                context,
+                calculateIndex(context),
+                avatarUrl: user?.photoURL,
+              ),
       ),
-      bottomNavigationBar: isDesktop
-          ? null
-          : _buildBottomNav(
-              context,
-              calculateIndex(context),
-              avatarUrl: user?.photoURL,
-            ),
     );
   }
 

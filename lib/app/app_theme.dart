@@ -153,6 +153,23 @@ class AppTheme {
       ),
     ),
 
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      elevation: 0,
+      insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      backgroundColor: Color.lerp(lightCard, lightPrimaryBlue, 0.08),
+      contentTextStyle: _textTheme(lightTextPrimary).bodyMedium?.copyWith(
+        color: lightTextPrimary,
+        fontWeight: FontWeight.w600,
+      ),
+      actionTextColor: lightPrimaryBlue,
+      disabledActionTextColor: lightTextMuted,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: lightBorder),
+      ),
+    ),
+
     dividerTheme: DividerThemeData(color: lightDivider, thickness: 1),
   );
 
@@ -220,6 +237,23 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(OwnerThemeShape.medium),
         ),
+      ),
+    ),
+
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      elevation: 0,
+      insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      backgroundColor: Color.lerp(darkCard, darkPrimaryBlue, 0.24),
+      contentTextStyle: _textTheme(darkTextPrimary).bodyMedium?.copyWith(
+        color: darkTextPrimary,
+        fontWeight: FontWeight.w600,
+      ),
+      actionTextColor: AppColors.cFF60A5FA,
+      disabledActionTextColor: darkTextMuted,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: darkBorder),
       ),
     ),
 

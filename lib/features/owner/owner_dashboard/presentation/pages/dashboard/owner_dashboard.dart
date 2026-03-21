@@ -7,6 +7,7 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/mobile_drawer.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/providers/dashboard_layout_provider.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/shared/widgets/back_handler.dart';
 import 'dart:ui';
 
 class OwnerDashboardPage extends ConsumerWidget {
@@ -27,93 +28,97 @@ class OwnerDashboardPage extends ConsumerWidget {
       return 0;
     }
 
-    return Scaffold(
-      backgroundColor: OwnerDashboardColors.pageBackground(context),
-      extendBody: true, // IMPORTANT for curved nav
-      drawer: isDesktop ? null : const OwnerMobileDrawer(),
-      onDrawerChanged: (isOpen) {
-        ref.read(dashboardLayoutProvider.notifier).setSidebarOpen(isOpen);
-      },
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: OwnerDashboardColors.ownerPageBackgroundGradient(
-                    context,
+    return BackHandler.root(
+      dialogTitle: 'Exit RentDone?',
+      dialogMessage: 'Are you sure you want to exit?',
+      child: Scaffold(
+        backgroundColor: OwnerDashboardColors.pageBackground(context),
+        extendBody: true, // IMPORTANT for curved nav
+        drawer: isDesktop ? null : const OwnerMobileDrawer(),
+        onDrawerChanged: (isOpen) {
+          ref.read(dashboardLayoutProvider.notifier).setSidebarOpen(isOpen);
+        },
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: OwnerDashboardColors.ownerPageBackgroundGradient(
+                      context,
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              top: -80,
-              left: -50,
-              child: _LiquidBlob(
-                size: 220,
-                color: OwnerDashboardColors.ownerTopBlobColor(context),
+              Positioned(
+                top: -80,
+                left: -50,
+                child: _LiquidBlob(
+                  size: 220,
+                  color: OwnerDashboardColors.ownerTopBlobColor(context),
+                ),
               ),
-            ),
-            Positioned(
-              bottom: -110,
-              right: -30,
-              child: _LiquidBlob(
-                size: 260,
-                color: OwnerDashboardColors.ownerBottomBlobColor(context),
+              Positioned(
+                bottom: -110,
+                right: -30,
+                child: _LiquidBlob(
+                  size: 260,
+                  color: OwnerDashboardColors.ownerBottomBlobColor(context),
+                ),
               ),
-            ),
-            BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(color: AppColors.transparent),
-            ),
-            Row(
-              children: [
-                /// 🧭 SIDEBAR (Desktop Only)
-                if (isDesktop) const OwnerSideDrawer(),
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: Container(color: AppColors.transparent),
+              ),
+              Row(
+                children: [
+                  /// 🧭 SIDEBAR (Desktop Only)
+                  if (isDesktop) const OwnerSideDrawer(),
 
-                /// 🧠 MAIN CONTENT
-                Expanded(
-                  child: Column(
-                    children: [
-                      const OwnerTopNavBar(),
+                  /// 🧠 MAIN CONTENT
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const OwnerTopNavBar(),
 
-                      Expanded(
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            scaffoldBackgroundColor: AppColors.transparent,
-                            canvasColor: AppColors.transparent,
+                        Expanded(
+                          child: Theme(
+                            data: Theme.of(context).copyWith(
+                              scaffoldBackgroundColor: AppColors.transparent,
+                              canvasColor: AppColors.transparent,
+                            ),
+                            child: child,
                           ),
-                          child: child,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
 
-      /// 🔥 MOBILE BOTTOM NAV ONLY
-      bottomNavigationBar: isDesktop
-          ? null
-          : PinterestMorphNavBar(
-              currentIndex: calculateIndex(context),
-              onTap: (index) {
-                switch (index) {
-                  case 0:
-                    context.go('/owner/dashboard');
-                    break;
-                  case 1:
-                    context.go('/owner/tenants/add');
-                    break;
-                  case 2:
-                    context.go('/owner/properties');
-                    break;
-                }
-              },
-            ),
+        /// 🔥 MOBILE BOTTOM NAV ONLY
+        bottomNavigationBar: isDesktop
+            ? null
+            : PinterestMorphNavBar(
+                currentIndex: calculateIndex(context),
+                onTap: (index) {
+                  switch (index) {
+                    case 0:
+                      context.go('/owner/dashboard');
+                      break;
+                    case 1:
+                      context.go('/owner/tenants/add');
+                      break;
+                    case 2:
+                      context.go('/owner/properties');
+                      break;
+                  }
+                },
+              ),
+      ),
     );
   }
 }

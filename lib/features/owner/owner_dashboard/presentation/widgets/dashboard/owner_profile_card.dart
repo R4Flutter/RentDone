@@ -5,20 +5,22 @@ import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
 
 class OwnerProfileCard extends StatelessWidget {
-  const OwnerProfileCard({super.key, required this.profile});
+  const OwnerProfileCard({super.key, required this.profile, this.onClose});
 
   final OwnerProfileState profile;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
-    return LiquidProfileCard(profile: profile);
+    return LiquidProfileCard(profile: profile, onClose: onClose);
   }
 }
 
 class LiquidProfileCard extends StatefulWidget {
-  const LiquidProfileCard({super.key, required this.profile});
+  const LiquidProfileCard({super.key, required this.profile, this.onClose});
 
   final OwnerProfileState profile;
+  final VoidCallback? onClose;
 
   @override
   State<LiquidProfileCard> createState() => _LiquidProfileCardState();
@@ -54,6 +56,11 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
     final textPrimary = OwnerDashboardColors.textPrimary(context);
     final textSecondary = OwnerDashboardColors.textSecondary(context);
     final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final brandHover = OwnerDashboardColors.brandPrimaryHover(context);
+    final cardBase = OwnerDashboardColors.cardBackground(context);
+    final elevatedBase = OwnerDashboardColors.elevatedBackground(context);
+    final baseBorder = OwnerDashboardColors.border(context);
     final width = _cardWidth(MediaQuery.of(context).size.width);
     final profile = widget.profile;
 
@@ -65,14 +72,13 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
               : profile.fullName.trim());
     final diceBearUrl =
         'https://api.dicebear.com/7.x/identicon/png?seed=${Uri.encodeComponent(avatarSeed)}';
+    final profilePhotoUrl = profile.photoUrl.trim();
 
-    final cardBackground = AppColors.white.withValues(
-      alpha: isDark ? 0.08 : 0.06,
-    );
+    final cardBackground = cardBase.withValues(alpha: isDark ? 0.72 : 0.9);
     final borderColors = <Color>[
-      AppColors.cFF8B5CF6.withValues(alpha: 0.70),
-      AppColors.cFF3B82F6.withValues(alpha: 0.70),
-      AppColors.cFF22D3EE.withValues(alpha: 0.70),
+      brand.withValues(alpha: isDark ? 0.62 : 0.5),
+      brandHover.withValues(alpha: isDark ? 0.72 : 0.6),
+      brand.withValues(alpha: isDark ? 0.56 : 0.44),
     ];
 
     return RepaintBoundary(
@@ -99,9 +105,7 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.cFF8B5CF6.withValues(
-                    alpha: isDark ? 0.28 : 0.20,
-                  ),
+                  color: brand.withValues(alpha: isDark ? 0.28 : 0.20),
                   blurRadius: 26,
                   offset: const Offset(0, 14),
                 ),
@@ -120,8 +124,8 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppColors.white.withValues(alpha: isDark ? 0.11 : 0.16),
-                        AppColors.white.withValues(alpha: isDark ? 0.05 : 0.07),
+                        elevatedBase.withValues(alpha: isDark ? 0.2 : 0.32),
+                        cardBase.withValues(alpha: isDark ? 0.1 : 0.18),
                       ],
                     ),
                   ),
@@ -134,8 +138,12 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
                           _GlassPill(
                             label: 'RentDone Elite',
                             textColor: textPrimary,
-                            background: AppColors.white.withValues(alpha: 0.13),
-                            border: AppColors.white.withValues(alpha: 0.26),
+                            background: elevatedBase.withValues(
+                              alpha: isDark ? 0.34 : 0.74,
+                            ),
+                            border: baseBorder.withValues(
+                              alpha: isDark ? 0.66 : 0.92,
+                            ),
                           ),
                           const Spacer(),
                           Container(
@@ -143,21 +151,31 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
                             height: 34,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppColors.white.withValues(alpha: 0.12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.cFF22D3EE.withValues(
-                                    alpha: 0.30,
-                                  ),
-                                  blurRadius: 16,
-                                  spreadRadius: 1,
+                              color: elevatedBase.withValues(
+                                alpha: isDark ? 0.34 : 0.8,
+                              ),
+                              border: Border.all(
+                                color: baseBorder.withValues(
+                                  alpha: isDark ? 0.66 : 0.92,
                                 ),
-                              ],
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.verified_rounded,
-                              color: AppColors.cFF22D3EE,
-                              size: 18,
+                            child: IconButton(
+                              tooltip: 'Close',
+                              padding: EdgeInsets.zero,
+                              splashRadius: 18,
+                              onPressed:
+                                  widget.onClose ??
+                                  () {
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                              icon: Icon(
+                                Icons.close_rounded,
+                                color: textPrimary,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ],
@@ -178,47 +196,50 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [
-                                  AppColors.cFF8B5CF6,
-                                  AppColors.cFF22D3EE,
-                                ],
+                                colors: [brand, brandHover],
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.cFF8B5CF6.withValues(
-                                    alpha: 0.35,
-                                  ),
+                                  color: brand.withValues(alpha: 0.35),
                                   blurRadius: 20,
                                   spreadRadius: 2,
                                 ),
                               ],
                             ),
                             child: ClipOval(
-                              child: Image.network(
-                                diceBearUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return profile.photoUrl.trim().isNotEmpty
-                                      ? Image.network(
-                                          profile.photoUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                                return Image.asset(
-                                                  profile.avatar.assetPath,
-                                                  fit: BoxFit.cover,
-                                                );
-                                              },
-                                        )
-                                      : Image.asset(
-                                          profile.avatar.assetPath,
-                                          fit: BoxFit.cover,
-                                        );
-                                },
-                              ),
+                              child: profilePhotoUrl.isNotEmpty
+                                  ? Image.network(
+                                      profilePhotoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Image.network(
+                                              diceBearUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return Image.asset(
+                                                      profile.avatar.assetPath,
+                                                      fit: BoxFit.cover,
+                                                    );
+                                                  },
+                                            );
+                                          },
+                                    )
+                                  : Image.network(
+                                      diceBearUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Image.asset(
+                                              profile.avatar.assetPath,
+                                              fit: BoxFit.cover,
+                                            );
+                                          },
+                                    ),
                             ),
                           ),
                         ),
@@ -267,28 +288,22 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.successGreen.withValues(
-                                alpha: 0.16,
-                              ),
+                              color: brand.withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: AppTheme.successGreen.withValues(
-                                  alpha: 0.50,
-                                ),
+                                color: brand.withValues(alpha: 0.52),
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.successGreen.withValues(
-                                    alpha: 0.30,
-                                  ),
+                                  color: brand.withValues(alpha: 0.28),
                                   blurRadius: 12,
                                 ),
                               ],
                             ),
-                            child: const Text(
+                            child: Text(
                               'Active',
                               style: TextStyle(
-                                color: AppTheme.successGreen,
+                                color: brand,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12,
                               ),
@@ -309,9 +324,24 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
                         spacing: 10,
                         runSpacing: 10,
                         children: [
-                          _TagChip(label: '#rentdone', textColor: textPrimary),
-                          _TagChip(label: '#owner', textColor: textPrimary),
-                          _TagChip(label: '#dashboard', textColor: textPrimary),
+                          _TagChip(
+                            label: '#rentdone',
+                            textColor: textPrimary,
+                            background: elevatedBase,
+                            border: baseBorder,
+                          ),
+                          _TagChip(
+                            label: '#owner',
+                            textColor: textPrimary,
+                            background: elevatedBase,
+                            border: baseBorder,
+                          ),
+                          _TagChip(
+                            label: '#dashboard',
+                            textColor: textPrimary,
+                            background: elevatedBase,
+                            border: baseBorder,
+                          ),
                         ],
                       ),
                     ],
@@ -420,17 +450,24 @@ class _GlassPill extends StatelessWidget {
 class _TagChip extends StatelessWidget {
   final String label;
   final Color textColor;
+  final Color background;
+  final Color border;
 
-  const _TagChip({required this.label, required this.textColor});
+  const _TagChip({
+    required this.label,
+    required this.textColor,
+    required this.background,
+    required this.border,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.12),
+        color: background.withValues(alpha: 0.28),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.white.withValues(alpha: 0.18)),
+        border: Border.all(color: border.withValues(alpha: 0.6)),
       ),
       child: Text(
         label,

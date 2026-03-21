@@ -8,6 +8,7 @@ import 'package:rentdone/features/owner/owner_dashboard/domain/repositories/sess
 import 'package:rentdone/features/owner/owner_dashboard/domain/usecases/get_dashboard_summary.dart';
 import 'package:rentdone/features/owner/owner_dashboard/domain/usecases/logout_owner.dart';
 import 'package:rentdone/features/owner/owner_dashboard/domain/usecases/refresh_dashboard.dart';
+import 'package:rentdone/features/owner/owner_dashboard/domain/usecases/watch_dashboard_summary.dart';
 import 'package:rentdone/features/owner/owner_dashboard/domain/usecases/watch_recent_messages.dart';
 
 final dashboardFirebaseServiceProvider = Provider<DashboardFirebaseService>((
@@ -27,6 +28,12 @@ final getDashboardSummaryUseCaseProvider = Provider<GetDashboardSummary>((ref) {
 
 final refreshDashboardUseCaseProvider = Provider<RefreshDashboard>((ref) {
   return RefreshDashboard(ref.watch(dashboardRepositoryProvider));
+});
+
+final watchDashboardSummaryUseCaseProvider = Provider<WatchDashboardSummary>((
+  ref,
+) {
+  return WatchDashboardSummary(ref.watch(dashboardRepositoryProvider));
 });
 
 final watchRecentMessagesUseCaseProvider = Provider<WatchRecentMessages>((ref) {

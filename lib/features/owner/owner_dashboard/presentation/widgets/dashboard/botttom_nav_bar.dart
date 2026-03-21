@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/bottom_nav_bar_theme.dart';
+import 'package:rentdone/shared/design/glassmorphism.dart';
 
 // ── Design tokens (spec: RentDoneAnimatedBottomNavbar) ────────────────────────
 const _kBarHeight = 59.0;
@@ -141,24 +142,29 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                     child: ClipPath(
                       clipper: clipper,
                       child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        filter: ImageFilter.blur(
+                          sigmaX: GlassmorphismConfig.strongBlurAmount,
+                          sigmaY: GlassmorphismConfig.strongBlurAmount,
+                        ),
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                navBase.withValues(alpha: isDark ? 0.82 : 0.92),
-                                brand.withValues(alpha: isDark ? 0.12 : 0.06),
+                                navBase.withValues(alpha: isDark ? 0.75 : 0.88),
+                                brand.withValues(alpha: isDark ? 0.15 : 0.08),
                               ],
                             ),
                             border: Border(
                               top: BorderSide(
                                 color: hideTopBorderForProperties
                                     ? AppColors.transparent
-                                    : brand.withValues(
-                                        alpha: isDark ? 0.24 : 0.14,
-                                      ),
+                                    : (isDark
+                                          ? Colors.white.withValues(alpha: 0.25)
+                                          : Colors.black.withValues(
+                                              alpha: 0.1,
+                                            )),
                                 width: 0.8,
                               ),
                             ),
@@ -264,27 +270,43 @@ class _NavIcon extends StatelessWidget {
               curve: Curves.easeOutBack,
               builder: (context, scale, _) => Transform.scale(
                 scale: scale,
-                // Glow + opacity container
+                // Glassmorphic container for icon
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isActive
-                        ? activeColor.withValues(alpha: isDark ? 0.22 : 0.14)
-                        : Colors.transparent,
+                    gradient: isActive
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              activeColor.withValues(alpha: 0.25),
+                              activeColor.withValues(alpha: 0.12),
+                            ],
+                          )
+                        : null,
                     border: isActive
                         ? Border.all(
                             color: activeColor.withValues(
-                              alpha: isDark ? 0.45 : 0.28,
+                              alpha: isDark ? 0.5 : 0.4,
                             ),
-                            width: 1,
+                            width: 1.2,
                           )
+                        : Border.all(color: Colors.transparent, width: 1.2),
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: activeColor.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ]
                         : null,
                   ),
                   child: AnimatedOpacity(
-                    opacity: isActive ? 1.0 : 0.70,
+                    opacity: isActive ? 1.0 : 0.65,
                     duration: const Duration(milliseconds: 300),
                     child: Icon(
                       icon,

@@ -4,7 +4,205 @@ const crypto = require('crypto');
 
 admin.initializeApp();
 const db = admin.firestore();
-const { FieldValue } = admin.firestore;
+const { FieldValue, Timestamp } = admin.firestore;
+
+function parseBool(value, fallback = false) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
+}
+
+function getSecurityConfig() {
+  const cfg = functions.config().security || {};
+  return {
+    enforceAppCheck: parseBool(
+      cfg.enforce_app_check,
+      true,
+    ),
+    allowedOrigin: String(
+      cfg.allowed_origin || process.env.SECURITY_ALLOWED_ORIGIN || '',
+    ).trim(),
+  };
+}
+
+function assertCallableAuth(context) {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Authentication required',
+    );
+  }
+
+  const { enforceAppCheck } = getSecurityConfig();
+  if (enforceAppCheck && !context.app) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'App Check token is required',
+    );
+  }
+}
+
+function setCorsHeaders(req, res) {
+  const { allowedOrigin } = getSecurityConfig();
+  const requestOrigin = String(req.get('Origin') || '').trim();
+
+  if (!allowedOrigin) {
+    return;
+  }
+
+  if (requestOrigin && requestOrigin === allowedOrigin) {
+    res.set('Access-Control-Allow-Origin', requestOrigin);
+    res.set('Vary', 'Origin');
+  }
+}
+
+function safeEqualDigest(expected, received, encoding = 'hex') {
+  if (!expected || !received) return false;
+  try {
+    const a = Buffer.from(String(expected), encoding);
+    const b = Buffer.from(String(received), encoding);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function verifyHttpAppCheckOrThrow(req) {
+  const { enforceAppCheck } = getSecurityConfig();
+  if (!enforceAppCheck) return;
+
+  const appCheckToken = String(req.get('X-Firebase-AppCheck') || '').trim();
+  if (!appCheckToken) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Missing App Check token',
+    );
+  }
+
+  await admin.appCheck().verifyToken(appCheckToken);
+}
+
+async function assertTenantAccessOrThrow(uid) {
+  const userDoc = await db.collection('users').doc(uid).get();
+  if (!userDoc.exists) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'User profile not found',
+    );
+  }
+
+  const role = String(userDoc.data()?.role || '').trim().toLowerCase();
+  if (role !== 'tenant') {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Only tenant users can perform this operation',
+    );
+  }
+}
+
+async function recordWebhookDelivery({ provider, uniqueKey, rawBody }) {
+  const safeProvider = String(provider || '').trim().toLowerCase() || 'unknown';
+  const keyHash = crypto
+    .createHash('sha256')
+    .update(String(uniqueKey || ''))
+    .digest('hex');
+  const payloadHash = crypto
+    .createHash('sha256')
+    .update(rawBody || '')
+    .digest('hex');
+
+  const docId = `${safeProvider}_${keyHash}`;
+  try {
+    const expiresAt = Timestamp.fromDate(new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)));
+    await db.collection('_webhookEvents').doc(docId).create({
+      provider: safeProvider,
+      uniqueKeyHash: keyHash,
+      payloadHash,
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAt,
+    });
+    return true;
+  } catch (error) {
+    if (error?.code === 6 || String(error?.message || '').toLowerCase().includes('already exists')) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function requestIpFromHeaders(req) {
+  const forwarded = String(req.get('x-forwarded-for') || '').trim();
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return String(req.ip || '').trim() || 'unknown';
+}
+
+function minuteBucketKey(date = new Date()) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  const h = String(date.getUTCHours()).padStart(2, '0');
+  const min = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${y}${m}${d}${h}${min}`;
+}
+
+async function recordSecuritySignal({
+  type,
+  channel,
+  uid = null,
+  ip = 'unknown',
+  reason = 'unknown',
+  statusCode = 0,
+  meta = {},
+}) {
+  const safeType = String(type || 'unknown').trim().toLowerCase();
+  const safeChannel = String(channel || 'unknown').trim().toLowerCase();
+  const bucket = minuteBucketKey();
+  const docId = `${safeType}_${bucket}`;
+  const ref = db.collection('_securitySignals').doc(docId);
+
+  const result = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const currentCount = snap.exists ? Number(snap.data()?.count || 0) : 0;
+    const nextCount = currentCount + 1;
+    const expiresAt = Timestamp.fromDate(new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)));
+    tx.set(ref, {
+      type: safeType,
+      channel: safeChannel,
+      bucket,
+      count: nextCount,
+      lastUid: uid || null,
+      lastIp: ip || 'unknown',
+      lastReason: String(reason || 'unknown'),
+      lastStatusCode: Number(statusCode) || 0,
+      lastMeta: meta || {},
+      updatedAt: FieldValue.serverTimestamp(),
+      expiresAt,
+      ...(snap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+    }, { merge: true });
+    return nextCount;
+  });
+
+  if (result === 5 || result === 20 || result === 50) {
+    await db.collection('_securityAlerts').add({
+      type: safeType,
+      channel: safeChannel,
+      bucket,
+      count: result,
+      severity: result >= 50 ? 'high' : result >= 20 ? 'medium' : 'low',
+      uid: uid || null,
+      ip: ip || 'unknown',
+      reason: String(reason || 'unknown'),
+      statusCode: Number(statusCode) || 0,
+      meta: meta || {},
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAt: Timestamp.fromDate(new Date(Date.now() + (14 * 24 * 60 * 60 * 1000))),
+    });
+  }
+}
 
 function getRazorpayConfig() {
   const cfg = functions.config().razorpay || {};
@@ -257,7 +455,7 @@ function verifyWebhookSignature(rawBody, signature, secret) {
     .createHmac('sha256', secret)
     .update(rawBody)
     .digest('hex');
-  return expected === signature;
+  return safeEqualDigest(expected, signature, 'hex');
 }
 
 async function getPaymentIdFromPayload(payload) {
@@ -271,6 +469,23 @@ async function getPaymentIdFromPayload(payload) {
     null
   );
 }
+
+exports.cleanupExpiredWebhookEvents = functions.pubsub
+  .schedule('every 6 hours')
+  .timeZone('Asia/Kolkata')
+  .onRun(async () => {
+    const now = Timestamp.now();
+    await deleteQueryInChunks(
+      db.collection('_webhookEvents').where('expiresAt', '<=', now),
+    );
+    await deleteQueryInChunks(
+      db.collection('_securitySignals').where('expiresAt', '<=', now),
+    );
+    await deleteQueryInChunks(
+      db.collection('_securityAlerts').where('expiresAt', '<=', now),
+    );
+    return null;
+  });
 
 exports.generateMonthlyPayments = functions.pubsub
   .schedule('0 0 1 * *')
@@ -701,12 +916,8 @@ exports.sendTenantPreDueReminders = functions.pubsub
 // ==========================================================
 
 exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'Authentication required',
-    );
-  }
+  assertCallableAuth(context);
+  await assertTenantAccessOrThrow(context.auth.uid);
 
   const leaseId = data.leaseId;
   const month = Number(data.month);
@@ -989,12 +1200,8 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
 });
 
 exports.verifyPayment = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'Authentication required',
-    );
-  }
+  assertCallableAuth(context);
+  await assertTenantAccessOrThrow(context.auth.uid);
 
   const paymentId = data.paymentId;
   const gateway = (data.gateway || '').toLowerCase();
@@ -1014,6 +1221,15 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
   }
 
   const payment = paymentSnap.data();
+  const callerUid = context.auth.uid;
+  const ownsPayment = payment.tenantId === callerUid || payment.ownerId === callerUid;
+  if (!ownsPayment) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Payment does not belong to current user',
+    );
+  }
+
   const transactionId = payment.transactionId || payload.transactionId;
   if (!transactionId) {
     throw new functions.https.HttpsError(
@@ -1053,7 +1269,7 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest('hex');
 
-    if (expected !== razorpaySignature) {
+    if (!safeEqualDigest(expected, razorpaySignature, 'hex')) {
       throw new functions.https.HttpsError(
         'permission-denied',
         'Invalid Razorpay signature',
@@ -1183,6 +1399,316 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
 });
 
 // ==========================================================
+// OWNER RAZORPAY PAYMENT INTENT + VERIFICATION
+// ==========================================================
+
+exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+
+  const ownerId = context.auth.uid;
+  await assertOwnerAccessOrThrow(ownerId);
+
+  const tenantId = String(data?.tenantId || '').trim();
+  const propertyId = String(data?.propertyId || '').trim();
+  const idempotencyKey = String(data?.idempotencyKey || '').trim();
+  const amount = Number(data?.amount || 0);
+  const currency = 'INR';
+
+  if (!tenantId || !propertyId || !idempotencyKey || !Number.isInteger(amount) || amount <= 0) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'tenantId, propertyId, idempotencyKey and positive integer amount are required',
+    );
+  }
+
+  if (amount > 5000000) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Amount exceeds allowed maximum',
+    );
+  }
+
+  const tenantRef = db.collection('tenants').doc(tenantId);
+  const propertyRef = db.collection('properties').doc(propertyId);
+  const transactionRef = db.collection('transactions').doc(idempotencyKey);
+
+  const [tenantDoc, propertyDoc] = await Promise.all([
+    tenantRef.get(),
+    propertyRef.get(),
+  ]);
+
+  if (!tenantDoc.exists) {
+    throw new functions.https.HttpsError('not-found', 'Tenant not found');
+  }
+  if (!propertyDoc.exists) {
+    throw new functions.https.HttpsError('not-found', 'Property not found');
+  }
+
+  const tenantData = tenantDoc.data() || {};
+  const propertyData = propertyDoc.data() || {};
+
+  if (String(propertyData.ownerId || '') !== ownerId) {
+    throw new functions.https.HttpsError('permission-denied', 'Property does not belong to owner');
+  }
+  if (String(tenantData.ownerId || '') !== ownerId) {
+    throw new functions.https.HttpsError('permission-denied', 'Tenant does not belong to owner');
+  }
+  if (String(tenantData.propertyId || '') !== propertyId) {
+    throw new functions.https.HttpsError('failed-precondition', 'Tenant is not assigned to this property');
+  }
+
+  const existingTransaction = await transactionRef.get();
+  if (existingTransaction.exists) {
+    const existingPaymentId = String(existingTransaction.get('paymentId') || '').trim();
+    if (existingPaymentId) {
+      const existingPayment = await db.collection('payments').doc(existingPaymentId).get();
+      if (existingPayment.exists) {
+        return {
+          paymentId: existingPaymentId,
+          gateway: 'razorpay',
+          amountInPaise: Number(existingPayment.get('amountInPaise') || amount * 100),
+          currency: String(existingPayment.get('currency') || currency),
+          idempotencyKey,
+          orderId: existingPayment.get('razorpayOrderId') || null,
+          keyId: existingPayment.get('razorpayKeyId') || null,
+        };
+      }
+    }
+  }
+
+  const paymentRef = db.collection('payments').doc();
+  const paymentId = paymentRef.id;
+  const amountInPaise = amount * 100;
+
+  await db.runTransaction(async (txn) => {
+    const txSnap = await txn.get(transactionRef);
+    if (txSnap.exists) {
+      throw new functions.https.HttpsError('already-exists', 'Payment transaction already initialized');
+    }
+
+    txn.set(paymentRef, {
+      paymentId,
+      tenantId,
+      ownerId,
+      propertyId,
+      amount,
+      baseAmount: amount,
+      paidAmount: 0,
+      remainingAmount: amount,
+      amountInPaise,
+      status: 'pending',
+      method: 'Razorpay',
+      currency,
+      transactionId: idempotencyKey,
+      idempotencyKey,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    txn.set(transactionRef, {
+      transactionId: idempotencyKey,
+      paymentId,
+      tenantId,
+      ownerId,
+      propertyId,
+      amount,
+      currency,
+      gateway: 'razorpay',
+      status: 'initiated',
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  });
+
+  const { keyId, keySecret } = getRazorpayConfig();
+  if (!keyId || !keySecret) {
+    throw new functions.https.HttpsError('failed-precondition', 'Razorpay keys not configured');
+  }
+
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+  const receipt = paymentId;
+  const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      amount: amountInPaise,
+      currency,
+      receipt,
+      notes: {
+        paymentId,
+        tenantId,
+        propertyId,
+        ownerId,
+      },
+    }),
+  });
+
+  if (!orderRes.ok) {
+    const text = await orderRes.text();
+    throw new functions.https.HttpsError('internal', `Razorpay order failed: ${text}`);
+  }
+
+  const order = await orderRes.json();
+  await paymentRef.set({
+    razorpayOrderId: order.id,
+    razorpayKeyId: keyId,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  return {
+    paymentId,
+    gateway: 'razorpay',
+    amountInPaise: order.amount,
+    currency: order.currency,
+    idempotencyKey,
+    orderId: order.id,
+    keyId,
+  };
+});
+
+exports.verifyOwnerRazorpayPayment = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+
+  const ownerId = context.auth.uid;
+  await assertOwnerAccessOrThrow(ownerId);
+
+  const paymentId = String(data?.paymentId || '').trim();
+  const payload = data?.payload || {};
+  const razorpayOrderId = String(payload.orderId || '').trim();
+  const razorpayPaymentId = String(payload.paymentId || '').trim();
+  const razorpaySignature = String(payload.signature || '').trim();
+
+  if (!paymentId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'paymentId and Razorpay payload (orderId, paymentId, signature) are required',
+    );
+  }
+
+  const paymentRef = db.collection('payments').doc(paymentId);
+  const paymentSnap = await paymentRef.get();
+  if (!paymentSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Payment not found');
+  }
+
+  const payment = paymentSnap.data() || {};
+  if (String(payment.ownerId || '') !== ownerId) {
+    throw new functions.https.HttpsError('permission-denied', 'Payment does not belong to owner');
+  }
+
+  if (String(payment.status || '').toLowerCase() === 'paid') {
+    return { ok: true, status: 'already_verified' };
+  }
+
+  if (String(payment.razorpayOrderId || '') !== razorpayOrderId) {
+    throw new functions.https.HttpsError('failed-precondition', 'Order mismatch for payment');
+  }
+
+  const { keyId, keySecret } = getRazorpayConfig();
+  if (!keyId || !keySecret) {
+    throw new functions.https.HttpsError('failed-precondition', 'Razorpay secret not configured');
+  }
+
+  const expected = crypto
+    .createHmac('sha256', keySecret)
+    .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+    .digest('hex');
+
+  if (!safeEqualDigest(expected, razorpaySignature, 'hex')) {
+    throw new functions.https.HttpsError('permission-denied', 'Invalid Razorpay signature');
+  }
+
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+  const paymentFetchRes = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(razorpayPaymentId)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!paymentFetchRes.ok) {
+    const text = await paymentFetchRes.text();
+    throw new functions.https.HttpsError('internal', `Razorpay payment fetch failed: ${text}`);
+  }
+
+  const remotePayment = await paymentFetchRes.json();
+  const expectedAmountInPaise = Number(payment.amountInPaise || (Number(payment.amount || 0) * 100));
+  const remoteAmount = Number(remotePayment.amount || 0);
+  const remoteCurrency = String(remotePayment.currency || '').toUpperCase();
+  const remoteOrderId = String(remotePayment.order_id || '').trim();
+  const remoteStatus = String(remotePayment.status || '').trim().toLowerCase();
+
+  if (remoteOrderId !== razorpayOrderId) {
+    throw new functions.https.HttpsError('failed-precondition', 'Razorpay order validation failed');
+  }
+  if (remoteAmount !== expectedAmountInPaise) {
+    throw new functions.https.HttpsError('failed-precondition', 'Razorpay amount validation failed');
+  }
+  if (remoteCurrency !== String(payment.currency || 'INR').toUpperCase()) {
+    throw new functions.https.HttpsError('failed-precondition', 'Razorpay currency validation failed');
+  }
+  if (!['captured', 'authorized'].includes(remoteStatus)) {
+    throw new functions.https.HttpsError('failed-precondition', `Razorpay payment not completed. Status: ${remoteStatus}`);
+  }
+
+  const transactionId = String(payment.transactionId || '').trim();
+  const transactionRef = transactionId
+    ? db.collection('transactions').doc(transactionId)
+    : db.collection('transactions').doc(`rzp_${paymentId}`);
+
+  await db.runTransaction(async (txn) => {
+    const latestPayment = await txn.get(paymentRef);
+    if (latestPayment.exists && String(latestPayment.get('status') || '').toLowerCase() === 'paid') {
+      return;
+    }
+
+    txn.set(paymentRef, {
+      status: 'paid',
+      method: 'Razorpay',
+      paidAmount: Number(payment.amount || 0),
+      remainingAmount: 0,
+      transactionId: transactionId || `rzp_${paymentId}`,
+      razorpayPaymentId,
+      razorpayOrderId,
+      signature: razorpaySignature,
+      paidAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    txn.set(transactionRef, {
+      transactionId: transactionId || `rzp_${paymentId}`,
+      paymentId,
+      ownerId,
+      tenantId: payment.tenantId || '',
+      propertyId: payment.propertyId || '',
+      amount: Number(payment.amount || 0),
+      currency: String(payment.currency || 'INR'),
+      gateway: 'razorpay',
+      status: 'success',
+      gatewayResponse: {
+        razorpayPaymentId,
+        razorpayOrderId,
+        status: remoteStatus,
+      },
+      verificationSignature: razorpaySignature,
+      completedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  });
+
+  return {
+    ok: true,
+    paymentId,
+    transactionId: transactionId || `rzp_${paymentId}`,
+  };
+});
+
+// ==========================================================
 // OWNER SUBSCRIPTION (CASHFREE)
 // ==========================================================
 
@@ -1210,9 +1736,7 @@ function toEpochMillisOrNull(value) {
 }
 
 exports.ensureOwnerSubscriptionProfile = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-  }
+  assertCallableAuth(context);
 
   const ownerId = context.auth.uid;
   const requestedOwnerId = String(data?.ownerId || ownerId).trim();
@@ -1245,9 +1769,7 @@ exports.ensureOwnerSubscriptionProfile = functions.https.onCall(async (data, con
 });
 
 exports.getOwnerSubscriptionSnapshot = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-  }
+  assertCallableAuth(context);
 
   const ownerId = context.auth.uid;
   const requestedOwnerId = String(data?.ownerId || ownerId).trim();
@@ -1297,9 +1819,7 @@ exports.getOwnerSubscriptionSnapshot = functions.https.onCall(async (data, conte
 });
 
 exports.activateOwnerFreeSubscription = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-  }
+  assertCallableAuth(context);
 
   const ownerId = context.auth.uid;
   const requestedOwnerId = String(data?.ownerId || ownerId).trim();
@@ -1324,9 +1844,7 @@ exports.activateOwnerFreeSubscription = functions.https.onCall(async (data, cont
 
 exports.createOwnerSubscriptionPaymentIntent = functions.https.onCall(async (data, context) => {
   // Production-grade Cashfree payment intent creation
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-  }
+  assertCallableAuth(context);
 
   const ownerId = context.auth.uid;
   await assertOwnerAccessOrThrow(ownerId);
@@ -1456,9 +1974,7 @@ exports.createOwnerSubscriptionPaymentIntent = functions.https.onCall(async (dat
 
 exports.verifyOwnerSubscriptionPayment = functions.https.onCall(async (data, context) => {
   // Production-grade Cashfree payment verification
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-  }
+  assertCallableAuth(context);
 
   const ownerId = context.auth.uid;
   await assertOwnerAccessOrThrow(ownerId);
@@ -1612,9 +2128,7 @@ function trustStatusLabel(score) {
 }
 
 exports.lookupTenantTrustScore = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-  }
+  assertCallableAuth(context);
 
   const ownerId = context.auth.uid;
   await assertOwnerAccessOrThrow(ownerId);
@@ -1734,12 +2248,8 @@ exports.lookupTenantTrustScore = functions.https.onCall(async (data, context) =>
 // ==========================================================
 
 exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'Authentication required',
-    );
-  }
+  assertCallableAuth(context);
+  await assertTenantAccessOrThrow(context.auth.uid);
 
   const { keyId, keySecret } = getRazorpayConfig();
   if (!keyId || !keySecret) {
@@ -1758,6 +2268,37 @@ exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError(
       'invalid-argument',
       'paymentId and amount are required',
+    );
+  }
+
+  const paymentRef = db.collection('payments').doc(paymentId);
+  const paymentSnap = await paymentRef.get();
+  if (!paymentSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Payment not found');
+  }
+
+  const payment = paymentSnap.data() || {};
+  const callerUid = context.auth.uid;
+  const ownsPayment = payment.tenantId === callerUid || payment.ownerId === callerUid;
+  if (!ownsPayment) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Payment does not belong to current user',
+    );
+  }
+
+  const expectedAmount = Number(payment.totalAmount || payment.amount || 0);
+  if (!Number.isFinite(expectedAmount) || expectedAmount <= 0) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Payment amount is invalid on server',
+    );
+  }
+
+  if (amount !== expectedAmount * 100) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Amount mismatch with server payment record',
     );
   }
 
@@ -1788,7 +2329,7 @@ exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
 
   const order = await orderRes.json();
 
-  await db.collection('payments').doc(paymentId).set(
+  await paymentRef.set(
     {
       gateway: 'razorpay',
       razorpayOrderId: order.id,
@@ -1808,12 +2349,8 @@ exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
 
 exports.confirmRazorpayPayment = functions.https.onCall(
   async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        'unauthenticated',
-        'Authentication required',
-      );
-    }
+    assertCallableAuth(context);
+    await assertTenantAccessOrThrow(context.auth.uid);
 
     const { keySecret } = getRazorpayConfig();
     if (!keySecret) {
@@ -1840,14 +2377,38 @@ exports.confirmRazorpayPayment = functions.https.onCall(
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest('hex');
 
-    if (expected !== razorpaySignature) {
+    if (!safeEqualDigest(expected, razorpaySignature, 'hex')) {
       throw new functions.https.HttpsError(
         'permission-denied',
         'Invalid Razorpay signature',
       );
     }
 
-    await db.collection('payments').doc(paymentId).set(
+    const paymentRef = db.collection('payments').doc(paymentId);
+    const paymentSnap = await paymentRef.get();
+    if (!paymentSnap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Payment not found');
+    }
+
+    const payment = paymentSnap.data() || {};
+    const callerUid = context.auth.uid;
+    const ownsPayment = payment.tenantId === callerUid || payment.ownerId === callerUid;
+    if (!ownsPayment) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Payment does not belong to current user',
+      );
+    }
+
+    const storedOrderId = String(payment.razorpayOrderId || '').trim();
+    if (!storedOrderId || storedOrderId !== razorpayOrderId) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Order id does not match server payment record',
+      );
+    }
+
+    await paymentRef.set(
       {
         status: 'paid',
         method: 'online',
@@ -1864,12 +2425,7 @@ exports.confirmRazorpayPayment = functions.https.onCall(
 );
 
 exports.deleteOwnerPropertyCascade = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'Authentication required',
-    );
-  }
+  assertCallableAuth(context);
 
   const ownerId = context.auth.uid;
   const propertyId = String(data?.propertyId || '').trim();
@@ -1939,9 +2495,7 @@ exports.deleteOwnerPropertyCascade = functions.https.onCall(async (data, context
 });
 
 exports.linkTenantAccount = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-  }
+  assertCallableAuth(context);
 
   const uid = context.auth.uid;
   const email = String(context.auth.token.email || '').trim();
@@ -2080,34 +2634,52 @@ exports.linkTenantAccount = functions.https.onCall(async (data, context) => {
 
 exports.createTenantImageUploadSignature = functions.https.onRequest(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    setCorsHeaders(req, res);
+    res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Firebase-AppCheck');
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.status(204).send('');
     return;
   }
 
-  res.set('Access-Control-Allow-Origin', '*');
+  setCorsHeaders(req, res);
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
   try {
+    await verifyHttpAppCheckOrThrow(req);
+
     const authHeader = req.get('Authorization') || '';
     if (!authHeader.startsWith('Bearer ')) {
+      await recordSecuritySignal({
+        type: 'unauthorized_http_access',
+        channel: 'tenant_image_signature',
+        ip: requestIpFromHeaders(req),
+        reason: 'missing_bearer',
+        statusCode: 401,
+      });
       res.status(401).json({ error: 'Missing Authorization bearer token' });
       return;
     }
 
     const idToken = authHeader.replace('Bearer ', '').trim();
     if (!idToken) {
+      await recordSecuritySignal({
+        type: 'unauthorized_http_access',
+        channel: 'tenant_image_signature',
+        ip: requestIpFromHeaders(req),
+        reason: 'empty_bearer',
+        statusCode: 401,
+      });
       res.status(401).json({ error: 'Invalid bearer token' });
       return;
     }
 
     const decoded = await admin.auth().verifyIdToken(idToken);
     const uid = decoded.uid;
+
+    await assertTenantAccessOrThrow(uid);
 
     const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
     if (!cloudName || !apiKey || !apiSecret) {
@@ -2133,12 +2705,24 @@ exports.createTenantImageUploadSignature = functions.https.onRequest(async (req,
       signature,
     });
   } catch (error) {
+    await recordSecuritySignal({
+      type: 'unauthorized_http_access',
+      channel: 'tenant_image_signature',
+      ip: requestIpFromHeaders(req),
+      reason: String(error?.message || 'unknown_error'),
+      statusCode: 401,
+    });
     functions.logger.error('Failed to create Cloudinary upload signature', { error: String(error) });
     res.status(401).json({ error: 'Unauthorized' });
   }
 });
 
 exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).send('Method not allowed');
+    return;
+  }
+
   const { webhookSecret } = getRazorpayConfig();
   if (!webhookSecret) {
     res.status(500).send('Webhook secret not configured');
@@ -2147,7 +2731,27 @@ exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {
 
   const signature = req.get('X-Razorpay-Signature');
   if (!signature || !verifyWebhookSignature(req.rawBody, signature, webhookSecret)) {
+    await recordSecuritySignal({
+      type: 'invalid_webhook_signature',
+      channel: 'razorpay',
+      ip: requestIpFromHeaders(req),
+      reason: 'invalid_or_missing_signature',
+      statusCode: 401,
+    });
     res.status(401).send('Invalid signature');
+    return;
+  }
+
+  const rawBody = req.rawBody?.toString('utf8') || JSON.stringify(req.body || {});
+  const eventIdHeader = String(req.get('X-Razorpay-Event-Id') || '').trim();
+  const replayKey = eventIdHeader || `${signature}:${rawBody}`;
+  const isFresh = await recordWebhookDelivery({
+    provider: 'razorpay',
+    uniqueKey: replayKey,
+    rawBody,
+  });
+  if (!isFresh) {
+    res.json({ received: true, duplicate: true });
     return;
   }
 
@@ -2212,6 +2816,11 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 // ==========================================================
 
 exports.cashfreeWebhook = functions.https.onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).send('Method not allowed');
+    return;
+  }
+
   const { webhookSecret } = getCashfreeConfig();
   if (!webhookSecret) {
     res.status(500).send('Cashfree webhook secret not configured');
@@ -2221,20 +2830,71 @@ exports.cashfreeWebhook = functions.https.onRequest(async (req, res) => {
   const signature = req.get('x-webhook-signature');
   const timestamp = req.get('x-webhook-timestamp');
   if (!signature || !timestamp) {
+    await recordSecuritySignal({
+      type: 'invalid_webhook_signature',
+      channel: 'cashfree',
+      ip: requestIpFromHeaders(req),
+      reason: 'missing_signature_headers',
+      statusCode: 401,
+    });
     res.status(401).send('Missing signature headers');
+    return;
+  }
+
+  const timestampMs = Number(timestamp) * 1000;
+  if (!Number.isFinite(timestampMs)) {
+    await recordSecuritySignal({
+      type: 'invalid_webhook_signature',
+      channel: 'cashfree',
+      ip: requestIpFromHeaders(req),
+      reason: 'invalid_signature_timestamp',
+      statusCode: 401,
+    });
+    res.status(401).send('Invalid signature timestamp');
+    return;
+  }
+
+  const maxAgeMs = 5 * 60 * 1000;
+  if (Math.abs(Date.now() - timestampMs) > maxAgeMs) {
+    await recordSecuritySignal({
+      type: 'invalid_webhook_signature',
+      channel: 'cashfree',
+      ip: requestIpFromHeaders(req),
+      reason: 'expired_signature_timestamp',
+      statusCode: 401,
+    });
+    res.status(401).send('Expired webhook signature timestamp');
     return;
   }
 
   // Cashfree HMAC-SHA256: base64(HMAC(timestamp + rawBody, secret))
   const rawBody = req.rawBody?.toString('utf8') || JSON.stringify(req.body);
-  const crypto = require('crypto');
   const expectedSig = crypto
     .createHmac('sha256', webhookSecret)
     .update(timestamp + rawBody)
     .digest('base64');
 
-  if (expectedSig !== signature) {
+  if (!safeEqualDigest(expectedSig, signature, 'base64')) {
+    await recordSecuritySignal({
+      type: 'invalid_webhook_signature',
+      channel: 'cashfree',
+      ip: requestIpFromHeaders(req),
+      reason: 'invalid_signature',
+      statusCode: 401,
+    });
     res.status(401).send('Invalid signature');
+    return;
+  }
+
+  const eventIdHeader = String(req.get('x-webhook-id') || '').trim();
+  const replayKey = eventIdHeader || `${timestamp}:${signature}:${rawBody}`;
+  const isFresh = await recordWebhookDelivery({
+    provider: 'cashfree',
+    uniqueKey: replayKey,
+    rawBody,
+  });
+  if (!isFresh) {
+    res.json({ received: true, duplicate: true });
     return;
   }
 

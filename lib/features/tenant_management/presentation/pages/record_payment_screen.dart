@@ -279,6 +279,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
       // Navigate back
       Navigator.of(context).pop(true);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _submitError = e.toString();
         _isLoading = false;

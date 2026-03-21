@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -70,6 +69,12 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(addTenantNotifierProvider.notifier).reset();
+      ref.read(documentUploadProvider.notifier).reset();
+    });
+
     // Pre-populate if property and room are passed
     selectedPropertyId =
         (widget.propertyId == null || widget.propertyId!.isEmpty)
@@ -770,16 +775,6 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   }
 
   void _save() async {
-    final limitError = await _validateOwnerTenantLimit();
-    if (!mounted) return;
-
-    if (limitError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(limitError), backgroundColor: AppColors.red),
-      );
-      return;
-    }
-
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -886,6 +881,10 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
 
       if (!mounted) return;
 
+      // Clear draft/session state so next tenant starts fresh.
+      ref.read(addTenantNotifierProvider.notifier).reset();
+      ref.read(documentUploadProvider.notifier).reset();
+
       // Close loading dialog
       Navigator.of(context, rootNavigator: true).pop();
 
@@ -910,34 +909,6 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
         ),
       );
     }
-  }
-
-  Future<String?> _validateOwnerTenantLimit() async {
-    final ownerId = FirebaseAuth.instance.currentUser?.uid;
-    if (ownerId == null || ownerId.isEmpty) {
-      return 'Owner session not found. Please sign in again.';
-    }
-
-    final ownerDoc = await FirebaseFirestore.instance
-        .collection('owners')
-        .doc(ownerId)
-        .get();
-
-    final data = ownerDoc.data() ?? <String, dynamic>{};
-    final tenantLimit = (data['tenantLimit'] as num?)?.toInt() ?? 2;
-    final currentCount = (data['currentTenantCount'] as num?)?.toInt() ?? 0;
-    final paymentStatus = (data['paymentStatus'] as String? ?? 'active')
-        .toLowerCase();
-
-    if (paymentStatus == 'pending') {
-      return 'Payment is pending. Complete subscription payment to add tenants.';
-    }
-
-    if (currentCount >= tenantLimit) {
-      return 'You have reached your tenant limit. Upgrade your plan to add more tenants.';
-    }
-
-    return null;
   }
 
   Future<void> _pickDocument() async {

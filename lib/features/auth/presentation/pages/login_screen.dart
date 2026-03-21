@@ -12,9 +12,14 @@ import 'package:rentdone/features/auth/presentation/providers/auth_state.dart';
 import 'package:rentdone/features/auth/presentation/widgets/forgot_password_dialog.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key, required this.selectedRole});
+  const LoginPage({
+    super.key,
+    required this.selectedRole,
+    required this.phoneNumber,
+  });
 
   final UserRole selectedRole;
+  final String phoneNumber;
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -24,7 +29,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
-  late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
   late final AnimationController _bgController;
@@ -34,7 +38,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   void initState() {
     super.initState();
-    _phoneController = TextEditingController();
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
 
@@ -54,7 +57,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   void dispose() {
     _bgController.dispose();
-    _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -283,21 +285,40 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                _buildInput(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(15),
-                  ],
-                  onChanged: (_) => authNotifier.clearError(),
-                  validator: _validatePhone,
-                  label: 'Phone Number',
-                  icon: Icons.phone_rounded,
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: AppTheme.infoBlue.withValues(alpha: 0.12),
+                    border: Border.all(
+                      color: AppTheme.infoBlue.withValues(alpha: 0.26),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.verified_rounded,
+                        size: 16,
+                        color: AppTheme.infoBlue,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Verified number: +91 ${widget.phoneNumber}',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: AppTheme.infoBlue,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 _buildInput(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -307,7 +328,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   label: 'Email Address',
                   icon: Icons.alternate_email_rounded,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 _buildInput(
                   controller: _passwordController,
                   keyboardType: TextInputType.visiblePassword,
@@ -333,7 +354,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -369,7 +390,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     onPressed: authState.isLoading
                         ? null
                         : () => context.go(
-                            '/signup?role=${widget.selectedRole.name}',
+                            '/signup?role=${widget.selectedRole.name}&phone=${widget.phoneNumber}',
                           ),
                     style: TextButton.styleFrom(
                       foregroundColor: isDark
@@ -608,15 +629,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
     );
   }
 
-  String? _validatePhone(String? input) {
-    final digits = (input ?? '').replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) return 'Phone number is required';
-    if (digits.length < 10 || digits.length > 15) {
-      return 'Enter a valid phone number';
-    }
-    return null;
-  }
-
   String? _validateEmail(String? input) {
     final value = (input ?? '').trim();
     if (value.isEmpty) return 'Email is required';
@@ -633,29 +645,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   Future<void> _onGooglePressed() async {
-    final rawPhone = _phoneController.text.trim();
-    if (rawPhone.isNotEmpty) {
-      final phoneError = _validatePhone(rawPhone);
-      if (phoneError != null) {
-        ref.read(authProvider.notifier).clearError();
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(phoneError),
-              backgroundColor: AppTheme.errorRed,
-            ),
-          );
-        return;
-      }
-    }
-
     final notifier = ref.read(authProvider.notifier);
 
     try {
-      final user = await notifier.continueWithGoogle(
-        phone: _phoneController.text.trim(),
-      );
+      final user = await notifier.continueWithGoogle(phone: widget.phoneNumber);
       if (!mounted) return;
       _navigateByRole(UserRoleX.tryParse(user.role) ?? widget.selectedRole);
     } catch (_) {
@@ -670,7 +663,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
     try {
       final user = await notifier.continueWithEmail(
-        phone: _phoneController.text.trim(),
+        phone: widget.phoneNumber,
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );

@@ -25,9 +25,9 @@ class StatsGrid extends StatelessWidget {
 
     final cards = [
       StatCard(
-        title: 'Properties',
-        value: summary.totalProperties.toString(),
-        subtitle: 'Vacant rooms',
+        title: 'Vacant Rooms',
+        value: summary.vacantRooms.toString(),
+        subtitle: '${summary.totalProperties} properties',
         icon: Icons.apartment_rounded,
         tone: OwnerDashboardColors.propertiesTone(context),
         assetPath: 'assets/images/property.png',

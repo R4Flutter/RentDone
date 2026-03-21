@@ -95,7 +95,7 @@ class ReportsNotifier extends Notifier<ReportsState> {
 
       await reload();
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _friendlyErrorMessage(e));
     }
   }
 
@@ -176,7 +176,7 @@ class ReportsNotifier extends Notifier<ReportsState> {
           .call(filter: state.filter, propertyId: state.selectedPropertyId);
       state = state.copyWith(isLoading: false, reportData: data, error: null);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _friendlyErrorMessage(e));
     }
   }
 
@@ -199,9 +199,22 @@ class ReportsNotifier extends Notifier<ReportsState> {
       state = state.copyWith(isExporting: false);
       return url;
     } catch (e) {
-      state = state.copyWith(isExporting: false, error: e.toString());
+      state = state.copyWith(isExporting: false);
       return null;
     }
+  }
+
+  String _friendlyErrorMessage(Object error) {
+    final raw = error.toString().trim();
+    if (raw.startsWith('Bad state: ')) {
+      final cleaned = raw.substring('Bad state: '.length).trim();
+      if (cleaned.isNotEmpty) return cleaned;
+    }
+    if (raw.startsWith('Exception: ')) {
+      final cleaned = raw.substring('Exception: '.length).trim();
+      if (cleaned.isNotEmpty) return cleaned;
+    }
+    return raw;
   }
 }
 

@@ -223,25 +223,14 @@ class _ProfileOverlayState extends ConsumerState<_ProfileOverlay>
                             transform: Matrix4.identity()
                               ..setEntry(3, 2, 0.001)
                               ..rotateY(_rotation.value),
-                            child: OwnerProfileCard(profile: profile),
+                            child: OwnerProfileCard(
+                              profile: profile,
+                              onClose: widget.onClose,
+                            ),
                           ),
                         );
                       },
                     ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.black.withValues(alpha: 0.5),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.white),
-                    onPressed: widget.onClose,
                   ),
                 ),
               ),

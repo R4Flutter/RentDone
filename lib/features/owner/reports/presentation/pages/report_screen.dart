@@ -2,13 +2,16 @@ import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
 import 'package:rentdone/features/owner/reports/domain/entities/report_data.dart';
 import 'package:rentdone/features/owner/reports/domain/entities/report_filter.dart';
 import 'package:rentdone/features/owner/reports/presentation/providers/report_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -51,8 +54,6 @@ class ReportsScreen extends ConsumerWidget {
                     onFilterTypeChanged: notifier.setFilterType,
                     onPropertyChanged: notifier.setProperty,
                     onYearChanged: notifier.setYear,
-                    onCustomDateRangeChanged: (start, end) => notifier
-                        .setCustomDateRange(startDate: start, endDate: end),
                   ),
                   const SizedBox(height: 16),
                   if (state.isLoading && reportData == null)
@@ -110,17 +111,169 @@ class ReportsScreen extends ConsumerWidget {
 
     if (url == null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Unable to export report right now.')),
+        const SnackBar(
+          content: Text(
+            'Unable to export report right now. Please check connection and try again.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Export created but download link is invalid.'),
+        ),
+      );
+      return;
+    }
+
+    final opened = await _openExportUri(uri);
+    if (!opened) {
+      if (!context.mounted) return;
+      await _showExportFallbackSheet(
+        context: context,
+        uri: uri,
+        format: format,
       );
       return;
     }
 
     messenger.showSnackBar(
       SnackBar(
-        content: Text('Export created. Download URL: $url'),
-        duration: const Duration(seconds: 6),
+        content: Text(
+          format.toLowerCase() == 'pdf'
+              ? 'PDF export generated and opened.'
+              : 'Excel export generated and opened.',
+        ),
+        duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  Future<void> _showExportFallbackSheet({
+    required BuildContext context,
+    required Uri uri,
+    required String format,
+  }) async {
+    final isPdf = format.toLowerCase() == 'pdf';
+    final title = isPdf ? 'PDF export ready' : 'Excel export ready';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Automatic open did not work on this device. You can still open or copy the file location/link below.',
+                  style: Theme.of(sheetContext).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: OwnerDashboardColors.activityCardBackground(
+                      sheetContext,
+                    ),
+                    border: Border.all(
+                      color: OwnerDashboardColors.activityCardBorder(
+                        sheetContext,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    uri.toString(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(sheetContext).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(
+                            ClipboardData(text: uri.toString()),
+                          );
+                          if (!sheetContext.mounted) return;
+                          Navigator.of(sheetContext).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Download link copied.'),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.copy_rounded),
+                        label: const Text('Copy Link'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () async {
+                          final opened = await _openExportUri(
+                            uri,
+                            preferInAppForHttp: true,
+                          );
+                          if (!sheetContext.mounted) return;
+                          Navigator.of(sheetContext).pop();
+                          if (!opened) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Unable to open link. Please copy and open manually.',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new_rounded),
+                        label: const Text('Open Link'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<bool> _openExportUri(
+    Uri uri, {
+    bool preferInAppForHttp = false,
+  }) async {
+    if (uri.scheme == 'file') {
+      final filePath = uri.toFilePath();
+      final result = await OpenFilex.open(filePath);
+      return result.type == ResultType.done;
+    }
+
+    final mode = preferInAppForHttp
+        ? LaunchMode.inAppBrowserView
+        : LaunchMode.externalApplication;
+    return launchUrl(uri, mode: mode);
   }
 }
 
@@ -222,18 +375,23 @@ class _FiltersCard extends StatelessWidget {
     required this.onFilterTypeChanged,
     required this.onPropertyChanged,
     required this.onYearChanged,
-    required this.onCustomDateRangeChanged,
   });
 
   final ReportsState state;
   final ValueChanged<ReportFilterType> onFilterTypeChanged;
   final ValueChanged<String?> onPropertyChanged;
   final ValueChanged<int> onYearChanged;
-  final Future<void> Function(DateTime, DateTime) onCustomDateRangeChanged;
 
   @override
   Widget build(BuildContext context) {
     final selectedYear = state.filter.startDate.year;
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
+    final isDark = OwnerDashboardColors.isDark(context);
+    final effectiveFilterType = state.filter.type == ReportFilterType.custom
+        ? ReportFilterType.thisMonth
+        : state.filter.type;
 
     return DashboardCard(
       radius: 20,
@@ -243,6 +401,32 @@ class _FiltersCard extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           SegmentedButton<ReportFilterType>(
+            style: ButtonStyle(
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppColors.white;
+                }
+                return textPrimary;
+              }),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return brand;
+                }
+                return isDark
+                    ? AppColors.white.withValues(alpha: 0.04)
+                    : AppColors.white.withValues(alpha: 0.70);
+              }),
+              side: WidgetStateProperty.resolveWith(
+                (_) => BorderSide(color: OwnerDashboardColors.border(context)),
+              ),
+              textStyle: WidgetStateProperty.resolveWith(
+                (_) => Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: textSecondary,
+                ),
+              ),
+            ),
+            showSelectedIcon: false,
             segments: const [
               ButtonSegment<ReportFilterType>(
                 value: ReportFilterType.thisMonth,
@@ -252,29 +436,49 @@ class _FiltersCard extends StatelessWidget {
                 value: ReportFilterType.thisYear,
                 label: Text('This Year'),
               ),
-              ButtonSegment<ReportFilterType>(
-                value: ReportFilterType.custom,
-                label: Text('Custom'),
-              ),
             ],
-            selected: <ReportFilterType>{state.filter.type},
+            selected: <ReportFilterType>{effectiveFilterType},
             onSelectionChanged: (selection) {
               onFilterTypeChanged(selection.first);
             },
           ),
           DropdownButton<String?>(
             value: state.selectedPropertyId,
-            hint: const Text('All Properties'),
+            hint: Text(
+              'All Properties',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            dropdownColor: OwnerDashboardColors.activityCardBackground(context),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+            iconEnabledColor: textPrimary,
             onChanged: onPropertyChanged,
             items: [
-              const DropdownMenuItem<String?>(
+              DropdownMenuItem<String?>(
                 value: null,
-                child: Text('All Properties'),
+                child: Text(
+                  'All Properties',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               ...state.propertyOptions.map(
                 (entry) => DropdownMenuItem<String?>(
                   value: entry.id,
-                  child: Text(entry.name),
+                  child: Text(
+                    entry.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -284,6 +488,14 @@ class _FiltersCard extends StatelessWidget {
               value: state.yearOptions.contains(selectedYear)
                   ? selectedYear
                   : state.yearOptions.first,
+              dropdownColor: OwnerDashboardColors.activityCardBackground(
+                context,
+              ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+              iconEnabledColor: textPrimary,
               onChanged: (value) {
                 if (value != null) {
                   onYearChanged(value);
@@ -293,40 +505,21 @@ class _FiltersCard extends StatelessWidget {
                   .map(
                     (year) => DropdownMenuItem<int>(
                       value: year,
-                      child: Text('Year $year'),
+                      child: Text(
+                        'Year $year',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
                     ),
                   )
                   .toList(),
             ),
-          if (state.filter.type == ReportFilterType.custom)
-            OutlinedButton.icon(
-              onPressed: () => _pickCustomRange(context),
-              icon: const Icon(Icons.date_range_rounded),
-              label: Text(
-                '${_formatDate(state.filter.startDate)} - ${_formatDate(state.filter.endDate)}',
-              ),
-            ),
         ],
       ),
     );
-  }
-
-  Future<void> _pickCustomRange(BuildContext context) async {
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: DateTimeRange(
-        start: state.filter.startDate,
-        end: state.filter.endDate,
-      ),
-    );
-
-    if (range == null) {
-      return;
-    }
-
-    await onCustomDateRangeChanged(range.start, range.end);
   }
 }
 
@@ -370,7 +563,7 @@ class _SummaryGrid extends StatelessWidget {
               value: _money(data.monthlySummary.collected),
               subtitle:
                   '${data.monthlySummary.collectionRate.toStringAsFixed(1)}% collection rate',
-              color: AppTheme.successGreen,
+              color: OwnerDashboardColors.brandPrimary(context),
               icon: Icons.payments_rounded,
             ),
             _KpiCard(
@@ -631,7 +824,7 @@ class _MethodPieChart extends StatelessWidget {
 
     final colors = <Color>[
       AppTheme.infoBlue,
-      AppTheme.successGreen,
+      OwnerDashboardColors.brandPrimary(context),
       AppTheme.warningAmber,
       OwnerDashboardColors.brandPrimary(context),
     ];
@@ -738,18 +931,33 @@ class _PropertyIncomeTable extends StatelessWidget {
           dataRowMinHeight: 40,
           columns: const [
             DataColumn(label: Text('Property')),
-            DataColumn(label: Text('Expected')),
-            DataColumn(label: Text('Collected')),
-            DataColumn(label: Text('Pending')),
+            DataColumn(label: Text('Expected'), numeric: true),
+            DataColumn(label: Text('Collected'), numeric: true),
+            DataColumn(label: Text('Pending'), numeric: true),
           ],
           rows: data.propertyIncome
               .map(
                 (entry) => DataRow(
                   cells: [
                     DataCell(Text(entry.propertyName)),
-                    DataCell(Text(_money(entry.expected))),
-                    DataCell(Text(_money(entry.collected))),
-                    DataCell(Text(_money(entry.pending))),
+                    DataCell(
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(_money(entry.expected)),
+                      ),
+                    ),
+                    DataCell(
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(_money(entry.collected)),
+                      ),
+                    ),
+                    DataCell(
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(_money(entry.pending)),
+                      ),
+                    ),
                   ],
                 ),
               )
@@ -784,7 +992,7 @@ class _TenantStatusTable extends StatelessWidget {
             DataColumn(label: Text('Tenant')),
             DataColumn(label: Text('Property')),
             DataColumn(label: Text('Room')),
-            DataColumn(label: Text('Rent')),
+            DataColumn(label: Text('Rent'), numeric: true),
             DataColumn(label: Text('Status')),
           ],
           rows: data.tenantStatuses
@@ -794,7 +1002,12 @@ class _TenantStatusTable extends StatelessWidget {
                     DataCell(Text(entry.tenantName)),
                     DataCell(Text(entry.propertyName)),
                     DataCell(Text(entry.roomNumber)),
-                    DataCell(Text(_money(entry.monthlyRent))),
+                    DataCell(
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(_money(entry.monthlyRent)),
+                      ),
+                    ),
                     DataCell(_StatusPill(status: entry.status)),
                   ],
                 ),
@@ -947,7 +1160,7 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalized = status.toLowerCase();
     final color = switch (normalized) {
-      'paid' => AppTheme.successGreen,
+      'paid' => OwnerDashboardColors.brandPrimary(context),
       'partial' => AppTheme.warningAmber,
       _ => AppTheme.errorRed,
     };

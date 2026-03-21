@@ -23,6 +23,8 @@ class DashboardSummary {
     required this.onlineAmount,
   });
 
+  int get vacantRooms => vacantProperties;
+
   static const empty = DashboardSummary(
     totalProperties: 0,
     vacantProperties: 0,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 import 'package:rentdone/shared/widgets/profile_picture_avatar.dart';
@@ -23,6 +23,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late final TextEditingController _phoneController;
   late final ScrollController _scrollController;
   bool _dirty = false;
+  bool _isHydrating = false;
   bool _hasScrolledToSetup = false;
   static const _horizontalPadding = 20.0;
 
@@ -35,6 +36,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _scrollController = ScrollController();
 
     void markDirty() {
+      if (_isHydrating) return;
       if (_dirty) return;
       setState(() => _dirty = true);
     }
@@ -55,9 +57,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _hydrate(OwnerProfileState profile) {
     if (_dirty || profile.isLoading) return;
+    _isHydrating = true;
     _fullNameController.text = profile.fullName;
     _emailController.text = profile.email;
     _phoneController.text = profile.phone;
+    _isHydrating = false;
 
     // In setup mode, scroll to the form card after first load
     if (widget.isSetupMode && !_hasScrolledToSetup && !profile.isLoading) {
@@ -377,6 +381,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildProfileHeader(BuildContext context, OwnerProfileState profile) {
     final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -400,7 +405,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF3B82F6).withValues(alpha: 0.35),
+                        color: brand.withValues(alpha: isDark ? 0.42 : 0.26),
                         blurRadius: 28,
                         spreadRadius: 4,
                       ),
@@ -432,7 +437,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF3B82F6),
+                        color: brand,
                         shape: BoxShape.circle,
                         border: Border.all(
                           color:
@@ -529,7 +534,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(
                   colors: isDark
-                      ? const [Color(0xFF3B82F6), Color(0xFF1E3A8A)]
+                      ? [
+                          brand.withValues(alpha: 0.90),
+                          brand.withValues(alpha: 0.58),
+                        ]
                       : [
                           AppColors.cFFFFFFFF.withValues(alpha: 0.82),
                           brand.withValues(alpha: 0.16),
@@ -709,72 +717,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _glassCard({required Widget child}) {
     final isDark = OwnerDashboardColors.isDark(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                (isDark ? AppColors.white : AppColors.cFFFFFFFF).withValues(
-                  alpha: isDark ? 0.18 : 0.80,
-                ),
-                OwnerDashboardColors.brandPrimary(
-                  context,
-                ).withValues(alpha: isDark ? 0.10 : 0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: (isDark ? AppColors.white : AppColors.cFF0F172A)
-                  .withValues(alpha: isDark ? 0.16 : 0.09),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withValues(alpha: isDark ? 0.24 : 0.09),
-                blurRadius: 26,
-                offset: const Offset(0, 10),
-              ),
-              BoxShadow(
-                color: OwnerDashboardColors.brandPrimary(
-                  context,
-                ).withValues(alpha: isDark ? 0.16 : 0.08),
-                blurRadius: 30,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: -28,
-                right: -22,
-                child: _bgBlob(
-                  size: 96,
-                  color: OwnerDashboardColors.brandPrimary(
-                    context,
-                  ).withValues(alpha: isDark ? 0.18 : 0.10),
-                ),
-              ),
-              Positioned(
-                bottom: -34,
-                left: -18,
-                child: _bgBlob(
-                  size: 88,
-                  color: OwnerDashboardColors.brandPrimary(
-                    context,
-                  ).withValues(alpha: isDark ? 0.12 : 0.06),
-                ),
-              ),
-              child,
-            ],
-          ),
-        ),
-      ),
+    final cardTone = isDark ? const Color(0xFF162640) : const Color(0xFFEAF2FF);
+
+    return DashboardCard(
+      radius: 24,
+      useGradient: false,
+      backgroundColor: cardTone,
+      padding: const EdgeInsets.all(16),
+      child: child,
     );
   }
 
@@ -854,8 +804,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               )
             : OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(
-                  color: Color(0xFF3B82F6),
+                borderSide: BorderSide(
+                  color: OwnerDashboardColors.brandPrimary(context),
                   width: 1.2,
                 ),
               ),

@@ -25,15 +25,26 @@ class SettingsScreen extends ConsumerWidget {
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                gradient:
-                    OwnerDashboardColors.managePropertiesBackgroundGradient(
-                      context,
-                    ),
+                gradient: OwnerDashboardColors.ownerPageBackgroundGradient(
+                  context,
+                ),
               ),
             ),
           ),
-          _liquidBlob(top: -80, left: -58, size: 300, isDark: isDark),
-          _liquidBlob(bottom: -92, right: -60, size: 260, isDark: isDark),
+          _liquidBlob(
+            context: context,
+            top: -80,
+            left: -58,
+            size: 300,
+            isDark: isDark,
+          ),
+          _liquidBlob(
+            context: context,
+            bottom: -92,
+            right: -60,
+            size: 260,
+            isDark: isDark,
+          ),
           SafeArea(
             child: Column(
               children: [
@@ -81,8 +92,6 @@ class SettingsScreen extends ConsumerWidget {
                                         child: _securitySection(
                                           context,
                                           ref,
-                                          settings,
-                                          notifier,
                                           theme,
                                         ),
                                       ),
@@ -114,13 +123,7 @@ class SettingsScreen extends ConsumerWidget {
                                   title: 'Security',
                                   subtitle:
                                       'Protect your account access and session.',
-                                  child: _securitySection(
-                                    context,
-                                    ref,
-                                    settings,
-                                    notifier,
-                                    theme,
-                                  ),
+                                  child: _securitySection(context, ref, theme),
                                 ),
                                 const SizedBox(height: 16),
                                 _glassSection(
@@ -170,9 +173,7 @@ class SettingsScreen extends ConsumerWidget {
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: OwnerDashboardColors.managePropertiesHeaderPrimary(
-                    context,
-                  ),
+                  color: OwnerDashboardColors.textPrimary(context),
                 ),
               ),
               const SizedBox(height: 2),
@@ -180,9 +181,7 @@ class SettingsScreen extends ConsumerWidget {
                 'Your changes save automatically and apply across the app.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontSize: 13,
-                  color: OwnerDashboardColors.managePropertiesHeaderSecondary(
-                    context,
-                  ),
+                  color: OwnerDashboardColors.textSecondary(context),
                 ),
               ),
             ],
@@ -194,8 +193,8 @@ class SettingsScreen extends ConsumerWidget {
           label: settings.isSaving ? 'Saving...' : 'Auto-saved',
           icon: settings.isSaving ? Icons.cloud_upload : Icons.cloud_done,
           color: settings.isSaving
-              ? AppTheme.warningAmber
-              : AppTheme.successGreen,
+              ? OwnerDashboardColors.brandPrimaryHover(context)
+              : OwnerDashboardColors.brandPrimary(context),
         ),
       ],
     );
@@ -210,6 +209,11 @@ class SettingsScreen extends ConsumerWidget {
     required Widget child,
   }) {
     final isDark = theme.brightness == Brightness.dark;
+    final elevated = OwnerDashboardColors.elevatedBackground(context);
+    final card = OwnerDashboardColors.cardBackground(context);
+    final border = OwnerDashboardColors.border(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final brandHover = OwnerDashboardColors.brandPrimaryHover(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: BackdropFilter(
@@ -220,20 +224,21 @@ class SettingsScreen extends ConsumerWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: isDark
-                  ? [Colors.white.withAlpha(20), Colors.white.withAlpha(10)]
-                  : [Colors.white.withAlpha(188), Colors.white.withAlpha(140)],
+              colors: [
+                elevated.withValues(alpha: isDark ? 0.72 : 0.9),
+                card.withValues(alpha: isDark ? 0.66 : 0.86),
+              ],
             ),
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: AppTheme.liquidPrimaryStart.withAlpha(48),
+              color: border.withValues(alpha: 0.9),
               width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: OwnerDashboardColors.managePropertiesShadowColor(
+                color: OwnerDashboardColors.brandPrimary(
                   context,
-                ),
+                ).withValues(alpha: isDark ? 0.18 : 0.1),
                 blurRadius: 28,
                 offset: const Offset(0, 12),
               ),
@@ -248,10 +253,11 @@ class SettingsScreen extends ConsumerWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      gradient:
-                          OwnerDashboardColors.managePropertiesAccentGradient(
-                            context,
-                          ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [brand, brandHover],
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, color: Colors.white, size: 20),
@@ -265,10 +271,7 @@ class SettingsScreen extends ConsumerWidget {
                           title,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color:
-                                OwnerDashboardColors.managePropertiesHeaderPrimary(
-                                  context,
-                                ),
+                            color: OwnerDashboardColors.textPrimary(context),
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -276,10 +279,7 @@ class SettingsScreen extends ConsumerWidget {
                           subtitle,
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontSize: 12,
-                            color:
-                                OwnerDashboardColors.managePropertiesHeaderSecondary(
-                                  context,
-                                ),
+                            color: OwnerDashboardColors.textSecondary(context),
                           ),
                         ),
                       ],
@@ -364,30 +364,17 @@ class SettingsScreen extends ConsumerWidget {
   Widget _securitySection(
     BuildContext context,
     WidgetRef ref,
-    OwnerSettingsState settings,
-    OwnerSettingsNotifier notifier,
     ThemeData theme,
   ) {
     final titleStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: OwnerDashboardColors.managePropertiesHeaderPrimary(context),
+      color: OwnerDashboardColors.textPrimary(context),
       fontWeight: FontWeight.w600,
     );
     final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
-      color: OwnerDashboardColors.managePropertiesHeaderSecondary(context),
+      color: OwnerDashboardColors.textSecondary(context),
     );
     return Column(
       children: [
-        _settingTile(
-          context,
-          icon: Icons.phonelink_lock,
-          title: 'Enable Two-Factor Authentication',
-          subtitle: 'Adds an extra verification step on login.',
-          child: Switch.adaptive(
-            value: settings.enable2FA,
-            onChanged: notifier.setEnable2FA,
-          ),
-        ),
-        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
@@ -395,10 +382,9 @@ class SettingsScreen extends ConsumerWidget {
                 height: 44,
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor:
-                        OwnerDashboardColors.managePropertiesActionColor(
-                          context,
-                        ),
+                    backgroundColor: OwnerDashboardColors.brandPrimaryHover(
+                      context,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -451,7 +437,7 @@ class SettingsScreen extends ConsumerWidget {
     ThemeData theme,
   ) {
     final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
-      color: OwnerDashboardColors.managePropertiesHeaderSecondary(context),
+      color: OwnerDashboardColors.textSecondary(context),
     );
     return Column(
       children: [
@@ -498,10 +484,12 @@ class SettingsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppTheme.pureWhite.withAlpha(90),
+        color: OwnerDashboardColors.elevatedBackground(
+          context,
+        ).withValues(alpha: OwnerDashboardColors.isDark(context) ? 0.66 : 0.84),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: OwnerDashboardColors.managePropertiesPillBorder(context),
+          color: OwnerDashboardColors.border(context).withValues(alpha: 0.9),
           width: 1,
         ),
       ),
@@ -511,8 +499,13 @@ class SettingsScreen extends ConsumerWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              gradient: OwnerDashboardColors.managePropertiesAccentGradient(
-                context,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  OwnerDashboardColors.brandPrimary(context),
+                  OwnerDashboardColors.brandPrimaryHover(context),
+                ],
               ),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -526,9 +519,7 @@ class SettingsScreen extends ConsumerWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    color: OwnerDashboardColors.managePropertiesHeaderPrimary(
-                      context,
-                    ),
+                    color: OwnerDashboardColors.textPrimary(context),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -537,9 +528,7 @@ class SettingsScreen extends ConsumerWidget {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: OwnerDashboardColors.managePropertiesHeaderSecondary(
-                      context,
-                    ),
+                    color: OwnerDashboardColors.textSecondary(context),
                     fontSize: 12,
                   ),
                 ),
@@ -553,6 +542,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _liquidBlob({
+    required BuildContext context,
     double? top,
     double? left,
     double? bottom,
@@ -571,8 +561,12 @@ class SettingsScreen extends ConsumerWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDark
-              ? AppTheme.liquidPrimaryStart.withAlpha(20)
-              : AppTheme.liquidPrimaryStart.withAlpha(30),
+              ? OwnerDashboardColors.brandPrimary(
+                  context,
+                ).withValues(alpha: 0.14)
+              : OwnerDashboardColors.brandPrimary(
+                  context,
+                ).withValues(alpha: 0.1),
         ),
       ),
     );
@@ -585,86 +579,320 @@ class SettingsScreen extends ConsumerWidget {
     final currentController = TextEditingController();
     final newController = TextEditingController();
     final confirmController = TextEditingController();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     try {
       await showDialog<void>(
         context: context,
         builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Change Password'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: currentController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Current password',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newController,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'New password'),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm new password',
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Cancel'),
+          bool hideCurrent = true;
+          bool hideNew = true;
+          bool hideConfirm = true;
+          bool isSubmitting = false;
+          String? inlineError;
+
+          InputDecoration liquidInput({
+            required String label,
+            required IconData icon,
+            required bool hidden,
+            required VoidCallback toggle,
+          }) {
+            return InputDecoration(
+              labelText: label,
+              labelStyle: TextStyle(
+                color: OwnerDashboardColors.textSecondary(context),
+                fontWeight: FontWeight.w600,
               ),
-              FilledButton(
-                onPressed: () async {
-                  final currentPassword = currentController.text.trim();
-                  final newPassword = newController.text.trim();
-                  final confirmPassword = confirmController.text.trim();
-
-                  if (newPassword != confirmPassword) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'New password and confirm password must match.',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-
-                  try {
-                    await ref
-                        .read(authRepositoryProvider)
-                        .changePassword(
-                          currentPassword: currentPassword,
-                          newPassword: newPassword,
-                        );
-
-                    if (!context.mounted) return;
-                    Navigator.of(dialogContext).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Password changed successfully.'),
-                      ),
-                    );
-                  } catch (error) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(
+              prefixIcon: Icon(
+                icon,
+                color: OwnerDashboardColors.brandPrimary(context),
+                size: 20,
+              ),
+              suffixIcon: IconButton(
+                onPressed: toggle,
+                icon: Icon(
+                  hidden
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                  color: OwnerDashboardColors.textSecondary(context),
+                ),
+              ),
+              filled: true,
+              fillColor: isDark
+                  ? OwnerDashboardColors.elevatedBackground(
                       context,
-                    ).showSnackBar(SnackBar(content: Text(error.toString())));
-                  }
-                },
-                child: const Text('Update'),
+                    ).withValues(alpha: 0.58)
+                  : OwnerDashboardColors.cardBackground(
+                      context,
+                    ).withValues(alpha: 0.95),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: OwnerDashboardColors.border(context),
+                ),
               ),
-            ],
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: OwnerDashboardColors.border(context),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: OwnerDashboardColors.brandPrimary(context),
+                  width: 1.2,
+                ),
+              ),
+            );
+          }
+
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 24,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            OwnerDashboardColors.elevatedBackground(
+                              context,
+                            ).withValues(alpha: isDark ? 0.86 : 0.96),
+                            OwnerDashboardColors.cardBackground(
+                              context,
+                            ).withValues(alpha: isDark ? 0.76 : 0.9),
+                          ],
+                        ),
+                        border: Border.all(
+                          color: OwnerDashboardColors.brandPrimary(
+                            context,
+                          ).withValues(alpha: isDark ? 0.40 : 0.22),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.black.withValues(
+                              alpha: isDark ? 0.34 : 0.12,
+                            ),
+                            blurRadius: 28,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: OwnerDashboardColors.brandPrimary(
+                                    context,
+                                  ).withValues(alpha: isDark ? 0.28 : 0.14),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: OwnerDashboardColors.brandPrimary(
+                                      context,
+                                    ).withValues(alpha: isDark ? 0.44 : 0.24),
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.lock_reset_rounded,
+                                  size: 18,
+                                  color: OwnerDashboardColors.textPrimary(
+                                    context,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Change Password',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: OwnerDashboardColors.textPrimary(
+                                          context,
+                                        ),
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Use a strong new password to keep your account secure.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: OwnerDashboardColors.textSecondary(
+                                    context,
+                                  ),
+                                ),
+                          ),
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: currentController,
+                            obscureText: hideCurrent,
+                            decoration: liquidInput(
+                              label: 'Current password',
+                              icon: Icons.lock_outline_rounded,
+                              hidden: hideCurrent,
+                              toggle: () {
+                                setState(() => hideCurrent = !hideCurrent);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: newController,
+                            obscureText: hideNew,
+                            decoration: liquidInput(
+                              label: 'New password',
+                              icon: Icons.enhanced_encryption_rounded,
+                              hidden: hideNew,
+                              toggle: () {
+                                setState(() => hideNew = !hideNew);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: confirmController,
+                            obscureText: hideConfirm,
+                            decoration: liquidInput(
+                              label: 'Confirm new password',
+                              icon: Icons.shield_rounded,
+                              hidden: hideConfirm,
+                              toggle: () {
+                                setState(() => hideConfirm = !hideConfirm);
+                              },
+                            ),
+                          ),
+                          if (inlineError != null) ...[
+                            const SizedBox(height: 10),
+                            Text(
+                              inlineError!,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppTheme.errorRed,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ],
+                          const SizedBox(height: 14),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () => Navigator.of(dialogContext).pop(),
+                                child: const Text('Cancel'),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor:
+                                      OwnerDashboardColors.brandPrimary(
+                                        context,
+                                      ),
+                                  foregroundColor: isDark
+                                      ? AppColors.white
+                                      : AppColors.cFF0F172A,
+                                ),
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () async {
+                                        final currentPassword =
+                                            currentController.text.trim();
+                                        final newPassword = newController.text
+                                            .trim();
+                                        final confirmPassword =
+                                            confirmController.text.trim();
+
+                                        if (newPassword != confirmPassword) {
+                                          setState(() {
+                                            inlineError =
+                                                'New password and confirm password must match.';
+                                          });
+                                          return;
+                                        }
+
+                                        setState(() {
+                                          isSubmitting = true;
+                                          inlineError = null;
+                                        });
+
+                                        try {
+                                          await ref
+                                              .read(authRepositoryProvider)
+                                              .changePassword(
+                                                currentPassword:
+                                                    currentPassword,
+                                                newPassword: newPassword,
+                                              );
+
+                                          if (!context.mounted) return;
+                                          Navigator.of(dialogContext).pop();
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Password changed successfully.',
+                                              ),
+                                            ),
+                                          );
+                                        } catch (error) {
+                                          if (!context.mounted) return;
+                                          setState(() {
+                                            inlineError = error.toString();
+                                          });
+                                        } finally {
+                                          if (context.mounted) {
+                                            setState(() {
+                                              isSubmitting = false;
+                                            });
+                                          }
+                                        }
+                                      },
+                                icon: isSubmitting
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.check_circle_outline_rounded,
+                                        size: 18,
+                                      ),
+                                label: const Text('Update'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           );
         },
       );

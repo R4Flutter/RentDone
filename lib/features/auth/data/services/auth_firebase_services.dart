@@ -368,11 +368,28 @@ class AuthFirebaseService {
     final data = snapshot.data();
     final existingRole = UserRoleX.tryParse(data?['role'] as String?);
 
-    if (existingRole != null && existingRole != selectedRole) {
-      throw AuthException(
-        message:
-            'This account is registered as ${existingRole.label}. Please continue as ${existingRole.label}.',
-      );
+    // SECURITY: If user already has a role, they cannot change it
+    if (existingRole != null) {
+      if (existingRole != selectedRole) {
+        throw AuthException(
+          message:
+              'This account is registered as ${existingRole.label}. '
+              'Your role cannot be changed. Please continue as ${existingRole.label}.',
+        );
+      }
+      // Role is already set and matches, continue with existing role
+    } else {
+      // SECURITY: New user - role is determined by signup flow, NOT client choice
+      // In production: Backend service should determine role based on business logic
+      // For now, enforce that role can only be 'tenant' on first signup
+      // Owners should be created via invitation or backend admin
+      if (selectedRole != UserRole.tenant) {
+        throw AuthException(
+          message:
+              'New accounts must register as tenants. '
+              'Contact support to become an owner.',
+        );
+      }
     }
 
     final roleToPersist = existingRole ?? selectedRole;
@@ -390,6 +407,7 @@ class AuthFirebaseService {
       fallbackType: 'identicon',
     );
 
+    // SECURITY: role field is set once and never changed by client
     await docRef.set({
       'uid': user.uid,
       'name': user.displayName,
@@ -398,7 +416,7 @@ class AuthFirebaseService {
       'photoUrl': user.photoURL ?? gravatarUrl,
       'gravatarUrl': gravatarUrl,
       'phone': phoneToPersist,
-      'role': roleToPersist.value,
+      'role': roleToPersist.value, // ← Immutable after first set
       'updatedAt': now,
       if (!snapshot.exists) 'createdAt': now,
       'lastLoginAt': now,

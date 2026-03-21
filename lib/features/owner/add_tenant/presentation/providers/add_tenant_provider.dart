@@ -28,6 +28,7 @@ class AddTenantNotifier extends Notifier<AddTenantState> {
       state = state.copyWith(isLoading: false, isSuccess: true);
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      rethrow;
     }
   }
 

@@ -9,5 +9,8 @@ abstract class DashboardRepository {
   /// Optional: refresh / force reload
   Future<DashboardSummary> refreshDashboard();
 
+  /// Live dashboard updates for responsive UI.
+  Stream<DashboardSummary> watchDashboardSummary();
+
   Stream<List<AppMessage>> watchRecentMessages({int limit = 6});
 }

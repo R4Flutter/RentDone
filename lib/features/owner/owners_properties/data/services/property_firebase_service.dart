@@ -206,24 +206,8 @@ class PropertyFirebaseService {
 
       final ownerDoc = await txn.get(ownerRef);
       final ownerData = ownerDoc.data() ?? <String, dynamic>{};
-      final tenantLimit =
-          (ownerData['tenantLimit'] as num?)?.toInt() ?? _defaultTenantLimit;
       final currentCount =
           (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
-      final paymentStatus = (ownerData['paymentStatus'] as String? ?? 'active')
-          .toLowerCase();
-
-      if (paymentStatus == 'pending') {
-        throw StateError(
-          'Payment is pending. Complete subscription payment to add tenants.',
-        );
-      }
-
-      if (currentCount >= tenantLimit) {
-        throw StateError(
-          'You have reached your tenant limit. Upgrade your plan to add more tenants.',
-        );
-      }
 
       final data = propertyDoc.data();
       final rooms = _normalizeRooms(data?['rooms']);
@@ -247,6 +231,8 @@ class PropertyFirebaseService {
       txn.update(propertyRef, {'rooms': rooms});
 
       final nextCount = currentCount + 1;
+      final tenantLimit =
+          (ownerData['tenantLimit'] as num?)?.toInt() ?? _defaultTenantLimit;
       txn.set(ownerRef, {
         'ownerId': ownerId,
         'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
@@ -275,6 +261,12 @@ class PropertyFirebaseService {
       final ownerRef = ownerId.isEmpty
           ? null
           : _db.collection('owners').doc(ownerId);
+      Map<String, dynamic>? ownerData;
+
+      if (ownerRef != null) {
+        final ownerDoc = await txn.get(ownerRef);
+        ownerData = ownerDoc.data() ?? <String, dynamic>{};
+      }
 
       final propertyDoc = await txn.get(propertyRef);
       if (!propertyDoc.exists) {
@@ -294,9 +286,7 @@ class PropertyFirebaseService {
 
       txn.update(propertyRef, {'rooms': rooms});
 
-      if (ownerRef != null) {
-        final ownerDoc = await txn.get(ownerRef);
-        final ownerData = ownerDoc.data() ?? <String, dynamic>{};
+      if (ownerRef != null && ownerData != null) {
         final currentCount =
             (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
         final nextCount = currentCount > 0 ? currentCount - 1 : 0;

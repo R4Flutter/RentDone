@@ -170,6 +170,11 @@ class DocumentUploadNotifier extends Notifier<DocumentUploadState> {
     );
   }
 
+  void reset() {
+    _inFlightPaths.clear();
+    state = const DocumentUploadState();
+  }
+
   void removeUploadedUrl(String url) {
     final next = List<String>.from(state.uploadedUrls)..remove(url);
     state = state.copyWith(uploadedUrls: next);

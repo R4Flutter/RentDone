@@ -63,6 +63,18 @@ class PaymentFirebaseService {
           .trim()
           .toLowerCase();
 
+      // Read tenant before any writes to satisfy Firestore transaction ordering.
+      DocumentReference<Map<String, dynamic>>? tenantRef;
+      Map<String, dynamic>? tenantData;
+      if (priorStatus != 'paid') {
+        final tenantId = (paymentData['tenantId'] as String? ?? '').trim();
+        if (tenantId.isNotEmpty) {
+          tenantRef = _firestore.collection('tenants').doc(tenantId);
+          final tenantDoc = await txn.get(tenantRef);
+          tenantData = tenantDoc.data() ?? <String, dynamic>{};
+        }
+      }
+
       final paymentUpdate = <String, dynamic>{
         'status': 'paid',
         'method': method,
@@ -79,14 +91,9 @@ class PaymentFirebaseService {
         return;
       }
 
-      final tenantId = (paymentData['tenantId'] as String? ?? '').trim();
-      if (tenantId.isEmpty) {
+      if (tenantRef == null || tenantData == null) {
         return;
       }
-
-      final tenantRef = _firestore.collection('tenants').doc(tenantId);
-      final tenantDoc = await txn.get(tenantRef);
-      final tenantData = tenantDoc.data() ?? <String, dynamic>{};
 
       final dueDate = _toDateTime(paymentData['dueDate']) ?? paidAt;
       final currentScore = TenantTrustScore.clamp(

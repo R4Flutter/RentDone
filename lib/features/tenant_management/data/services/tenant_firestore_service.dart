@@ -1,22 +1,80 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:rentdone/core/exceptions/security_exceptions.dart';
 import '../models/tenant_dto.dart';
 
 /// Firestore service for tenant data operations
 /// Handles all database read/write operations
+/// ⚠️ SECURITY: All writes require ownership verification
 class TenantFirestoreService {
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
   static const String _defaultPlan = 'free';
   static const int _defaultTenantLimit = 2;
 
-  TenantFirestoreService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  TenantFirestoreService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  /// Get current authenticated user ID or throw if not authenticated
+  String _getCurrentUserIdOrThrow() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      throw UnauthorizedException('User not authenticated');
+    }
+    return uid;
+  }
+
+  /// Verify tenant belongs to current user by checking ownerId
+  /// SECURITY: Defense-in-depth check before Firestore rules
+  Future<void> _verifyTenantOwnershipOrThrow(String tenantId) async {
+    try {
+      final currentUserId = _getCurrentUserIdOrThrow();
+      final tenantDoc = await _firestore
+          .collection('tenants')
+          .doc(tenantId)
+          .get();
+
+      if (!tenantDoc.exists) {
+        throw ResourceNotAccessibleException(
+          message: 'Tenant not found',
+          resourceType: 'tenant',
+          resourceId: tenantId,
+        );
+      }
+
+      final ownerId = tenantDoc.data()?['ownerId'] as String?;
+      if (ownerId != currentUserId) {
+        throw UnauthorizedException(
+          'You do not own this tenant. Cannot modify.',
+        );
+      }
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw UnauthorizedException('Permission denied by Firestore rules');
+      }
+      rethrow;
+    }
+  }
 
   /// Add a new tenant to Firestore
   /// Structure: /tenants/{tenantId}
+  /// SECURITY: Verifies that authenticated user is the owner before creating tenant
   Future<void> addTenant(TenantDTO tenantDTO) async {
+    // SECURITY: Verify that current user is owner (defense-in-depth)
+    final currentUserId = _getCurrentUserIdOrThrow();
+    final providedOwnerId = tenantDTO.ownerId.trim();
+
+    if (providedOwnerId != currentUserId) {
+      throw UnauthorizedException(
+        'You can only add tenants to your own account. '
+        'Provided ownerId ($providedOwnerId) does not match authenticated user ($currentUserId).',
+      );
+    }
+
     final map = tenantDTO.toMap();
     final normalizedPhone = _normalizePhone(tenantDTO.phone);
     map['phoneHash'] = _hashPhone(normalizedPhone);
@@ -35,28 +93,14 @@ class TenantFirestoreService {
     await _firestore.runTransaction((txn) async {
       final ownerDoc = await txn.get(ownerRef);
       final ownerData = ownerDoc.data() ?? <String, dynamic>{};
-      final tenantLimit =
-          (ownerData['tenantLimit'] as num?)?.toInt() ?? _defaultTenantLimit;
       final currentCount =
           (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
-      final paymentStatus = (ownerData['paymentStatus'] as String? ?? 'active')
-          .toLowerCase();
-
-      if (paymentStatus == 'pending') {
-        throw StateError(
-          'Payment is pending. Complete subscription payment to add tenants.',
-        );
-      }
-
-      if (currentCount >= tenantLimit) {
-        throw StateError(
-          'You have reached your tenant limit. Upgrade your plan to add more tenants.',
-        );
-      }
 
       txn.set(tenantRef, map, SetOptions(merge: false));
 
       final nextCount = currentCount + 1;
+      final tenantLimit =
+          (ownerData['tenantLimit'] as num?)?.toInt() ?? _defaultTenantLimit;
       txn.set(ownerRef, {
         'ownerId': ownerId,
         'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
@@ -158,8 +202,12 @@ class TenantFirestoreService {
   }
 
   /// Deactivate tenant
+  /// SECURITY: Verifies current user owns the tenant before deactivating
   Future<void> deactivateTenant(String tenantId) async {
     try {
+      // SECURITY: Verify ownership BEFORE transaction (defense-in-depth)
+      await _verifyTenantOwnershipOrThrow(tenantId);
+
       final tenantRef = _firestore.collection('tenants').doc(tenantId);
       await _firestore.runTransaction((txn) async {
         final tenantDoc = await txn.get(tenantRef);
@@ -173,6 +221,20 @@ class TenantFirestoreService {
         final isActiveFlag = tenantData['isActive'] == true;
         final wasActive = status == 'active' || isActiveFlag;
 
+        // SECURITY: Double-check ownership inside transaction
+        final currentUserId = _getCurrentUserIdOrThrow();
+        if (ownerId != currentUserId) {
+          throw UnauthorizedException('You do not own this tenant.');
+        }
+
+        Map<String, dynamic>? ownerData;
+        DocumentReference<Map<String, dynamic>>? ownerRef;
+        if (ownerId.isNotEmpty && wasActive) {
+          ownerRef = _firestore.collection('owners').doc(ownerId);
+          final ownerDoc = await txn.get(ownerRef);
+          ownerData = ownerDoc.data() ?? <String, dynamic>{};
+        }
+
         txn.update(tenantRef, {
           'status': 'inactive',
           'isActive': false,
@@ -183,9 +245,10 @@ class TenantFirestoreService {
           return;
         }
 
-        final ownerRef = _firestore.collection('owners').doc(ownerId);
-        final ownerDoc = await txn.get(ownerRef);
-        final ownerData = ownerDoc.data() ?? <String, dynamic>{};
+        if (ownerRef == null || ownerData == null) {
+          return;
+        }
+
         final currentCount =
             (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
         final nextCount = currentCount > 0 ? currentCount - 1 : 0;
@@ -207,8 +270,12 @@ class TenantFirestoreService {
   }
 
   /// Activate tenant
+  /// SECURITY: Verifies current user owns the tenant before activating
   Future<void> activateTenant(String tenantId) async {
     try {
+      // SECURITY: Verify ownership BEFORE transaction (defense-in-depth)
+      await _verifyTenantOwnershipOrThrow(tenantId);
+
       final tenantRef = _firestore.collection('tenants').doc(tenantId);
       await _firestore.runTransaction((txn) async {
         final tenantDoc = await txn.get(tenantRef);
@@ -220,6 +287,12 @@ class TenantFirestoreService {
         final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
         if (ownerId.isEmpty) {
           throw StateError('Tenant owner not found');
+        }
+
+        // SECURITY: Double-check ownership inside transaction
+        final currentUserId = _getCurrentUserIdOrThrow();
+        if (ownerId != currentUserId) {
+          throw UnauthorizedException('You do not own this tenant.');
         }
 
         final status = (tenantData['status'] as String? ?? '').toLowerCase();
@@ -243,8 +316,11 @@ class TenantFirestoreService {
         }
 
         if (!alreadyActive && currentCount >= tenantLimit) {
-          throw StateError(
-            'You have reached your tenant limit. Upgrade your plan to add more tenants.',
+          throw QuotaExceededException(
+            message:
+                'You have reached your tenant limit. Upgrade your plan to add more tenants.',
+            currentCount: currentCount,
+            maxAllowed: tenantLimit,
           );
         }
 

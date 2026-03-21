@@ -38,6 +38,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
   bool _isLoading = false;
   String? _uploadError;
   TenantEntity? _tenant;
+  ProviderSubscription<AsyncValue<TenantEntity?>>? _tenantSubscription;
 
   @override
   void initState() {
@@ -52,14 +53,34 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
 
     // Load tenant data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadTenantData();
-    });
-  }
+      if (!mounted) return;
 
-  void _loadTenantData() {
-    final tenantAsync = ref.watch(tenantProvider(widget.tenantId));
-    tenantAsync.whenData((tenant) {
-      if (tenant != null && mounted) {
+      _tenantSubscription = ref.listenManual<AsyncValue<TenantEntity?>>(
+        tenantProvider(widget.tenantId),
+        (previous, next) {
+          next.whenData((tenant) {
+            if (tenant == null || !mounted) return;
+            setState(() {
+              _tenant = tenant;
+              _phoneController.text = tenant.phone;
+              _emailController.text = tenant.email ?? '';
+              _rentAmountController.text = tenant.rentAmount.toString();
+              _securityDepositController.text = tenant.securityDeposit
+                  .toString();
+              _rentDueDateController.text = tenant.rentDueDate.toString();
+              _upiIdController.text = tenant.upiId ?? '';
+              _notesController.text = tenant.notes ?? '';
+              _leaseEndDate = tenant.leaseEndDate;
+              _selectedPaymentMode = tenant.paymentMode;
+              _selectedIdProofType = tenant.idProofType ?? 'aadhar';
+            });
+          });
+        },
+      );
+
+      final initialTenant = ref.read(tenantProvider(widget.tenantId));
+      initialTenant.whenData((tenant) {
+        if (tenant == null || !mounted) return;
         setState(() {
           _tenant = tenant;
           _phoneController.text = tenant.phone;
@@ -73,12 +94,13 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
           _selectedPaymentMode = tenant.paymentMode;
           _selectedIdProofType = tenant.idProofType ?? 'aadhar';
         });
-      }
+      });
     });
   }
 
   @override
   void dispose() {
+    _tenantSubscription?.close();
     _phoneController.dispose();
     _emailController.dispose();
     _rentAmountController.dispose();
@@ -255,6 +277,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
       // Navigate back
       Navigator.of(context).pop(true);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _uploadError = e.toString();
         _isLoading = false;

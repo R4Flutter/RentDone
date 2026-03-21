@@ -6,6 +6,7 @@ import 'package:rentdone/features/owner/owner_payment/models/tenant_payment_reco
 import 'package:rentdone/features/owner/owner_payment/presentation/providers/tenant_payment_history_provider.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/add_payment_form.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/payment_history_card.dart';
+import 'package:rentdone/shared/widgets/back_handler.dart';
 
 class TenantPaymentHistoryScreen extends ConsumerStatefulWidget {
   const TenantPaymentHistoryScreen({
@@ -43,6 +44,7 @@ class _TenantPaymentHistoryScreenState
   bool _isLoadingMore = false;
   bool _hasMore = true;
   String? _error;
+  String? _loadMoreError;
 
   @override
   void initState() {
@@ -54,6 +56,7 @@ class _TenantPaymentHistoryScreenState
     setState(() {
       _isLoading = true;
       _error = null;
+      _loadMoreError = null;
       _hasMore = true;
       _cursor = null;
     });
@@ -88,7 +91,7 @@ class _TenantPaymentHistoryScreenState
 
     setState(() {
       _isLoadingMore = true;
-      _error = null;
+      _loadMoreError = null;
     });
 
     try {
@@ -110,7 +113,7 @@ class _TenantPaymentHistoryScreenState
       if (!mounted) return;
       setState(() {
         _isLoadingMore = false;
-        _error = 'Unable to load more payments. Try again.';
+        _loadMoreError = 'Unable to load more payments. Try again.';
       });
     }
   }
@@ -120,66 +123,161 @@ class _TenantPaymentHistoryScreenState
     await service.addPayment(
       tenantId: widget.tenantId,
       propertyId: widget.propertyId,
-      amount: payload.amount,
+      amount: payload.baseAmount,
       date: payload.date,
       method: payload.method,
       status: payload.status,
+      baseAmount: payload.baseAmount,
+      paidAmount: payload.paidAmount,
+      remainingAmount: payload.remainingAmount,
       notes: payload.notes,
     );
     await _loadInitial();
   }
 
+  /// Update a payment status (paid, partial, unpaid)
+  /// Updates Firebase and refreshes local list
+  Future<void> _updatePaymentStatus(
+    String paymentId,
+    String newStatus, {
+    int? installmentAmount,
+    String? installmentMethod,
+    String? installmentNotes,
+  }) async {
+    try {
+      final service = ref.read(tenantPaymentHistoryServiceProvider);
+      await service.updatePaymentStatus(
+        paymentId: paymentId,
+        newStatus: newStatus,
+        installmentAmount: installmentAmount,
+        installmentMethod: installmentMethod,
+        installmentNotes: installmentNotes,
+      );
+
+      // Update local state
+      if (mounted) {
+        final index = _items.indexWhere((item) => item.id == paymentId);
+        if (index >= 0) {
+          final current = _items[index];
+          final amountToAdd = newStatus == 'partial'
+              ? (installmentAmount ?? 0)
+              : 0;
+
+          final nextPaid = switch (newStatus) {
+            'paid' => current.baseAmount,
+            'unpaid' => 0,
+            _ => (current.paidAmount + amountToAdd).clamp(
+              0,
+              current.baseAmount,
+            ),
+          };
+          final nextRemaining = (current.baseAmount - nextPaid).clamp(
+            0,
+            current.baseAmount,
+          );
+          final normalizedStatus = nextRemaining == 0
+              ? (nextPaid > 0 ? 'paid' : 'unpaid')
+              : (nextPaid > 0 ? 'partial' : 'unpaid');
+
+          final installments = [...current.installments];
+          if (newStatus == 'partial' && amountToAdd > 0) {
+            installments.add(
+              PaymentInstallment(
+                amount: amountToAdd,
+                date: DateTime.now(),
+                method: installmentMethod ?? current.method,
+                notes: installmentNotes,
+              ),
+            );
+          }
+
+          final updatedRecord = TenantPaymentRecord(
+            id: current.id,
+            tenantId: current.tenantId,
+            propertyId: current.propertyId,
+            amount: current.baseAmount,
+            date: current.date,
+            method: current.method,
+            status: normalizedStatus,
+            createdAt: current.createdAt,
+            baseAmount: current.baseAmount,
+            paidAmount: nextPaid,
+            remainingAmount: nextRemaining,
+            transactionId: current.transactionId,
+            notes: current.notes,
+            installments: newStatus == 'unpaid' ? const [] : installments,
+          );
+          setState(() {
+            _items[index] = updatedRecord;
+          });
+        }
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return BackHandler.normal(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Tenant Payment History'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddPaymentSheet(context),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Payment'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadInitial,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification.metrics.pixels >=
-                    notification.metrics.maxScrollExtent - 120 &&
-                _hasMore &&
-                !_isLoadingMore) {
-              _loadMore();
-            }
-            return false;
-          },
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 90),
-            children: [
-              _SummaryCard(
-                propertyName: widget.propertyName,
-                tenantName: widget.tenantName,
-                roomNumber: widget.roomNumber,
-                rentAmount: widget.rentAmount,
-                phone: widget.phone,
-              ),
-              const SizedBox(height: 16),
-              if (_isLoading)
-                const Center(child: CircularProgressIndicator())
-              else if (_error != null && _items.isEmpty)
-                _HistoryError(message: _error!, onRetry: _loadInitial)
-              else if (_items.isEmpty)
-                const _EmptyHistory()
-              else
-                ..._buildGroupedPayments(_items),
-              if (_isLoadingMore)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(child: CircularProgressIndicator()),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text('Tenant Payment History'),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showAddPaymentSheet(context),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Add Payment'),
+        ),
+        body: RefreshIndicator(
+          onRefresh: _loadInitial,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.pixels >=
+                      notification.metrics.maxScrollExtent - 120 &&
+                  _hasMore &&
+                  !_isLoadingMore) {
+                _loadMore();
+              }
+              return false;
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 90),
+              children: [
+                _SummaryCard(
+                  propertyName: widget.propertyName,
+                  tenantName: widget.tenantName,
+                  roomNumber: widget.roomNumber,
+                  rentAmount: widget.rentAmount,
+                  phone: widget.phone,
                 ),
-            ],
+                const SizedBox(height: 16),
+                if (_isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else if (_error != null && _items.isEmpty)
+                  _HistoryError(message: _error!, onRetry: _loadInitial)
+                else if (_items.isEmpty)
+                  const _EmptyHistory()
+                else
+                  ..._buildGroupedPayments(_items),
+                if (_isLoadingMore)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                if (_loadMoreError != null && _items.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: _HistoryError(
+                      message: _loadMoreError!,
+                      onRetry: _loadMore,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -212,7 +310,12 @@ class _TenantPaymentHistoryScreenState
         ..sort((a, b) => b.date.compareTo(a.date));
 
       for (final record in monthRecords) {
-        widgets.add(PaymentHistoryCard(payment: record));
+        widgets.add(
+          PaymentHistoryCard(
+            payment: record,
+            onStatusChanged: _updatePaymentStatus,
+          ),
+        );
         widgets.add(const SizedBox(height: 10));
       }
     }
@@ -243,9 +346,18 @@ class _TenantPaymentHistoryScreenState
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (sheetContext) {
-        return AddPaymentForm(onSubmit: _addPayment);
+        return AddPaymentForm(
+          onSubmit: _addPayment,
+          rentAmount: widget.rentAmount ?? 0,
+          existingPayments: _items,
+        );
       },
     );
   }

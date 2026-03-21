@@ -11,8 +11,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = OwnerDashboardColors.isDark(context);
     final subscriptionAsync = ref.watch(subscriptionProvider);
 
     return Scaffold(
@@ -22,15 +21,26 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                gradient:
-                    OwnerDashboardColors.managePropertiesBackgroundGradient(
-                      context,
-                    ),
+                gradient: OwnerDashboardColors.ownerPageBackgroundGradient(
+                  context,
+                ),
               ),
             ),
           ),
-          _liquidBlob(top: -90, left: -60, size: 300, isDark: isDark),
-          _liquidBlob(bottom: -100, right: -70, size: 260, isDark: isDark),
+          _liquidBlob(
+            context: context,
+            top: -90,
+            left: -60,
+            size: 300,
+            isDark: isDark,
+          ),
+          _liquidBlob(
+            context: context,
+            bottom: -100,
+            right: -70,
+            size: 260,
+            isDark: isDark,
+          ),
           SafeArea(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -172,6 +182,11 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
 
   Widget _header(BuildContext context, String currentPlan, String status) {
     final theme = Theme.of(context);
+    final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final brandHover = OwnerDashboardColors.brandPrimaryHover(context);
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final elevated = OwnerDashboardColors.elevatedBackground(context);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
@@ -184,11 +199,16 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.liquidPrimaryStart.withAlpha(220),
-                AppTheme.liquidPrimaryEnd.withAlpha(200),
+                brand.withValues(alpha: isDark ? 0.84 : 0.72),
+                brandHover.withValues(alpha: isDark ? 0.9 : 0.78),
               ],
             ),
             borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: OwnerDashboardColors.border(
+                context,
+              ).withValues(alpha: isDark ? 0.5 : 0.8),
+            ),
           ),
           child: Row(
             children: [
@@ -196,12 +216,12 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: AppColors.white.withAlpha(46),
+                  color: elevated.withValues(alpha: isDark ? 0.34 : 0.78),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.workspace_premium_rounded,
-                  color: AppColors.white,
+                  color: textPrimary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -212,7 +232,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                     Text(
                       'Subscription',
                       style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppColors.white,
+                        color: textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -220,7 +240,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                     Text(
                       'Current: ${currentPlan.toUpperCase()} • ${status.toUpperCase()}',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.white.withAlpha(220),
+                        color: OwnerDashboardColors.textSecondary(context),
                       ),
                     ),
                   ],
@@ -235,6 +255,8 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
 
   Widget _usageCard(BuildContext context, OwnerSubscriptionData subscription) {
     final theme = Theme.of(context);
+    final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -243,10 +265,14 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.pureWhite.withAlpha(130),
+            color: OwnerDashboardColors.activityCardBackground(
+              context,
+            ).withValues(alpha: isDark ? 0.78 : 0.9),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppTheme.liquidPrimaryStart.withAlpha(44),
+              color: OwnerDashboardColors.activityCardBorder(
+                context,
+              ).withValues(alpha: 0.9),
             ),
           ),
           child: Column(
@@ -256,9 +282,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                 'Tenant Usage',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: OwnerDashboardColors.managePropertiesHeaderPrimary(
-                    context,
-                  ),
+                  color: OwnerDashboardColors.textPrimary(context),
                 ),
               ),
               const SizedBox(height: 8),
@@ -266,18 +290,16 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                 value: subscription.usageRatio,
                 minHeight: 9,
                 borderRadius: BorderRadius.circular(999),
-                backgroundColor: AppTheme.liquidPrimaryStart.withAlpha(36),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppTheme.liquidPrimaryEnd,
+                backgroundColor: brand.withValues(alpha: 0.18),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  OwnerDashboardColors.brandPrimaryHover(context),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 '${subscription.currentTenantCount} of ${subscription.tenantLimit} tenants used',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: OwnerDashboardColors.managePropertiesHeaderSecondary(
-                    context,
-                  ),
+                  color: OwnerDashboardColors.textSecondary(context),
                 ),
               ),
             ],
@@ -295,6 +317,9 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
   }) {
     final theme = Theme.of(context);
     final isCurrent = plan.code == currentPlanCode;
+    final isDark = OwnerDashboardColors.isDark(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final brandHover = OwnerDashboardColors.brandPrimaryHover(context);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -304,13 +329,15 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isCurrent
-                ? AppTheme.liquidPrimaryStart.withAlpha(44)
-                : AppTheme.pureWhite.withAlpha(125),
+                ? brand.withValues(alpha: isDark ? 0.22 : 0.14)
+                : OwnerDashboardColors.cardBackground(
+                    context,
+                  ).withValues(alpha: isDark ? 0.76 : 0.9),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isCurrent
-                  ? AppTheme.liquidPrimaryEnd
-                  : AppTheme.liquidPrimaryStart.withAlpha(42),
+                  ? brandHover
+                  : OwnerDashboardColors.border(context).withValues(alpha: 0.9),
               width: isCurrent ? 1.5 : 1,
             ),
           ),
@@ -321,18 +348,14 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                 plan.title,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: OwnerDashboardColors.managePropertiesHeaderPrimary(
-                    context,
-                  ),
+                  color: OwnerDashboardColors.textPrimary(context),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 plan.description,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: OwnerDashboardColors.managePropertiesHeaderSecondary(
-                    context,
-                  ),
+                  color: OwnerDashboardColors.textSecondary(context),
                 ),
               ),
               const SizedBox(height: 12),
@@ -342,16 +365,14 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                     : 'Rs ${plan.monthlyPrice}/month',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.liquidPrimaryEnd,
+                  color: brandHover,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 'Limit: ${plan.tenantLimit} tenants',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: OwnerDashboardColors.managePropertiesHeaderSecondary(
-                    context,
-                  ),
+                  color: OwnerDashboardColors.textSecondary(context),
                 ),
               ),
               const SizedBox(height: 14),
@@ -361,9 +382,8 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                 child: FilledButton(
                   onPressed: isCurrent ? null : onSelect,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.liquidPrimaryEnd,
-                    disabledBackgroundColor: AppTheme.liquidPrimaryEnd
-                        .withAlpha(90),
+                    backgroundColor: brandHover,
+                    disabledBackgroundColor: brandHover.withValues(alpha: 0.45),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -447,6 +467,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
   }
 
   Widget _liquidBlob({
+    required BuildContext context,
     double? top,
     double? left,
     double? bottom,
@@ -465,8 +486,12 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDark
-              ? AppTheme.liquidPrimaryStart.withAlpha(22)
-              : AppTheme.liquidPrimaryStart.withAlpha(32),
+              ? OwnerDashboardColors.brandPrimary(
+                  context,
+                ).withValues(alpha: 0.14)
+              : OwnerDashboardColors.brandPrimary(
+                  context,
+                ).withValues(alpha: 0.1),
         ),
       ),
     );

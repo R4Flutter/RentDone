@@ -8,12 +8,15 @@ import 'package:rentdone/core/constants/user_role.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
+import 'package:rentdone/features/auth/presentation/pages/phone_capture_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/signup_screen.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart'
     as owner_add_tenant;
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_screen.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/owner_dashboard.dart';
+import 'package:rentdone/features/owner/owner_payment/presentation/pages/payment_failure_screen.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/pages/payment_screen.dart';
+import 'package:rentdone/features/owner/owner_payment/presentation/pages/payment_success_screen.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/pages/tenant_list_screen.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/pages/tenant_payment_history_screen.dart';
 import 'package:rentdone/features/owner/owner_profile/presentation/pages/profile_screen.dart';
@@ -41,6 +44,7 @@ import 'package:rentdone/features/tenant_management/presentation/pages/edit_tena
 import 'package:rentdone/features/tenant_management/presentation/pages/record_payment_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/tenant_list_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/tenant_analytics_screen.dart';
+import 'package:rentdone/shared/widgets/back_handler.dart';
 import 'package:rentdone/shared/pages/role_selection_screen.dart';
 import 'package:rentdone/shared/pages/splash_screen.dart';
 
@@ -55,6 +59,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final isLoggedIn = firebaseAuth.currentUser != null;
       final path = state.uri.path;
+      bool isValidPhone(String? value) {
+        final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+        return RegExp(r'^[6-9]\d{9}$').hasMatch(digits);
+      }
 
       if (!hasHandledInitialRouteGuard) {
         hasHandledInitialRouteGuard = true;
@@ -71,11 +79,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path.startsWith('/owner') || path.startsWith('/tenant');
         if (requiresAuth) {
           if (path.startsWith('/tenant')) {
-            return '/login?role=tenant';
+            return '/phone?role=tenant';
           }
-          return '/login?role=owner';
+          return '/phone?role=owner';
         }
-        return null; // Allow /role, /login and /signup
+
+        if (path == '/login') {
+          final roleParam = state.uri.queryParameters['role'];
+          final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
+          final phone = state.uri.queryParameters['phone'];
+          if (!isValidPhone(phone)) {
+            return '/phone?role=${selectedRole.name}';
+          }
+        }
+
+        if (path == '/signup') {
+          final roleParam = state.uri.queryParameters['role'];
+          final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
+          final phone = state.uri.queryParameters['phone'];
+          if (!isValidPhone(phone)) {
+            return '/phone?role=${selectedRole.name}';
+          }
+        }
+
+        return null; // Allow /role, /phone, /login and /signup
       }
 
       // User is authenticated - check their role
@@ -84,7 +111,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // If user has no role yet, only allow /role and /login
       if (role == null) {
-        if (path == '/role' || path == '/login' || path == '/signup') {
+        if (path == '/role' ||
+            path == '/phone' ||
+            path == '/login' ||
+            path == '/signup') {
           return null; // Allow these paths
         }
         return '/role'; // Redirect everything else to role selection
@@ -100,6 +130,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // If user with role tries to access role selection or login, redirect to their dashboard
       if (path == '/role' ||
+          path == '/phone' ||
           path == '/login' ||
           path == '/signup' ||
           path == '/') {
@@ -137,14 +168,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         name: 'splash',
-        builder: (context, state) => const SplashPage(),
+        builder: (context, state) => const BackHandler.root(
+          dialogTitle: 'Exit RentDone?',
+          dialogMessage: 'Are you sure you want to exit?',
+          child: SplashPage(),
+        ),
       ),
 
       /// 🎭 Role Selection Screen
       GoRoute(
         path: '/role',
         name: 'roleSelection',
-        builder: (context, state) => const RoleSelectionScreen(),
+        builder: (context, state) => const BackHandler.root(
+          dialogTitle: 'Exit RentDone?',
+          dialogMessage: 'Are you sure you want to exit?',
+          child: RoleSelectionScreen(),
+        ),
       ),
 
       /// 🔐 Login Screen
@@ -153,8 +192,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'login',
         builder: (context, state) {
           final roleParam = state.uri.queryParameters['role'];
+          final phone = state.uri.queryParameters['phone'] ?? '';
           final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
-          return LoginPage(selectedRole: selectedRole);
+          return BackHandler.root(
+            dialogTitle: 'Exit RentDone?',
+            dialogMessage: 'Are you sure you want to exit?',
+            child: LoginPage(selectedRole: selectedRole, phoneNumber: phone),
+          );
+        },
+      ),
+
+      /// 📱 Phone Verification Before Login
+      GoRoute(
+        path: '/phone',
+        name: 'phoneCapture',
+        builder: (context, state) {
+          final roleParam = state.uri.queryParameters['role'];
+          final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
+          return BackHandler.root(
+            dialogTitle: 'Exit RentDone?',
+            dialogMessage: 'Are you sure you want to exit?',
+            child: PhoneCapturePage(selectedRole: selectedRole),
+          );
         },
       ),
 
@@ -164,8 +223,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'signup',
         builder: (context, state) {
           final roleParam = state.uri.queryParameters['role'];
+          final phone = state.uri.queryParameters['phone'] ?? '';
           final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
-          return SignupPage(selectedRole: selectedRole);
+          return BackHandler.root(
+            dialogTitle: 'Exit RentDone?',
+            dialogMessage: 'Are you sure you want to exit?',
+            child: SignupPage(selectedRole: selectedRole, phoneNumber: phone),
+          );
         },
       ),
 
@@ -401,6 +465,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 roomNumber: state.uri.queryParameters['roomNumber'],
                 rentAmount: rentAmount,
                 phone: state.uri.queryParameters['phone'],
+              );
+            },
+          ),
+
+          GoRoute(
+            path: '/owner/payments/success',
+            name: 'ownerPaymentSuccess',
+            builder: (context, state) {
+              final amount = int.tryParse(
+                state.uri.queryParameters['amount'] ?? '',
+              );
+              return PaymentSuccessScreen(
+                amount: amount ?? 0,
+                tenantName: state.uri.queryParameters['tenantName'] ?? 'Tenant',
+                propertyName:
+                    state.uri.queryParameters['propertyName'] ?? 'Property',
+              );
+            },
+          ),
+
+          GoRoute(
+            path: '/owner/payments/failure',
+            name: 'ownerPaymentFailure',
+            builder: (context, state) {
+              final amount = int.tryParse(
+                state.uri.queryParameters['amount'] ?? '',
+              );
+              return PaymentFailureScreen(
+                amount: amount ?? 0,
+                tenantName: state.uri.queryParameters['tenantName'] ?? 'Tenant',
+                propertyName:
+                    state.uri.queryParameters['propertyName'] ?? 'Property',
+                errorMessage:
+                    state.uri.queryParameters['error'] ??
+                    'Payment could not be processed',
               );
             },
           ),

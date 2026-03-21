@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
-import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_bank_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_upi_provider.dart';
 
@@ -22,23 +21,12 @@ class _OwnerBankDetailsScreenState
   late final TextEditingController _rentDueDayController;
   late final TextEditingController _upiController;
 
-  late final TextEditingController _holderController;
-  late final TextEditingController _bankNameController;
-  late final TextEditingController _accountNumberController;
-  late final TextEditingController _ifscController;
-  late final TextEditingController _branchController;
-
   @override
   void initState() {
     super.initState();
     _lateFeeController = TextEditingController();
     _rentDueDayController = TextEditingController();
     _upiController = TextEditingController();
-    _holderController = TextEditingController();
-    _bankNameController = TextEditingController();
-    _accountNumberController = TextEditingController();
-    _ifscController = TextEditingController();
-    _branchController = TextEditingController();
   }
 
   @override
@@ -46,11 +34,6 @@ class _OwnerBankDetailsScreenState
     _lateFeeController.dispose();
     _rentDueDayController.dispose();
     _upiController.dispose();
-    _holderController.dispose();
-    _bankNameController.dispose();
-    _accountNumberController.dispose();
-    _ifscController.dispose();
-    _branchController.dispose();
     super.dispose();
   }
 
@@ -65,10 +48,7 @@ class _OwnerBankDetailsScreenState
     final ownerUpi = ref.watch(ownerUpiProvider);
     final ownerUpiNotifier = ref.read(ownerUpiProvider.notifier);
 
-    final bank = ref.watch(ownerBankProvider);
-    final bankNotifier = ref.read(ownerBankProvider.notifier);
-
-    _syncControllers(settings, ownerUpi, bank);
+    _syncControllers(settings, ownerUpi);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -98,7 +78,7 @@ class _OwnerBankDetailsScreenState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Bank Details',
+                              'Payment Defaults',
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w700,
@@ -110,7 +90,7 @@ class _OwnerBankDetailsScreenState
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Production-ready payout and payment configuration',
+                              'Configure default payment mode, rent policy, and owner UPI verification',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontSize: 13,
                                 color:
@@ -125,13 +105,15 @@ class _OwnerBankDetailsScreenState
                       const SizedBox(width: 10),
                       _statusPill(
                         context,
-                        label: bank.isDirty ? 'Unsynced' : 'Synced',
-                        icon: bank.isDirty
-                            ? Icons.cloud_off_outlined
-                            : Icons.cloud_done,
-                        color: bank.isDirty
-                            ? AppTheme.warningAmber
-                            : AppTheme.successGreen,
+                        label: ownerUpi.isVerified
+                            ? 'UPI Verified'
+                            : 'UPI Pending',
+                        icon: ownerUpi.isVerified
+                            ? Icons.verified_rounded
+                            : Icons.gpp_maybe_outlined,
+                        color: ownerUpi.isVerified
+                            ? AppTheme.successGreen
+                            : AppTheme.warningAmber,
                       ),
                     ],
                   ),
@@ -142,7 +124,6 @@ class _OwnerBankDetailsScreenState
                       await Future.wait([
                         ref.read(ownerSettingsProvider.notifier).load(),
                         ref.read(ownerUpiProvider.notifier).load(),
-                        ref.read(ownerBankProvider.notifier).refresh(),
                       ]);
                     },
                     child: SingleChildScrollView(
@@ -170,21 +151,6 @@ class _OwnerBankDetailsScreenState
                                   ownerUpiNotifier,
                                 ),
                               ),
-                              const SizedBox(height: 18),
-                              _glassSection(
-                                context,
-                                theme,
-                                icon: Icons.account_balance_outlined,
-                                title: 'Bank Account Verification',
-                                subtitle:
-                                    'Secure account details used for invoices, reminders, and transfers.',
-                                child: _bankSection(
-                                  context,
-                                  theme,
-                                  bank,
-                                  bankNotifier,
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -200,20 +166,10 @@ class _OwnerBankDetailsScreenState
     );
   }
 
-  void _syncControllers(
-    OwnerSettingsState settings,
-    OwnerUpiState ownerUpi,
-    OwnerBankState bank,
-  ) {
+  void _syncControllers(OwnerSettingsState settings, OwnerUpiState ownerUpi) {
     _setControllerText(_lateFeeController, settings.lateFeePercentage);
     _setControllerText(_rentDueDayController, settings.rentDueDay);
     _setControllerText(_upiController, ownerUpi.upiId);
-
-    _setControllerText(_holderController, bank.accountHolderName);
-    _setControllerText(_bankNameController, bank.bankName);
-    _setControllerText(_accountNumberController, bank.accountNumber);
-    _setControllerText(_ifscController, bank.ifsc);
-    _setControllerText(_branchController, bank.branch);
   }
 
   void _setControllerText(TextEditingController controller, String value) {
@@ -232,7 +188,7 @@ class _OwnerBankDetailsScreenState
     OwnerUpiState ownerUpi,
     OwnerUpiNotifier ownerUpiNotifier,
   ) {
-    const paymentModes = ['UPI', 'Cash', 'Bank Transfer'];
+    const paymentModes = ['UPI', 'Cash'];
     final activeMode = paymentModes.contains(settings.defaultPaymentMode)
         ? settings.defaultPaymentMode
         : paymentModes.first;
@@ -240,6 +196,10 @@ class _OwnerBankDetailsScreenState
     return Column(
       children: [
         DropdownButtonFormField<String>(
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
           initialValue: activeMode,
           onChanged: (value) {
             if (value != null) {
@@ -254,7 +214,18 @@ class _OwnerBankDetailsScreenState
             helper: 'Applied as the default while creating new tenants.',
           ),
           items: paymentModes
-              .map((mode) => DropdownMenuItem(value: mode, child: Text(mode)))
+              .map(
+                (mode) => DropdownMenuItem(
+                  value: mode,
+                  child: Text(
+                    mode,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              )
               .toList(),
         ),
         const SizedBox(height: 14),
@@ -371,219 +342,6 @@ class _OwnerBankDetailsScreenState
             alignment: Alignment.centerLeft,
             child: Text(
               ownerUpi.successMessage!,
-              style: const TextStyle(
-                color: AppTheme.successGreen,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _bankSection(
-    BuildContext context,
-    ThemeData theme,
-    OwnerBankState bank,
-    OwnerBankNotifier notifier,
-  ) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            _statusPill(
-              context,
-              label: bank.isVerified ? 'Bank Verified' : 'Needs Verification',
-              icon: bank.isVerified
-                  ? Icons.verified_user
-                  : Icons.pending_actions,
-              color: bank.isVerified
-                  ? AppTheme.successGreen
-                  : AppTheme.warningAmber,
-            ),
-            const SizedBox(width: 8),
-            if (bank.updatedAt != null)
-              _statusPill(
-                context,
-                label: 'Synced ${_formatSyncTime(bank.updatedAt!)}',
-                icon: Icons.sync,
-                color: OwnerDashboardColors.managePropertiesActionColor(
-                  context,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        TextFormField(
-          controller: _holderController,
-          onChanged: notifier.updateAccountHolderName,
-          textInputAction: TextInputAction.next,
-          decoration: _fieldDecoration(
-            context,
-            label: 'Account Holder Name',
-            hint: 'As per bank records',
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _bankNameController,
-          onChanged: notifier.updateBankName,
-          textInputAction: TextInputAction.next,
-          decoration: _fieldDecoration(
-            context,
-            label: 'Bank Name',
-            hint: 'HDFC Bank, ICICI Bank, SBI, etc.',
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: TextFormField(
-                controller: _accountNumberController,
-                onChanged: notifier.updateAccountNumber,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(20),
-                ],
-                textInputAction: TextInputAction.next,
-                decoration: _fieldDecoration(
-                  context,
-                  label: 'Account Number',
-                  hint: '6-20 digits',
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                controller: _ifscController,
-                onChanged: notifier.updateIfsc,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                  LengthLimitingTextInputFormatter(11),
-                ],
-                textInputAction: TextInputAction.next,
-                decoration: _fieldDecoration(
-                  context,
-                  label: 'IFSC',
-                  hint: 'HDFC0001234',
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _branchController,
-          onChanged: notifier.updateBranch,
-          textInputAction: TextInputAction.done,
-          decoration: _fieldDecoration(
-            context,
-            label: 'Branch (Optional)',
-            hint: 'Branch name or city',
-          ),
-        ),
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Account preview: ${_maskAccountNumber(_accountNumberController.text)}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 12,
-              color: OwnerDashboardColors.managePropertiesHeaderSecondary(
-                context,
-              ),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 44,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor:
-                        OwnerDashboardColors.managePropertiesActionColor(
-                          context,
-                        ),
-                    side: BorderSide(
-                      color: OwnerDashboardColors.managePropertiesActionColor(
-                        context,
-                      ),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: bank.isLoading ? null : notifier.refresh,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Refresh'),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: SizedBox(
-                height: 44,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor:
-                        OwnerDashboardColors.managePropertiesActionColor(
-                          context,
-                        ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: bank.isLoading
-                      ? null
-                      : notifier.verifyAndSaveBankDetails,
-                  icon: bank.isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.shield_rounded, size: 18),
-                  label: Text(
-                    bank.isVerified && !bank.isDirty
-                        ? 'Saved & Verified'
-                        : 'Save & Verify',
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        if (bank.errorMessage != null) ...[
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              bank.errorMessage!,
-              style: const TextStyle(
-                color: AppTheme.errorRed,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-        if (bank.successMessage != null) ...[
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              bank.successMessage!,
               style: const TextStyle(
                 color: AppTheme.successGreen,
                 fontSize: 12,
@@ -800,23 +558,5 @@ class _OwnerBankDetailsScreenState
         ),
       ),
     );
-  }
-
-  String _maskAccountNumber(String value) {
-    final clean = value.trim();
-    if (clean.isEmpty) return 'Not entered';
-    if (clean.length <= 4) return clean;
-    final lastFour = clean.substring(clean.length - 4);
-    return 'XXXXXX$lastFour';
-  }
-
-  String _formatSyncTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) return 'just now';
-    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
-    if (difference.inDays < 1) return '${difference.inHours}h ago';
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 }
