@@ -417,6 +417,7 @@ class AuthFirebaseService {
       'gravatarUrl': gravatarUrl,
       'phone': phoneToPersist,
       'role': roleToPersist.value, // ← Immutable after first set
+      'notifications': {'rent_due': true, 'payment_received': true},
       'updatedAt': now,
       if (!snapshot.exists) 'createdAt': now,
       'lastLoginAt': now,

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'package:rentdone/app/app.dart';
+import 'package:rentdone/core/notifications/push_notification_service.dart';
 import 'package:rentdone/firebase/firebase_options.dart';
 
 /// ------------------------------------------------------------
@@ -14,6 +16,7 @@ Future<void> main() async {
 
   // Initialize Firebase (single responsibility)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   // Run the app with Riverpod scope
   runApp(const ProviderScope(child: RentDoneApp()));

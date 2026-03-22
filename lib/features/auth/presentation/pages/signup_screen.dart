@@ -511,6 +511,7 @@ class _SignupPageState extends State<SignupPage>
         'phoneNumber': widget.phoneNumber,
         'phone': widget.phoneNumber,
         'role': 'owner',
+        'notifications': {'rent_due': true, 'payment_received': true},
         'createdAt': FieldValue.serverTimestamp(),
         'tenantScore': 0,
       }, SetOptions(merge: true));

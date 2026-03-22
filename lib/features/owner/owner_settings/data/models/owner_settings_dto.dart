@@ -12,6 +12,8 @@ class OwnerSettingsDto {
   final String rentDueDay;
   final bool enable2FA;
   final bool notificationsEnabled;
+  final bool rentDueNotificationsEnabled;
+  final bool paymentReceivedNotificationsEnabled;
   final bool darkMode;
   final String locationAddress;
   final double? locationLatitude;
@@ -29,6 +31,8 @@ class OwnerSettingsDto {
     required this.rentDueDay,
     required this.enable2FA,
     required this.notificationsEnabled,
+    required this.rentDueNotificationsEnabled,
+    required this.paymentReceivedNotificationsEnabled,
     required this.darkMode,
     required this.locationAddress,
     required this.locationLatitude,
@@ -48,6 +52,9 @@ class OwnerSettingsDto {
       rentDueDay: settings.rentDueDay,
       enable2FA: settings.enable2FA,
       notificationsEnabled: settings.notificationsEnabled,
+      rentDueNotificationsEnabled: settings.rentDueNotificationsEnabled,
+      paymentReceivedNotificationsEnabled:
+          settings.paymentReceivedNotificationsEnabled,
       darkMode: settings.darkMode,
       locationAddress: settings.locationAddress,
       locationLatitude: settings.locationLatitude,
@@ -68,6 +75,8 @@ class OwnerSettingsDto {
       rentDueDay: rentDueDay,
       enable2FA: enable2FA,
       notificationsEnabled: notificationsEnabled,
+      rentDueNotificationsEnabled: rentDueNotificationsEnabled,
+      paymentReceivedNotificationsEnabled: paymentReceivedNotificationsEnabled,
       darkMode: darkMode,
       locationAddress: locationAddress,
       locationLatitude: locationLatitude,

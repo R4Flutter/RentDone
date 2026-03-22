@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/core/notifications/push_notification_provider.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 
@@ -107,6 +108,7 @@ class SettingsScreen extends ConsumerWidget {
                                             'Control alerts and display behavior.',
                                         child: _systemSection(
                                           context,
+                                          ref,
                                           settings,
                                           notifier,
                                           theme,
@@ -135,6 +137,7 @@ class SettingsScreen extends ConsumerWidget {
                                       'Control alerts and display behavior.',
                                   child: _systemSection(
                                     context,
+                                    ref,
                                     settings,
                                     notifier,
                                     theme,
@@ -432,6 +435,7 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _systemSection(
     BuildContext context,
+    WidgetRef ref,
     OwnerSettingsState settings,
     OwnerSettingsNotifier notifier,
     ThemeData theme,
@@ -444,11 +448,36 @@ class SettingsScreen extends ConsumerWidget {
         _settingTile(
           context,
           icon: Icons.notifications_active_outlined,
-          title: 'Enable Notifications',
-          subtitle: 'Receive rent alerts and reminders.',
+          title: 'Rent Due Reminder',
+          subtitle: 'Receive alerts when unpaid rent is due today.',
           child: Switch.adaptive(
-            value: settings.notificationsEnabled,
-            onChanged: notifier.setNotificationsEnabled,
+            value: settings.rentDueNotificationsEnabled,
+            onChanged: (value) async {
+              if (value) {
+                await ref
+                    .read(pushNotificationServiceProvider)
+                    .requestPermission();
+              }
+              notifier.setRentDueNotificationsEnabled(value);
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        _settingTile(
+          context,
+          icon: Icons.payments_outlined,
+          title: 'Payment Received Confirmation',
+          subtitle: 'Receive confirmation when rent payment is marked paid.',
+          child: Switch.adaptive(
+            value: settings.paymentReceivedNotificationsEnabled,
+            onChanged: (value) async {
+              if (value) {
+                await ref
+                    .read(pushNotificationServiceProvider)
+                    .requestPermission();
+              }
+              notifier.setPaymentReceivedNotificationsEnabled(value);
+            },
           ),
         ),
         const SizedBox(height: 12),

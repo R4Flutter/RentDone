@@ -52,6 +52,30 @@ service cloud.firestore {
           && request.resource.data.uid == currentUid());
     }
 
+    function notificationsShapeIsValid(data) {
+      return !('notifications' in data)
+        || (
+          data.notifications is map
+          && (!('rent_due' in data.notifications) || data.notifications.rent_due is bool)
+          && (!('payment_received' in data.notifications)
+            || data.notifications.payment_received is bool)
+        );
+    }
+
+    function tokenPlatformIsValid(platform) {
+      return platform in ['android', 'ios', 'web', 'unknown'];
+    }
+
+    function deviceTokenShapeIsValid(data) {
+      return data.token is string
+        && data.token.size() > 20
+        && data.token.size() < 4096
+        && data.platform is string
+        && tokenPlatformIsValid(data.platform)
+        && (!('createdAt' in data) || data.createdAt is timestamp)
+        && (!('lastUsedAt' in data) || data.lastUsedAt is timestamp);
+    }
+
     function ownerOwnsProperty(propertyId) {
       return exists(/databases/$(database)/documents/properties/$(propertyId))
         && get(/databases/$(database)/documents/properties/$(propertyId)).data.ownerId == currentUid();
@@ -192,15 +216,36 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && userId == currentUid()
         && request.resource.data.uid == currentUid()
-        && roleIsValid(request.resource.data.role);
+        && roleIsValid(request.resource.data.role)
+        && notificationsShapeIsValid(request.resource.data);
 
       // SECURITY: Role cannot be changed after creation (immutable field)
       allow update: if isAuthenticated()
         && userId == currentUid()
         && userUidUnchanged()
-        && userRoleUnchanged();
+        && userRoleUnchanged()
+        && notificationsShapeIsValid(request.resource.data);
 
       allow delete: if false;
+
+      match /deviceTokens/{tokenId} {
+        allow read: if isAuthenticated() && userId == currentUid();
+
+        allow create: if isAuthenticated()
+          && userId == currentUid()
+          && deviceTokenShapeIsValid(request.resource.data);
+
+        allow update: if isAuthenticated()
+          && userId == currentUid()
+          && deviceTokenShapeIsValid(request.resource.data)
+          && request.resource.data.token == resource.data.token;
+
+        allow delete: if isAuthenticated() && userId == currentUid();
+      }
+
+      match /notificationSnoozes/{snoozeId} {
+        allow read, create, update, delete: if isAuthenticated() && userId == currentUid();
+      }
     }
 
     match /ownerPaymentProfiles/{ownerId} {
@@ -272,7 +317,6 @@ service cloud.firestore {
           isOwner()
           && request.resource.data.ownerId == currentUid()
           && ownerOwnsProperty(request.resource.data.propertyId)
-          && ownerCanCreateTenant(currentUid())
         )
         || tenantCanSelfCreateProfile(tenantId);
 
@@ -453,6 +497,10 @@ service cloud.firestore {
     }
 
     match /_securityAlerts/{alertId} {
+      allow read, write: if false;
+    }
+
+    match /_notificationEvents/{eventId} {
       allow read, write: if false;
     }
 

@@ -33,6 +33,16 @@ class OwnerSettingsFirestoreService {
     final latitude = toDouble(data['locationLatitude']) ?? geoPoint?.latitude;
     final longitude =
         toDouble(data['locationLongitude']) ?? geoPoint?.longitude;
+    final notifications =
+        (data['notifications'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
+    final legacyNotificationsEnabled =
+        (data['notificationsEnabled'] as bool?) ?? true;
+    final rentDueEnabled =
+        (notifications['rent_due'] as bool?) ?? legacyNotificationsEnabled;
+    final paymentReceivedEnabled =
+        (notifications['payment_received'] as bool?) ??
+        legacyNotificationsEnabled;
 
     return OwnerSettingsDto(
       fullName: (data['name'] as String?) ?? '',
@@ -45,7 +55,9 @@ class OwnerSettingsFirestoreService {
       lateFeePercentage: (data['lateFeePercentage'] as String?) ?? '0',
       rentDueDay: (data['rentDueDay'] as String?) ?? '5',
       enable2FA: (data['enable2FA'] as bool?) ?? false,
-      notificationsEnabled: (data['notificationsEnabled'] as bool?) ?? true,
+      notificationsEnabled: rentDueEnabled || paymentReceivedEnabled,
+      rentDueNotificationsEnabled: rentDueEnabled,
+      paymentReceivedNotificationsEnabled: paymentReceivedEnabled,
       darkMode: (data['darkMode'] as bool?) ?? false,
       locationAddress: (data['locationAddress'] as String?) ?? '',
       locationLatitude: latitude,
@@ -88,6 +100,10 @@ class OwnerSettingsFirestoreService {
       'rentDueDay': settings.rentDueDay,
       'enable2FA': settings.enable2FA,
       'notificationsEnabled': settings.notificationsEnabled,
+      'notifications': {
+        'rent_due': settings.rentDueNotificationsEnabled,
+        'payment_received': settings.paymentReceivedNotificationsEnabled,
+      },
       'darkMode': settings.darkMode,
       'locationAddress': settings.locationAddress,
       'locationLatitude': latitude,
@@ -119,6 +135,8 @@ class OwnerSettingsFirestoreService {
       rentDueDay: '5',
       enable2FA: false,
       notificationsEnabled: true,
+      rentDueNotificationsEnabled: true,
+      paymentReceivedNotificationsEnabled: true,
       darkMode: false,
       locationAddress: '',
       locationLatitude: null,

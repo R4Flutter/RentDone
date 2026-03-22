@@ -259,6 +259,226 @@ function monthKey(date) {
   return `${date.getFullYear()}-${m}`;
 }
 
+function normalizePaymentStatus(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isUnpaidStatus(value) {
+  const status = normalizePaymentStatus(value);
+  return status === 'unpaid' || status === 'pending';
+}
+
+function amountInr(value) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat('en-IN').format(Number.isFinite(amount) ? amount : 0);
+}
+
+function dueDateLabel(value) {
+  const date = toDate(value) || new Date();
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  }).format(date);
+}
+
+function todayBoundsInKolkata(date = new Date()) {
+  const inKolkata = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  const start = new Date(inKolkata.getFullYear(), inKolkata.getMonth(), inKolkata.getDate());
+  const end = new Date(inKolkata.getFullYear(), inKolkata.getMonth(), inKolkata.getDate() + 1);
+  return { now: inKolkata, start, end };
+}
+
+async function shouldSendUserNotification({ uid, notificationKey }) {
+  if (!uid || !notificationKey) {
+    return { allowed: false, tokens: [] };
+  }
+
+  const userDoc = await db.collection('users').doc(uid).get();
+  if (!userDoc.exists) {
+    return { allowed: false, tokens: [] };
+  }
+
+  const userData = userDoc.data() || {};
+  const notifications = userData.notifications || {};
+  const enabled = notifications[notificationKey] !== false;
+  if (!enabled) {
+    return {
+      allowed: false,
+      tokens: [],
+      userRef: userDoc.ref,
+    };
+  }
+
+  const tokenSnap = await userDoc.ref.collection('deviceTokens').get();
+  const tokens = [];
+  const tokenRefs = new Map();
+  tokenSnap.forEach((doc) => {
+    const token = String(doc.data()?.token || doc.id || '').trim();
+    if (!token) return;
+    tokens.push(token);
+    tokenRefs.set(token, doc.ref);
+  });
+
+  if (!tokens.length) {
+    const legacyToken = String(userData.fcmToken || '').trim();
+    if (legacyToken) {
+      tokens.push(legacyToken);
+    }
+  }
+
+  return {
+    allowed: enabled,
+    tokens,
+    tokenRefs,
+    userRef: userDoc.ref,
+  };
+}
+
+async function reserveNotificationEvent(eventId, payload) {
+  const ref = db.collection('_notificationEvents').doc(eventId);
+  try {
+    await ref.create({
+      ...payload,
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAt: Timestamp.fromDate(new Date(Date.now() + (30 * 24 * 60 * 60 * 1000))),
+    });
+    return true;
+  } catch (error) {
+    if (error?.code === 6 || String(error?.message || '').toLowerCase().includes('already exists')) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function sendDirectPush({ token, title, body, data = {} }) {
+  if (!token) return { sent: false, invalidToken: false };
+
+  try {
+    await admin.messaging().send({
+      token,
+      notification: { title, body },
+      data,
+      android: {
+        priority: 'high',
+      },
+      apns: {
+        headers: {
+          'apns-priority': '10',
+        },
+        payload: {
+          aps: {
+            sound: 'default',
+          },
+        },
+      },
+    });
+    return { sent: true, invalidToken: false };
+  } catch (error) {
+    const code = String(error?.code || '');
+    const invalidToken = code.includes('registration-token-not-registered')
+      || code.includes('invalid-registration-token');
+    functions.logger.error('FCM send failed', { code, message: error?.message });
+    return { sent: false, invalidToken };
+  }
+}
+
+async function sendPushMulticast({ tokens, title, body, data = {} }) {
+  const uniqueTokens = Array.from(new Set((tokens || []).filter(Boolean)));
+  if (!uniqueTokens.length) {
+    return { sentCount: 0, invalidTokens: [] };
+  }
+
+  const invalidTokens = [];
+  const retryTokens = [];
+  let sentCount = 0;
+
+  for (let i = 0; i < uniqueTokens.length; i += 500) {
+    const chunk = uniqueTokens.slice(i, i + 500);
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens: chunk,
+      notification: { title, body },
+      data,
+      android: {
+        priority: 'high',
+      },
+      apns: {
+        headers: {
+          'apns-priority': '10',
+        },
+        payload: {
+          aps: {
+            sound: 'default',
+          },
+        },
+      },
+    });
+
+    sentCount += response.successCount;
+    response.responses.forEach((item, index) => {
+      if (item.success) return;
+      const code = String(item.error?.code || '');
+      const invalid = code.includes('registration-token-not-registered')
+        || code.includes('invalid-registration-token');
+      if (invalid) {
+        invalidTokens.push(chunk[index]);
+        return;
+      }
+
+      const transient = code.includes('internal')
+        || code.includes('unavailable')
+        || code.includes('deadline-exceeded')
+        || code.includes('unknown');
+      if (transient) {
+        retryTokens.push(chunk[index]);
+      }
+    });
+  }
+
+  if (retryTokens.length) {
+    const uniqueRetryTokens = Array.from(new Set(retryTokens));
+    for (let i = 0; i < uniqueRetryTokens.length; i += 500) {
+      const chunk = uniqueRetryTokens.slice(i, i + 500);
+      const retryResponse = await admin.messaging().sendEachForMulticast({
+        tokens: chunk,
+        notification: { title, body },
+        data,
+        android: {
+          priority: 'high',
+        },
+        apns: {
+          headers: {
+            'apns-priority': '10',
+          },
+          payload: {
+            aps: {
+              sound: 'default',
+            },
+          },
+        },
+      });
+
+      sentCount += retryResponse.successCount;
+      retryResponse.responses.forEach((item, index) => {
+        if (item.success) return;
+        const code = String(item.error?.code || '');
+        const invalid = code.includes('registration-token-not-registered')
+          || code.includes('invalid-registration-token');
+        if (invalid) {
+          invalidTokens.push(chunk[index]);
+        }
+      });
+    }
+  }
+
+  return {
+    sentCount,
+    invalidTokens,
+  };
+}
+
 function previousMonthKey(date = new Date()) {
   const previous = new Date(date.getFullYear(), date.getMonth() - 1, 1);
   return monthKey(previous);
@@ -484,6 +704,9 @@ exports.cleanupExpiredWebhookEvents = functions.pubsub
     await deleteQueryInChunks(
       db.collection('_securityAlerts').where('expiresAt', '<=', now),
     );
+    await deleteQueryInChunks(
+      db.collection('_notificationEvents').where('expiresAt', '<=', now),
+    );
     return null;
   });
 
@@ -533,382 +756,264 @@ exports.generateMonthlyPayments = functions.pubsub
     await writer.close();
   });
 
-exports.markOverdueAndNotify = functions.pubsub
+exports.sendRentDueReminders = functions.pubsub
   .schedule('0 9 * * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
-    const now = admin.firestore.Timestamp.now();
-    const overdueSnap = await db
-      .collection('payments')
-      .where('status', '==', 'pending')
-      .where('dueDate', '<', now)
+    const { now, start, end } = todayBoundsInKolkata();
+    const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const dueSnap = await db
+      .collection('tenants')
+      .where('status', 'in', ['ACTIVE', 'active'])
+      .where('dueDate', '>=', start)
+      .where('dueDate', '<', end)
       .get();
 
-    if (overdueSnap.empty) return;
+    if (dueSnap.empty) return null;
 
-    const writer = db.bulkWriter();
-    writer.onWriteError((err) => {
-      if (err.code === 6) return false;
-      return true;
-    });
+    const userCache = new Map();
+    let sentCount = 0;
+    const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    for (const doc of overdueSnap.docs) {
-      const p = doc.data();
-      let ownerId = p.ownerId || null;
-      writer.update(doc.ref, {
-        status: 'overdue',
-        updatedAt: FieldValue.serverTimestamp(),
+    for (const tenantDoc of dueSnap.docs) {
+      const tenant = tenantDoc.data() || {};
+      const ownerId = String(tenant.ownerId || '').trim();
+      const tenantId = String(tenantDoc.id || '').trim();
+      if (!ownerId || !tenantId) {
+        continue;
+      }
+
+      // Skip if already paid for the current cycle.
+      const paymentSnap = await db
+        .collection('payments')
+        .where('tenantId', '==', tenantId)
+        .where('paidDate', '>=', cycleStart)
+        .where('paidDate', '<', cycleEnd)
+        .limit(1)
+        .get();
+      if (!paymentSnap.empty) {
+        continue;
+      }
+
+      let userNotification = userCache.get(ownerId);
+      if (!userNotification) {
+        userNotification = await shouldSendUserNotification({
+          uid: ownerId,
+          notificationKey: 'rent_due',
+        });
+        userCache.set(ownerId, userNotification);
+      }
+
+      if (!userNotification.allowed) {
+        continue;
+      }
+
+      const eventId = `rent_due_${tenantId}_${dateKey}`;
+      const reserved = await reserveNotificationEvent(eventId, {
+        type: 'rent_due',
+        ownerId,
+        tenantId,
+        dateKey,
+      });
+      if (!reserved) {
+        continue;
+      }
+
+      const tenantName = String(tenant.fullName || tenant.name || 'Tenant').trim();
+      const amount = amountInr(tenant.rentAmount || 0);
+      const title = 'Rent Due Reminder';
+      const body = `${tenantName}'s rent Rs ${amount} is due today`;
+
+      await db.collection('messages').doc(eventId).set({
+        type: 'rent_due',
+        title,
+        body,
+        severity: 'info',
+        ownerId,
+        tenantId,
+        read: false,
+        createdAt: FieldValue.serverTimestamp(),
+      }, { merge: false });
+
+      const result = await sendPushMulticast({
+        tokens: userNotification.tokens,
+        title,
+        body,
+        data: {
+          type: 'RENT_DUE',
+          tenant_id: tenantId,
+          tenantId,
+        },
       });
 
-      let tenantName = 'Tenant';
-      if (p.tenantId) {
-        const tenantDoc = await db.collection('tenants').doc(p.tenantId).get();
-        if (tenantDoc.exists) {
-          const tenantData = tenantDoc.data() || {};
-          tenantName = tenantData.fullName || tenantName;
-          ownerId = ownerId || tenantData.ownerId || null;
+      for (const invalidToken of result.invalidTokens) {
+        const ref = userNotification.tokenRefs?.get(invalidToken);
+        if (ref) {
+          await ref.delete();
         }
       }
 
-      const messageId = `${doc.id}_overdue`;
-      writer.create(db.collection('messages').doc(messageId), {
-        type: 'overdue',
-        title: 'Rent overdue',
-        body: `${tenantName} has not paid for ${p.periodKey}.`,
-        severity: 'critical',
-        ownerId,
-        tenantId: p.tenantId,
-        paymentId: doc.id,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
-      });
+      sentCount += result.sentCount;
     }
 
-    await writer.close();
-    await sendPushToAll(
-      'Overdue payments',
-      `You have ${overdueSnap.size} overdue payment(s).`,
-    );
+    functions.logger.info('sendRentDueReminders completed', {
+      scanned: dueSnap.size,
+      sent: sentCount,
+    });
+    return null;
   });
+
+function isPaidLikeStatus(value) {
+  const status = normalizePaymentStatus(value);
+  return status === 'paid' || status === 'success';
+}
+
+async function dispatchPaymentReceivedNotification({
+  paymentId,
+  payment,
+  eventId,
+}) {
+  const ownerId = String(payment.ownerId || '').trim();
+  const tenantId = String(payment.tenantId || '').trim();
+  if (!ownerId || !tenantId) {
+    return null;
+  }
+
+  const reserved = await reserveNotificationEvent(eventId, {
+    type: 'payment_received',
+    ownerId,
+    tenantId,
+    paymentId,
+    eventId,
+  });
+  if (!reserved) {
+    return null;
+  }
+
+  const userNotification = await shouldSendUserNotification({
+    uid: ownerId,
+    notificationKey: 'payment_received',
+  });
+
+  if (!userNotification.allowed) {
+    return null;
+  }
+
+  let tenantName = 'Tenant';
+  const tenantDoc = await db.collection('tenants').doc(tenantId).get();
+  if (tenantDoc.exists) {
+    const tenantData = tenantDoc.data() || {};
+    tenantName = String(tenantData.fullName || tenantData.name || 'Tenant').trim();
+  }
+
+  const amount = amountInr(payment.amount || 0);
+  const status = normalizePaymentStatus(payment.status);
+  const isReceived = status === 'paid' || status === 'success';
+  const title = isReceived ? 'Payment Received' : 'Payment Updated';
+  const body = isReceived
+    ? `Rs ${amount} received from ${tenantName}. Payment has been recorded successfully.`
+    : `${tenantName}'s payment status was updated to ${status || 'updated'}. Amount: Rs ${amount}.`;
+
+  await db
+    .collection('messages')
+    .doc(`payment_received_${paymentId}_${eventId}`)
+    .set({
+      type: 'payment_received',
+      title,
+      body,
+      severity: 'info',
+      ownerId,
+      tenantId,
+      paymentId,
+      createdAt: FieldValue.serverTimestamp(),
+      read: false,
+    });
+
+  const result = await sendPushMulticast({
+    tokens: userNotification.tokens,
+    title,
+    body,
+    data: {
+      type: isReceived ? 'PAYMENT_RECEIVED' : 'PAYMENT_UPDATED',
+      notification_type: isReceived ? 'payment_received' : 'payment_updated',
+      tenant_id: tenantId,
+      tenantId,
+      payment_id: paymentId,
+      payment_status: status,
+    },
+  });
+
+  for (const invalidToken of result.invalidTokens || []) {
+    const ref = userNotification.tokenRefs?.get(invalidToken);
+    if (ref) {
+      await ref.delete();
+    }
+  }
+
+  return null;
+}
 
 exports.onPaymentPaid = functions.firestore
   .document('payments/{paymentId}')
-  .onUpdate(async (change) => {
-    const before = change.before.data();
-    const after = change.after.data();
-    if (before.status === after.status || after.status !== 'paid') return;
+  .onUpdate(async (change, context) => {
+    const before = change.before.data() || {};
+    const after = change.after.data() || {};
+    const previous = normalizePaymentStatus(before.status);
+    const next = normalizePaymentStatus(after.status);
 
-    let tenantName = 'Tenant';
-    let ownerId = after.ownerId || null;
-    if (after.tenantId) {
-      const tenantDoc = await db.collection('tenants').doc(after.tenantId).get();
-      if (tenantDoc.exists) {
-        const tenantData = tenantDoc.data() || {};
-        tenantName = tenantData.fullName || tenantName;
-        ownerId = ownerId || tenantData.ownerId || null;
-      }
+    if (previous === next) {
+      return null;
     }
 
-    await db
-      .collection('messages')
-      .doc(`${change.after.id}_paid`)
-      .set({
-        type: 'receipt',
-        title: 'Payment received',
-        body: `${tenantName} paid Rs ${after.amount} for ${after.periodKey}.`,
-        severity: 'info',
-        ownerId,
-        tenantId: after.tenantId,
-        paymentId: change.after.id,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
-      });
+    // Notify for all status transitions, with special treatment for received payments.
 
-    await sendPushToAll(
-      'Payment received',
-      `${tenantName} paid Rs ${after.amount} for ${after.periodKey}.`,
-    );
+    return dispatchPaymentReceivedNotification({
+      paymentId: change.after.id,
+      payment: after,
+      eventId: context.eventId,
+    });
+  });
+
+exports.onPaymentCreatedPaid = functions.firestore
+  .document('payments/{paymentId}')
+  .onCreate(async (snapshot, context) => {
+    const payment = snapshot.data() || {};
+    const status = normalizePaymentStatus(payment.status);
+    if (!status) {
+      return null;
+    }
+
+    return dispatchPaymentReceivedNotification({
+      paymentId: snapshot.id,
+      payment,
+      eventId: context.eventId,
+    });
   });
 
 exports.sendMonthlyRentStatusNotifications = functions.pubsub
   .schedule('15 10 1 * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
-    const period = previousMonthKey(new Date());
-    const monthlyRunKey = monthKey(new Date());
-
-    const paymentsSnap = await db
-      .collection('payments')
-      .where('periodKey', '==', period)
-      .get();
-
-    if (paymentsSnap.empty) return;
-
-    const writer = db.bulkWriter();
-    writer.onWriteError((err) => {
-      if (err.code === 6) return false;
-      return true;
-    });
-
-    for (const paymentDoc of paymentsSnap.docs) {
-      const payment = paymentDoc.data() || {};
-
-      let ownerId = payment.ownerId || null;
-      let tenantName = 'Tenant';
-
-      const tenantId = payment.tenantId;
-      if (tenantId) {
-        const tenantDoc = await db.collection('tenants').doc(tenantId).get();
-        if (tenantDoc.exists) {
-          const tenantData = tenantDoc.data() || {};
-          tenantName = tenantData.fullName || tenantName;
-          ownerId = ownerId || tenantData.ownerId || null;
-        }
-      }
-
-      if (!ownerId) continue;
-
-      const status = String(payment.status || 'pending').toLowerCase();
-      const isPaid = status === 'paid' || status === 'success';
-      const statusLabel = isPaid ? 'Paid' : 'Not paid';
-
-      const messageId = `${paymentDoc.id}_monthly_status_${monthlyRunKey}`;
-      writer.create(db.collection('messages').doc(messageId), {
-        type: 'monthly-status',
-        title: 'Monthly rent status',
-        body: `${tenantName} rent for ${period}: ${statusLabel}.`,
-        severity: isPaid ? 'info' : 'warn',
-        ownerId,
-        tenantId: tenantId || null,
-        paymentId: paymentDoc.id,
-        periodKey: period,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
-      });
-    }
-
-    await writer.close();
+    functions.logger.info('sendMonthlyRentStatusNotifications disabled. RentDone supports only rent_due and payment_received push notifications.');
+    return null;
   });
 
 exports.sendRentDueWhatsAppReminders = functions.pubsub
   .schedule('0 9,12,15,18,21 * * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
-    const { businessName, remindersEnabled } = getWhatsAppConfig();
-    if (!remindersEnabled) {
-      functions.logger.info('WhatsApp reminders are disabled via config.');
-      return;
-    }
-
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-
-    const dueSnap = await db
-      .collection('payments')
-      .where('status', '==', 'pending')
-      .where('dueDate', '>=', start)
-      .where('dueDate', '<', end)
-      .get();
-
-    if (dueSnap.empty) return;
-
-    for (const paymentDoc of dueSnap.docs) {
-      const payment = paymentDoc.data();
-      const reminderRef = db.collection('messages').doc(`${paymentDoc.id}_wa_due`);
-      const reminderExists = await reminderRef.get();
-      if (reminderExists.exists) continue;
-
-      if (!payment.tenantId) continue;
-      const tenantDoc = await db.collection('tenants').doc(payment.tenantId).get();
-      if (!tenantDoc.exists) continue;
-
-      const tenant = tenantDoc.data() || {};
-      const ownerId = payment.ownerId || tenant.ownerId || null;
-      let bankSnippet = '';
-      const to = normalizeIndianPhone(tenant.whatsappPhone || tenant.phone);
-      const upiId = String(tenant.upiId || '').trim();
-      if (!to || !upiId) continue;
-
-      if (ownerId) {
-        const ownerProfileDoc = await db
-          .collection('ownerPaymentProfiles')
-          .doc(ownerId)
-          .get();
-        if (ownerProfileDoc.exists) {
-          const ownerProfile = ownerProfileDoc.data() || {};
-          const bankName = ownerProfile.bankName || '';
-          const accountHolder = ownerProfile.bankAccountHolderName || '';
-          const accountNumber = ownerProfile.bankAccountNumber || '';
-          const ifsc = ownerProfile.bankIfsc || '';
-          if (bankName && accountHolder && accountNumber && ifsc) {
-            bankSnippet =
-              `\n\nBank Transfer Details:\n` +
-              `Name: ${accountHolder}\n` +
-              `Bank: ${bankName}\n` +
-              `A/C: ${accountNumber}\n` +
-              `IFSC: ${ifsc}`;
-          }
-        }
-      }
-
-      const amount = Number(payment.amount || tenant.rentAmount || 0);
-      const period = payment.periodKey || monthKey(now);
-      const tenantName = tenant.fullName || 'Tenant';
-      const upiLink = buildUpiLink({
-        upiId,
-        amount,
-        payeeName: businessName,
-        note: `Rent ${period}`,
-      });
-
-      const body =
-        `Hi ${tenantName}, your rent for ${period} is due today.\n` +
-        `Amount: Rs ${amount}\n` +
-        `Pay now: ${upiLink}` +
-        bankSnippet;
-
-      const sent = await sendWhatsAppMessage({
-        to,
-        body,
-        templateParams: [tenantName, period, amount, upiLink],
-      });
-      if (!sent.ok) {
-        await db
-          .collection('messages')
-          .doc(`${paymentDoc.id}_wa_due_failed_${Date.now()}`)
-          .set({
-            type: 'reminder',
-            channel: 'whatsapp',
-            title: 'Rent due reminder failed',
-            body: `WhatsApp reminder failed for ${to}.`,
-            severity: 'warn',
-            ownerId,
-            tenantId: payment.tenantId,
-            paymentId: paymentDoc.id,
-            providerStatus: sent.status,
-            providerError: sent.errorBody,
-            createdAt: FieldValue.serverTimestamp(),
-            read: false,
-          });
-        continue;
-      }
-
-      await reminderRef.set({
-        type: 'reminder',
-        channel: 'whatsapp',
-        title: 'Rent due reminder sent',
-        body: `WhatsApp reminder sent to ${to} for ${period}.`,
-        severity: 'info',
-        ownerId,
-        tenantId: payment.tenantId,
-        paymentId: paymentDoc.id,
-        providerMessageId: sent.providerMessageId,
-        providerStatus: sent.status,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
-      });
-    }
+    functions.logger.info('sendRentDueWhatsAppReminders disabled. RentDone supports only rent_due and payment_received push notifications.');
+    return null;
   });
 
 exports.sendTenantPreDueReminders = functions.pubsub
   .schedule('0 9 * * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    const tenantsSnap = await db.collection('tenants').get();
-    if (tenantsSnap.empty) {
-      return;
-    }
-
-    for (const tenantDoc of tenantsSnap.docs) {
-      const tenant = tenantDoc.data() || {};
-      const tenantId = tenantDoc.id;
-
-      let dueDay = Number(tenant.rentDueDay || 1);
-      let monthlyRent = Number(tenant.rentAmount || 0);
-
-      const roomDetailsDoc = await db
-        .collection('tenants')
-        .doc(tenantId)
-        .collection('room_details')
-        .doc('current')
-        .get();
-      if (roomDetailsDoc.exists) {
-        const roomDetails = roomDetailsDoc.data() || {};
-        dueDay = Number(roomDetails.rentDueDay || dueDay);
-        monthlyRent = Number(roomDetails.monthlyRent || monthlyRent);
-      }
-
-      if (!Number.isFinite(dueDay) || dueDay < 1 || dueDay > 31) {
-        continue;
-      }
-
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const safeDueDay = Math.min(Math.max(Math.trunc(dueDay), 1), lastDay);
-      const dueDate = new Date(now.getFullYear(), now.getMonth(), safeDueDay);
-      const daysUntilDue = Math.floor((dueDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-
-      if (daysUntilDue !== 3) {
-        continue;
-      }
-
-      const periodKey = monthKey(dueDate);
-      const paymentDoc = await db
-        .collection('tenants')
-        .doc(tenantId)
-        .collection('payments')
-        .doc(periodKey)
-        .get();
-
-      const paymentStatus = String((paymentDoc.data() || {}).status || '').toLowerCase();
-      if (paymentDoc.exists && paymentStatus === 'paid') {
-        continue;
-      }
-
-      const reminderDocId = `${periodKey}_dminus3`;
-      const reminderRef = db
-        .collection('tenants')
-        .doc(tenantId)
-        .collection('reminders')
-        .doc(reminderDocId);
-      const reminderSnapshot = await reminderRef.get();
-      if (reminderSnapshot.exists) {
-        continue;
-      }
-
-      const amount = Number.isFinite(monthlyRent) && monthlyRent > 0 ? monthlyRent : Number(tenant.dueAmount || 0);
-      const body =
-        `Your rent is due in 3 days (due day ${safeDueDay}).` +
-        (amount > 0 ? ` Amount: Rs ${amount}.` : '');
-
-      await reminderRef.set({
-        type: 'rent_due_pre_reminder',
-        periodKey,
-        title: 'Rent Payment Reminder',
-        body,
-        dueDay: safeDueDay,
-        daysBeforeDue: 3,
-        status: 'pending',
-        tenantId,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-
-      await db.collection('messages').doc(`${tenantId}_${reminderDocId}`).set({
-        type: 'reminder',
-        channel: 'inapp',
-        title: 'Rent Payment Reminder',
-        body,
-        severity: 'info',
-        ownerId: tenant.ownerId || null,
-        tenantId,
-        periodKey,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
-      });
-    }
+    functions.logger.info('sendTenantPreDueReminders disabled. RentDone supports only rent_due and payment_received push notifications.');
+    return null;
   });
 
 // ==========================================================

@@ -19,6 +19,7 @@ class TenantSettingsStore {
     };
     await firestore.collection('users').doc(tenantId).set({
       'tenantSettings': payload,
+      'notifications': {'rent_due': true, 'payment_received': true},
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     await firestore.collection('tenants').doc(tenantId).set({

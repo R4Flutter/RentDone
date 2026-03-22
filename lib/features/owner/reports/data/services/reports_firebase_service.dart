@@ -450,7 +450,7 @@ class ReportsFirebaseService {
           ? <List<String>>[List<String>.filled(headers.length, '-')]
           : rows;
 
-      return pw.Table.fromTextArray(
+      return pw.TableHelper.fromTextArray(
         headers: headers,
         data: safeRows,
         headerStyle: pw.TextStyle(

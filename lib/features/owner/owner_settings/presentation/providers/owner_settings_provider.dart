@@ -18,6 +18,8 @@ class OwnerSettingsState {
   final String rentDueDay;
   final bool enable2FA;
   final bool notificationsEnabled;
+  final bool rentDueNotificationsEnabled;
+  final bool paymentReceivedNotificationsEnabled;
   final bool darkMode;
   final String locationAddress;
   final double? locationLatitude;
@@ -39,6 +41,8 @@ class OwnerSettingsState {
     required this.rentDueDay,
     required this.enable2FA,
     required this.notificationsEnabled,
+    required this.rentDueNotificationsEnabled,
+    required this.paymentReceivedNotificationsEnabled,
     required this.darkMode,
     required this.locationAddress,
     required this.locationLatitude,
@@ -62,6 +66,8 @@ class OwnerSettingsState {
       rentDueDay: '5',
       enable2FA: false,
       notificationsEnabled: true,
+      rentDueNotificationsEnabled: true,
+      paymentReceivedNotificationsEnabled: true,
       darkMode: false,
       locationAddress: '',
       locationLatitude: null,
@@ -86,6 +92,9 @@ class OwnerSettingsState {
       rentDueDay: settings.rentDueDay,
       enable2FA: settings.enable2FA,
       notificationsEnabled: settings.notificationsEnabled,
+      rentDueNotificationsEnabled: settings.rentDueNotificationsEnabled,
+      paymentReceivedNotificationsEnabled:
+          settings.paymentReceivedNotificationsEnabled,
       darkMode: settings.darkMode,
       locationAddress: settings.locationAddress,
       locationLatitude: settings.locationLatitude,
@@ -110,6 +119,8 @@ class OwnerSettingsState {
       rentDueDay: rentDueDay,
       enable2FA: enable2FA,
       notificationsEnabled: notificationsEnabled,
+      rentDueNotificationsEnabled: rentDueNotificationsEnabled,
+      paymentReceivedNotificationsEnabled: paymentReceivedNotificationsEnabled,
       darkMode: darkMode,
       locationAddress: locationAddress,
       locationLatitude: locationLatitude,
@@ -129,6 +140,8 @@ class OwnerSettingsState {
     String? rentDueDay,
     bool? enable2FA,
     bool? notificationsEnabled,
+    bool? rentDueNotificationsEnabled,
+    bool? paymentReceivedNotificationsEnabled,
     bool? darkMode,
     String? locationAddress,
     double? locationLatitude,
@@ -153,6 +166,11 @@ class OwnerSettingsState {
       rentDueDay: rentDueDay ?? this.rentDueDay,
       enable2FA: enable2FA ?? this.enable2FA,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      rentDueNotificationsEnabled:
+          rentDueNotificationsEnabled ?? this.rentDueNotificationsEnabled,
+      paymentReceivedNotificationsEnabled:
+          paymentReceivedNotificationsEnabled ??
+          this.paymentReceivedNotificationsEnabled,
       darkMode: darkMode ?? this.darkMode,
       locationAddress: locationAddress ?? this.locationAddress,
       locationLatitude: clearLocationLatitude
@@ -209,8 +227,28 @@ class OwnerSettingsNotifier extends Notifier<OwnerSettingsState> {
       _update(state.copyWith(rentDueDay: value), persist: true);
   void setEnable2FA(bool value) =>
       _update(state.copyWith(enable2FA: value), persist: true);
-  void setNotificationsEnabled(bool value) =>
-      _update(state.copyWith(notificationsEnabled: value), persist: true);
+  void setNotificationsEnabled(bool value) => _update(
+    state.copyWith(
+      notificationsEnabled: value,
+      rentDueNotificationsEnabled: value,
+      paymentReceivedNotificationsEnabled: value,
+    ),
+    persist: true,
+  );
+  void setRentDueNotificationsEnabled(bool value) => _update(
+    state.copyWith(
+      rentDueNotificationsEnabled: value,
+      notificationsEnabled: value || state.paymentReceivedNotificationsEnabled,
+    ),
+    persist: true,
+  );
+  void setPaymentReceivedNotificationsEnabled(bool value) => _update(
+    state.copyWith(
+      paymentReceivedNotificationsEnabled: value,
+      notificationsEnabled: state.rentDueNotificationsEnabled || value,
+    ),
+    persist: true,
+  );
   void setDarkMode(bool value) =>
       _update(state.copyWith(darkMode: value), persist: true);
 

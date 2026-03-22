@@ -13,6 +13,8 @@ class OwnerSettingsLocalService {
     rentDueDay: '',
     enable2FA: false,
     notificationsEnabled: true,
+    rentDueNotificationsEnabled: true,
+    paymentReceivedNotificationsEnabled: true,
     darkMode: false,
     locationAddress: '',
     locationLatitude: null,

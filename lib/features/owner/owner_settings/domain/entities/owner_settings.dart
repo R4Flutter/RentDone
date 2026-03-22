@@ -10,6 +10,8 @@ class OwnerSettings {
   final String rentDueDay;
   final bool enable2FA;
   final bool notificationsEnabled;
+  final bool rentDueNotificationsEnabled;
+  final bool paymentReceivedNotificationsEnabled;
   final bool darkMode;
   final String locationAddress;
   final double? locationLatitude;
@@ -27,6 +29,8 @@ class OwnerSettings {
     required this.rentDueDay,
     required this.enable2FA,
     required this.notificationsEnabled,
+    required this.rentDueNotificationsEnabled,
+    required this.paymentReceivedNotificationsEnabled,
     required this.darkMode,
     required this.locationAddress,
     required this.locationLatitude,

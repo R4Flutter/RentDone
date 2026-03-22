@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/core/notifications/push_notification_provider.dart';
 import 'package:rentdone/app/theme_mode_provider.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
@@ -21,11 +22,29 @@ import 'app_theme.dart';
 /// - Know about Firebase
 /// - Know about authentication
 ///
-class RentDoneApp extends ConsumerWidget {
+class RentDoneApp extends ConsumerStatefulWidget {
   const RentDoneApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RentDoneApp> createState() => _RentDoneAppState();
+}
+
+class _RentDoneAppState extends ConsumerState<RentDoneApp> {
+  bool _notificationsInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_notificationsInitialized) return;
+    _notificationsInitialized = true;
+
+    Future.microtask(() async {
+      await ref.read(pushNotificationServiceProvider).initialize();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final ownerSettings = ref.watch(ownerSettingsProvider);
     final themeOverride = ref.watch(appThemeModeProvider);
     final currentUser = ref.watch(firebaseAuthProvider).currentUser;

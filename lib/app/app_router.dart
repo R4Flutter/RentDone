@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rentdone/app/app_navigation.dart';
 import 'package:rentdone/core/constants/user_role.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 
@@ -53,6 +54,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   var hasHandledInitialRouteGuard = false;
 
   return GoRouter(
+    navigatorKey: appNavigatorKey,
     initialLocation: '/',
     overridePlatformDefaultLocation: true,
     refreshListenable: _RouterRefreshNotifier(firebaseAuth.authStateChanges()),
