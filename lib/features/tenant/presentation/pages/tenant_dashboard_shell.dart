@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
-import 'package:rentdone/shared/widgets/back_handler.dart';
 
 class TenantDashboardShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -15,30 +14,47 @@ class TenantDashboardShell extends ConsumerStatefulWidget {
 }
 
 class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
+  bool _isDashboardLocation(String location) {
+    return location.startsWith('/tenant/dashboard');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
     final user = ref.watch(firebaseAuthProvider).currentUser;
+    final location = GoRouterState.of(context).uri.toString();
+    final isDashboard = _isDashboardLocation(location);
 
     int calculateIndex(BuildContext context) {
       final location = GoRouterState.of(context).uri.toString();
-      if (location.contains('/tenant/map') || location.contains('/tenant/city')) return 0;
       if (location.contains('/tenant/transactions')) return 1;
       if (location.contains('/tenant/documents')) return 2;
       if (location.contains('/tenant/profile')) return 3;
       return 0;
     }
 
-    return BackHandler.root(
-      dialogTitle: 'Exit RentDone?',
-      dialogMessage: 'Are you sure you want to exit?',
+    return PopScope(
+      canPop: isDashboard,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        final currentLocation = GoRouterState.of(context).uri.toString();
+        final currentlyOnDashboard = _isDashboardLocation(currentLocation);
+
+        if (!currentlyOnDashboard) {
+          context.go('/tenant/dashboard');
+        }
+      },
       child: Scaffold(
         backgroundColor: AppTheme.nearBlack,
         extendBody: true,
         drawer: const _TenantSideDrawer(),
         body: SafeArea(
           bottom: false,
-          child: Container(color: AppTheme.nearBlack, child: widget.child),
+          child: Container(
+            color: AppTheme.nearBlack,
+            child: widget.child,
+          ),
         ),
         bottomNavigationBar: isDesktop
             ? null
@@ -195,7 +211,6 @@ class _TenantSideDrawer extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Row(
                 children: [
                   Container(

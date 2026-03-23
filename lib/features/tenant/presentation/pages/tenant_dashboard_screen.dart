@@ -125,18 +125,18 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                                 .read(transactionHistoryProvider.notifier)
                                 .loadInitial(actor: TransactionActor.tenant),
                           );
-                          context.go('/tenant/transactions');
+                          context.push('/tenant/transactions');
                         },
                       ),
                       loading: () => _ActiveDuesCard(
                         dueAmount: summary.dueAmount,
                         isAmountRefreshing: true,
-                        onPayNow: () => context.go('/tenant/transactions'),
+                        onPayNow: () => context.push('/tenant/transactions'),
                       ),
                       error: (_, _) => _ActiveDuesCard(
                         dueAmount: summary.dueAmount,
                         isAmountRefreshing: false,
-                        onPayNow: () => context.go('/tenant/transactions'),
+                        onPayNow: () => context.push('/tenant/transactions'),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -156,31 +156,31 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                           icon: Icons.payments_rounded,
                           title: 'Payments',
                           subtitle: 'Due & history',
-                          onTap: () => context.go('/tenant/transactions'),
+                          onTap: () => context.push('/tenant/transactions'),
                         ),
                         _QuickActionTile(
                           icon: Icons.lock_outline_rounded,
                           title: 'Vault',
                           subtitle: 'Documents',
-                          onTap: () => context.go('/tenant/documents'),
+                          onTap: () => context.push('/tenant/documents'),
                         ),
                         _QuickActionTile(
                           icon: Icons.description_outlined,
                           title: 'Complaints',
                           subtitle: 'Submit / track',
-                          onTap: () => context.go('/tenant/complaints'),
+                          onTap: () => context.push('/tenant/complaints'),
                         ),
                         _QuickActionTile(
                           icon: Icons.map_outlined,
                           title: 'Map',
                           subtitle: 'Search by city',
-                          onTap: () => context.go('/tenant/city'),
+                          onTap: () => context.push('/tenant/city'),
                         ),
                         _QuickActionTile(
                           icon: Icons.person_outline_rounded,
                           title: 'Profile',
                           subtitle: 'Account details',
-                          onTap: () => context.go('/tenant/profile'),
+                          onTap: () => context.push('/tenant/profile'),
                         ),
                       ],
                     ),
@@ -188,7 +188,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                     remindersAsync.when(
                       data: (items) => _SystemStatusCard(
                         reminders: items,
-                        onTap: () => context.go('/tenant/documents'),
+                        onTap: () => context.push('/tenant/documents'),
                       ),
                       loading: () => const _SkeletonGlassCard(height: 92),
                       error: (_, _) => const _SkeletonGlassCard(height: 92),
@@ -200,10 +200,10 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                 right: 20,
                 bottom: 26,
                 child: _ExpandableCommandFab(
-                  onPayRent: () => context.go('/tenant/transactions'),
-                  onUploadDocument: () => context.go('/tenant/documents'),
-                  onRaiseComplaint: () => context.go('/tenant/complaints'),
-                  onContactOwner: () => context.go('/tenant/profile'),
+                  onPayRent: () => context.push('/tenant/transactions'),
+                  onUploadDocument: () => context.push('/tenant/documents'),
+                  onRaiseComplaint: () => context.push('/tenant/complaints'),
+                  onContactOwner: () => context.push('/tenant/profile'),
                 ),
               ),
             ],

@@ -54,7 +54,7 @@ class _TenantCityEntryScreenState extends ConsumerState<TenantCityEntryScreen> {
       _isSubmitting = true;
     });
 
-    context.go('/tenant/map?city=$city');
+    context.push('/tenant/map?city=$city');
   }
 
   @override

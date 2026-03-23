@@ -26,12 +26,23 @@ class _TenantPropertyMapScreenState
   String? _selectedPropertyId;
 
   void _goToCityPicker() {
+    if (Navigator.of(context).canPop()) {
+      context.pop();
+      return;
+    }
     context.go('/tenant/city');
+  }
+
+  void _handleSystemBack() {
+    if (Navigator.of(context).canPop()) {
+      context.pop();
+      return;
+    }
+    context.go('/tenant/dashboard');
   }
 
   @override
   Widget build(BuildContext context) {
-    // Sync route city with provider
     final routeCity = (widget.cityFromRoute ?? '').trim();
     if (routeCity.isNotEmpty) {
       final current = ref.read(selectedCityProvider).trim();
@@ -44,30 +55,37 @@ class _TenantPropertyMapScreenState
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: dark
-                ? const [Color(0xFF0A1127), Color(0xFF132A57)]
-                : const [Color(0xFFD9ECFF), Color(0xFFF6FAFF)],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleSystemBack();
+      },
+      child: Scaffold(
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: dark
+                  ? const [Color(0xFF0A1127), Color(0xFF132A57)]
+                  : const [Color(0xFFD9ECFF), Color(0xFFF6FAFF)],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: selectedCity.isEmpty
-              ? _NoCitySelected(onTap: _goToCityPicker)
-              : _MapBody(
-                  mapController: _mapController,
-                  city: selectedCity,
-                  selectedPropertyId: _selectedPropertyId,
-                  onChangeCity: _goToCityPicker,
-                  onMarkerTap: (p) {
-                    setState(() => _selectedPropertyId = p.id);
-                    _showPropertySheet(context, p);
-                  },
-                ),
+          child: SafeArea(
+            child: selectedCity.isEmpty
+                ? _NoCitySelected(onTap: _goToCityPicker)
+                : _MapBody(
+                    mapController: _mapController,
+                    city: selectedCity,
+                    selectedPropertyId: _selectedPropertyId,
+                    onChangeCity: _goToCityPicker,
+                    onMarkerTap: (p) {
+                      setState(() => _selectedPropertyId = p.id);
+                      _showPropertySheet(context, p);
+                    },
+                  ),
+          ),
         ),
       ),
     );
@@ -150,7 +168,6 @@ class _MapBody extends ConsumerStatefulWidget {
 }
 
 class _MapBodyState extends ConsumerState<_MapBody> {
-  /// Prevents repeatedly fitting camera on every rebuild.
   String _lastFitSignature = '';
 
   @override
@@ -162,7 +179,6 @@ class _MapBodyState extends ConsumerState<_MapBody> {
       data: (cityCenter) {
         return propertiesAsync.when(
           data: (properties) {
-            // ✅ Auto-zoom to fit all properties (or center if none)
             _scheduleAutoFit(cityCenter: cityCenter, properties: properties);
 
             final markers = properties.map((p) {
@@ -190,7 +206,6 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                     child: FlutterMap(
                       mapController: widget.mapController,
                       options: MapOptions(
-                        // only initial; auto-fit adjusts after load
                         initialCenter: cityCenter,
                         initialZoom: 12,
                       ),
@@ -200,7 +215,6 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                               'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'rentdone',
                         ),
-
                         MarkerClusterLayerWidget(
                           options: MarkerClusterLayerOptions(
                             markers: markers,
@@ -324,7 +338,6 @@ class _MapBodyState extends ConsumerState<_MapBody> {
       final lngSpan = (bounds.east - bounds.west).abs();
       final maxSpan = latSpan > lngSpan ? latSpan : lngSpan;
 
-      // If properties are densely packed, force a tighter zoom to avoid stacked markers.
       if (maxSpan <= 0.008) {
         widget.mapController.move(bounds.center, 16.2);
         return;
