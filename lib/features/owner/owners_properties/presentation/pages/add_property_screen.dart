@@ -22,6 +22,11 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
   late TextEditingController nameCtrl;
   late TextEditingController addressCtrl;
   late TextEditingController totalRoomsCtrl;
+  late TextEditingController cityCtrl;
+  late TextEditingController latCtrl;
+  late TextEditingController lngCtrl;
+
+  bool isPublished = false;
 
   List<RoomInput> rooms = [];
 
@@ -33,6 +38,14 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     totalRoomsCtrl = TextEditingController(
       text: (widget.property?.totalRooms ?? 0).toString(),
     );
+    cityCtrl = TextEditingController(text: widget.property?.city ?? '');
+    latCtrl = TextEditingController(
+      text: (widget.property?.lat ?? 0.0).toString(),
+    );
+    lngCtrl = TextEditingController(
+      text: (widget.property?.lng ?? 0.0).toString(),
+    );
+    isPublished = widget.property?.isPublished ?? false;
 
     if (widget.property != null) {
       rooms = widget.property!.rooms
@@ -56,6 +69,9 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     nameCtrl.dispose();
     addressCtrl.dispose();
     totalRoomsCtrl.dispose();
+    cityCtrl.dispose();
+    latCtrl.dispose();
+    lngCtrl.dispose();
     super.dispose();
   }
 
@@ -255,6 +271,90 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                                         validator: (v) => v?.isEmpty ?? true
                                             ? 'Required'
                                             : null,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _buildGlassCard(
+                                    context,
+                                    theme,
+                                    'Map Location (Tenant View)',
+                                    [
+                                      _glassField(
+                                        controller: cityCtrl,
+                                        label: 'City',
+                                        hint: 'e.g., Mumbai',
+                                        validator: (v) =>
+                                            v?.trim().isEmpty ?? true
+                                                ? 'Required'
+                                                : null,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _glassField(
+                                              controller: latCtrl,
+                                              label: 'Latitude',
+                                              hint: 'e.g., 19.115',
+                                              keyboardType:
+                                                  const TextInputType.numberWithOptions(
+                                                    decimal: true,
+                                                    signed: true,
+                                                  ),
+                                              validator: (v) {
+                                                final t = v?.trim() ?? '';
+                                                if (t.isEmpty) return 'Required';
+                                                final d = double.tryParse(t);
+                                                if (d == null) {
+                                                  return 'Invalid latitude';
+                                                }
+                                                if (d < -90 || d > 90) {
+                                                  return 'Latitude must be -90 to 90';
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: _glassField(
+                                              controller: lngCtrl,
+                                              label: 'Longitude',
+                                              hint: 'e.g., 72.867',
+                                              keyboardType:
+                                                  const TextInputType.numberWithOptions(
+                                                    decimal: true,
+                                                    signed: true,
+                                                  ),
+                                              validator: (v) {
+                                                final t = v?.trim() ?? '';
+                                                if (t.isEmpty) return 'Required';
+                                                final d = double.tryParse(t);
+                                                if (d == null) {
+                                                  return 'Invalid longitude';
+                                                }
+                                                if (d < -180 || d > 180) {
+                                                  return 'Longitude must be -180 to 180';
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      SwitchListTile.adaptive(
+                                        value: isPublished,
+                                        onChanged: (value) =>
+                                            setState(() => isPublished = value),
+                                        contentPadding: EdgeInsets.zero,
+                                        title: const Text(
+                                          'Publish (visible to tenants)',
+                                        ),
+                                        subtitle: const Text(
+                                          "If off, tenants won't see this property on the map.",
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -540,11 +640,14 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
       return;
     }
 
+    final lat = double.parse(latCtrl.text.trim());
+    final lng = double.parse(lngCtrl.text.trim());
+
     final property = Property(
       id: widget.property?.id ?? const Uuid().v4(),
-      name: nameCtrl.text,
-      address: addressCtrl.text,
-      totalRooms: int.parse(totalRoomsCtrl.text),
+      name: nameCtrl.text.trim(),
+      address: addressCtrl.text.trim(),
+      totalRooms: int.parse(totalRoomsCtrl.text.trim()),
       rooms: rooms
           .map(
             (r) => Room(
@@ -556,6 +659,10 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
             ),
           )
           .toList(),
+      city: cityCtrl.text.trim(),
+      lat: lat,
+      lng: lng,
+      isPublished: isPublished,
     );
 
     try {

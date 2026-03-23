@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/pages/property_detail_screen.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 
@@ -18,6 +20,11 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
   late TextEditingController nameCtrl;
   late TextEditingController addressCtrl;
   late TextEditingController totalRoomsCtrl;
+  late TextEditingController cityCtrl;
+  late TextEditingController latCtrl;
+  late TextEditingController lngCtrl;
+
+  bool isPublished = false;
 
   List<RoomInput> rooms = [];
 
@@ -29,6 +36,14 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     totalRoomsCtrl = TextEditingController(
       text: (widget.property?.totalRooms ?? 0).toString(),
     );
+    cityCtrl = TextEditingController(text: widget.property?.city ?? '');
+    latCtrl = TextEditingController(
+      text: (widget.property?.lat ?? 0.0).toString(),
+    );
+    lngCtrl = TextEditingController(
+      text: (widget.property?.lng ?? 0.0).toString(),
+    );
+    isPublished = widget.property?.isPublished ?? false;
 
     if (widget.property != null) {
       rooms = widget.property!.rooms
@@ -52,6 +67,9 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     nameCtrl.dispose();
     addressCtrl.dispose();
     totalRoomsCtrl.dispose();
+    cityCtrl.dispose();
+    latCtrl.dispose();
+    lngCtrl.dispose();
     super.dispose();
   }
 
@@ -169,6 +187,86 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                           ),
                           validator: (value) =>
                               value?.isEmpty ?? true ? "Required" : null,
+                        ),
+                      ]),
+                      const SizedBox(height: 24),
+
+                      _buildCard(theme, "Map Location (Tenant View)", [
+                        TextFormField(
+                          controller: cityCtrl,
+                          decoration: InputDecoration(
+                            labelText: "City",
+                            hintText: "e.g., Mumbai",
+                            filled: true,
+                            fillColor: AppColors.white.withValues(alpha: 0.08),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          validator: (value) => value?.trim().isEmpty ?? true ? "Required" : null,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: latCtrl,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                decoration: InputDecoration(
+                                  labelText: "Latitude",
+                                  hintText: "e.g., 19.115",
+                                  filled: true,
+                                  fillColor: AppColors.white.withValues(alpha: 0.08),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                validator: (value) {
+                                  final t = value?.trim() ?? '';
+                                  if (t.isEmpty) return "Required";
+                                  final d = double.tryParse(t);
+                                  if (d == null) return "Invalid latitude";
+                                  if (d < -90 || d > 90) return "Latitude must be -90 to 90";
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: lngCtrl,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                decoration: InputDecoration(
+                                  labelText: "Longitude",
+                                  hintText: "e.g., 72.867",
+                                  filled: true,
+                                  fillColor: AppColors.white.withValues(alpha: 0.08),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                                validator: (value) {
+                                  final t = value?.trim() ?? '';
+                                  if (t.isEmpty) return "Required";
+                                  final d = double.tryParse(t);
+                                  if (d == null) return "Invalid longitude";
+                                  if (d < -180 || d > 180) return "Longitude must be -180 to 180";
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile.adaptive(
+                          value: isPublished,
+                          onChanged: (value) => setState(() => isPublished = value),
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Publish (visible to tenants)'),
+                          subtitle: const Text("If off, tenants won't see this property on the map."),
                         ),
                       ]),
                       const SizedBox(height: 24),
@@ -304,21 +402,34 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
       return;
     }
 
-    // final property = Property(
-    //   id: widget.property?.id ?? const Uuid().v4(),
-    //   name: nameCtrl.text,
-    //   address: addressCtrl.text,
-    //   totalRooms: int.parse(totalRoomsCtrl.text),
-    //   rooms: rooms,
-    // );
+    final lat = double.parse(latCtrl.text.trim());
+    final lng = double.parse(lngCtrl.text.trim());
+
+    final property = Property(
+      id: widget.property?.id ?? const Uuid().v4(),
+      name: nameCtrl.text.trim(),
+      address: addressCtrl.text.trim(),
+      totalRooms: int.parse(totalRoomsCtrl.text.trim()),
+      rooms: rooms
+          .map((r) => Room(
+                id: r.id,
+                roomNumber: r.roomNumber,
+                name: r.name,
+                isOccupied: r.isOccupied,
+                tenantId: r.tenantId,
+              ))
+          .toList(),
+      city: cityCtrl.text.trim(),
+      lat: lat,
+      lng: lng,
+      isPublished: isPublished,
+    );
 
     try {
       if (widget.property != null) {
-        // Update property
-        // await properties_repo.update(property);
+        await ref.read(updatePropertyUseCaseProvider)(property);
       } else {
-        // Add property
-        // await properties_repo.add(property);
+        await ref.read(addPropertyUseCaseProvider)(property);
       }
 
       if (mounted) {
@@ -334,7 +445,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
         // Navigate to property detail after creation/update
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const SizedBox()),
+          MaterialPageRoute(builder: (_) => PropertyDetailScreen(propertyId: property.id)),
         );
       }
     } catch (e) {

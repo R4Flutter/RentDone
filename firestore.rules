@@ -205,12 +205,9 @@ service cloud.firestore {
     // ===== FIRESTORE RULES =====
 
     match /users/{userId} {
-      // Allow reading own document
       allow read: if isAuthenticated() && userId == currentUid();
 
-      // Allow list/query operations for email uniqueness checks
-      // Users can query by emailLowercase to check if email exists
-      allow list: if isAuthenticated() && 
+      allow list: if isAuthenticated() &&
         request.query.limit <= 1;
 
       allow create: if isAuthenticated()
@@ -219,7 +216,6 @@ service cloud.firestore {
         && roleIsValid(request.resource.data.role)
         && notificationsShapeIsValid(request.resource.data);
 
-      // SECURITY: Role cannot be changed after creation (immutable field)
       allow update: if isAuthenticated()
         && userId == currentUid()
         && userUidUnchanged()
@@ -279,15 +275,12 @@ service cloud.firestore {
 
     match /tenantTrust/{phone} {
       allow read: if request.auth != null;
-
-      // SECURITY: Only owners can write (create/update) trust records
       allow write: if isOwner();
     }
 
     match /properties/{propertyId} {
-      // SECURITY: Owners can read only their own properties
-      // Tenants cannot read properties directly - they have access via tenant assignment
-      allow read: if isOwner() && resource.data.ownerId == currentUid();
+      allow read: if (isOwner() && resource.data.ownerId == currentUid())
+        || (isTenant() && resource.data.isPublished == true);
 
       allow create: if isOwner()
         && request.resource.data.ownerId == currentUid();
@@ -301,9 +294,6 @@ service cloud.firestore {
     }
 
     match /tenants/{tenantId} {
-      // SECURITY: Restrict tenant read according to role
-      // - Owners can read tenants they own
-      // - Tenants can read only their own profile
       allow read: if (isOwner() && (
           resource.data.ownerId == currentUid()
           || (
@@ -439,11 +429,9 @@ service cloud.firestore {
     }
 
     match /payments/{paymentId} {
-      // SECURITY: Restrict payment read to owner and tenant involved
       allow read: if (isOwner() && resource.data.ownerId == currentUid())
         || (isTenant() && resource.data.tenantId == currentUid());
 
-      // SECURITY: Only owner can create payments WITH strict validation
       allow create: if isOwner()
         && request.resource.data.ownerId == currentUid()
         && request.resource.data.propertyId is string
@@ -454,7 +442,6 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/tenants/$(request.resource.data.tenantId)).data.propertyId == request.resource.data.propertyId
         && paymentFieldsLookValid(request.resource.data);
 
-      // SECURITY: Only owner can update payments for their own data
       allow update: if isOwner()
         && resource.data.ownerId == currentUid()
         && request.resource.data.ownerId == resource.data.ownerId
@@ -504,7 +491,6 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // SECURITY: Block all other access by default (explicit deny)
     match /{document=**} {
       allow read, write: if false;
     }

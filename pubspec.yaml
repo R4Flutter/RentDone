@@ -55,6 +55,9 @@ dependencies:
   cloudinary_public: ^0.23.1
   url_launcher: ^6.3.1
   geolocator: ^14.0.2
+  flutter_map: ^8.0.0
+  latlong2: ^0.9.1
+  flutter_map_marker_cluster: ^8.2.2
   geocoding: ^4.0.0
   crypto: ^3.0.3
   qr_flutter: ^4.1.0

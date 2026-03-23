@@ -171,6 +171,12 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                           onTap: () => context.go('/tenant/complaints'),
                         ),
                         _QuickActionTile(
+                          icon: Icons.map_outlined,
+                          title: 'Map',
+                          subtitle: 'Search by city',
+                          onTap: () => context.go('/tenant/city'),
+                        ),
+                        _QuickActionTile(
                           icon: Icons.person_outline_rounded,
                           title: 'Profile',
                           subtitle: 'Account details',

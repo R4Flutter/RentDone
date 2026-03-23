@@ -59,8 +59,20 @@ class PropertyFirebaseService {
 
   Future<void> addProperty(PropertyDto property) async {
     final ownerId = _requireOwnerId();
+    final ownerCoordinates = await _readOwnerCoordinates(ownerId);
+    final resolvedCoords = await _resolveCoordinates(
+      ownerId: ownerId,
+      propertyLat: property.lat,
+      propertyLng: property.lng,
+      cachedOwnerCoordinates: ownerCoordinates,
+    );
+
     await _db.collection('properties').doc(property.id).set({
       ...property.toMap(),
+      'lat': resolvedCoords.$1,
+      'lng': resolvedCoords.$2,
+      if (ownerCoordinates != null) 'ownerLocationLatitude': ownerCoordinates.$1,
+      if (ownerCoordinates != null) 'ownerLocationLongitude': ownerCoordinates.$2,
       'ownerId': ownerId,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -69,8 +81,20 @@ class PropertyFirebaseService {
 
   Future<void> updateProperty(PropertyDto property) async {
     final ownerId = _requireOwnerId();
+    final ownerCoordinates = await _readOwnerCoordinates(ownerId);
+    final resolvedCoords = await _resolveCoordinates(
+      ownerId: ownerId,
+      propertyLat: property.lat,
+      propertyLng: property.lng,
+      cachedOwnerCoordinates: ownerCoordinates,
+    );
+
     await _db.collection('properties').doc(property.id).update({
       ...property.toMap(),
+      'lat': resolvedCoords.$1,
+      'lng': resolvedCoords.$2,
+      if (ownerCoordinates != null) 'ownerLocationLatitude': ownerCoordinates.$1,
+      if (ownerCoordinates != null) 'ownerLocationLongitude': ownerCoordinates.$2,
       'ownerId': ownerId,
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -312,6 +336,58 @@ class PropertyFirebaseService {
       }
       rethrow;
     }
+  }
+
+
+  Future<(double, double)?> _readOwnerCoordinates(String ownerId) async {
+    final snapshot = await _db.collection('users').doc(ownerId).get();
+    final data = snapshot.data();
+    if (data == null) return null;
+
+    final geoPoint =
+        data['location'] is GeoPoint ? data['location'] as GeoPoint : null;
+
+    final lat = _toDouble(data['locationLatitude']) ?? geoPoint?.latitude;
+    final lng = _toDouble(data['locationLongitude']) ?? geoPoint?.longitude;
+
+    if (_isValidCoordinates(lat, lng)) {
+      return (lat!, lng!);
+    }
+    return null;
+  }
+
+  Future<(double, double)> _resolveCoordinates({
+    required String ownerId,
+    required double propertyLat,
+    required double propertyLng,
+    (double, double)? cachedOwnerCoordinates,
+  }) async {
+    if (_isValidCoordinates(propertyLat, propertyLng)) {
+      return (propertyLat, propertyLng);
+    }
+
+    final ownerCoordinates =
+        cachedOwnerCoordinates ?? await _readOwnerCoordinates(ownerId);
+    if (ownerCoordinates != null) {
+      return ownerCoordinates;
+    }
+
+    return (propertyLat, propertyLng);
+  }
+
+  double? _toDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  bool _isValidCoordinates(double? lat, double? lng) {
+    if (lat == null || lng == null) return false;
+    return lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180 &&
+        !(lat == 0.0 && lng == 0.0);
   }
 
   List<Map<String, dynamic>> _normalizeRooms(dynamic roomsRaw) {

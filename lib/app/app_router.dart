@@ -40,6 +40,8 @@ import 'package:rentdone/features/tenant/presentation/pages/tenant_dashboard_she
 import 'package:rentdone/features/tenant/presentation/pages/tenant_complaint_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_profile_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_tenancy_details_screen.dart';
+import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_city_entry_screen.dart';
+import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_property_map_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/add_tenant_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/edit_tenant_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/record_payment_screen.dart';
@@ -245,6 +247,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/tenant/dashboard',
             name: 'tenantDashboard',
             builder: (context, state) => const TenantDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/tenant/city',
+            name: 'tenantCity',
+            builder: (context, state) => const TenantCityEntryScreen(),
+          ),
+          GoRoute(
+            path: '/tenant/map',
+            name: 'tenantMap',
+            builder: (context, state) {
+              final city = state.uri.queryParameters['city'];
+              return TenantPropertyMapScreen(cityFromRoute: city);
+            },
           ),
           GoRoute(
             path: '/tenant/documents',

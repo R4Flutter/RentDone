@@ -22,6 +22,7 @@ class _TenantDashboardShellState extends ConsumerState<TenantDashboardShell> {
 
     int calculateIndex(BuildContext context) {
       final location = GoRouterState.of(context).uri.toString();
+      if (location.contains('/tenant/map') || location.contains('/tenant/city')) return 0;
       if (location.contains('/tenant/transactions')) return 1;
       if (location.contains('/tenant/documents')) return 2;
       if (location.contains('/tenant/profile')) return 3;
@@ -224,6 +225,16 @@ class _TenantSideDrawer extends StatelessWidget {
               const SizedBox(height: 28),
               Divider(color: AppColors.white.withValues(alpha: 0.08)),
               const SizedBox(height: 16),
+              _DrawerItem(
+                icon: Icons.map_outlined,
+                label: 'Explore Map',
+                subtitle: 'Search properties by city',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/tenant/city');
+                },
+              ),
+              const SizedBox(height: 10),
               _DrawerItem(
                 icon: Icons.report_problem_outlined,
                 label: 'Complaints',
