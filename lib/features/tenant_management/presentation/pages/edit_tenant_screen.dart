@@ -7,7 +7,7 @@ import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/tenant_management/domain/entities/tenant_entity.dart';
 import 'package:rentdone/features/tenant_management/domain/usecases/validators.dart';
 import 'package:rentdone/features/tenant_management/presentation/providers/tenant_providers.dart';
-import 'package:rentdone/features/tenant_management/data/services/cloudinary_service.dart';
+import 'package:rentdone/features/tenant_management/data/services/firebase_tenant_storage_service.dart';
 
 class EditTenantScreen extends ConsumerStatefulWidget {
   final String tenantId;
@@ -37,6 +37,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
   final Map<String, String> _fieldErrors = {};
   bool _isLoading = false;
   String? _uploadError;
+  double? _uploadProgress;
   TenantEntity? _tenant;
   ProviderSubscription<AsyncValue<TenantEntity?>>? _tenantSubscription;
 
@@ -218,27 +219,43 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
     setState(() {
       _isLoading = true;
       _uploadError = null;
+      _uploadProgress = 0;
     });
 
     try {
-      final cloudinary = ref.read(cloudinaryServiceProvider);
+      final storageService = ref.read(firebaseTenantStorageServiceProvider);
+      final userId = _tenant?.ownerId;
 
       // Upload new documents if selected
       String idProofUrl = _tenant!.idProofUrl ?? '';
       String agreementUrl = _tenant!.agreementUrl ?? '';
 
       if (_newIdProofFile != null) {
-        idProofUrl = await cloudinary.uploadIdProof(
+        idProofUrl = await storageService.uploadIdProof(
           documentFile: _newIdProofFile!,
           tenantId: widget.tenantId,
           idType: _selectedIdProofType,
+          userId: userId,
+          onProgress: (progress) {
+            if (!mounted) return;
+            setState(() {
+              _uploadProgress = progress;
+            });
+          },
         );
       }
 
       if (_newAgreementFile != null) {
-        agreementUrl = await cloudinary.uploadAgreement(
+        agreementUrl = await storageService.uploadAgreement(
           documentFile: _newAgreementFile!,
           tenantId: widget.tenantId,
+          userId: userId,
+          onProgress: (progress) {
+            if (!mounted) return;
+            setState(() {
+              _uploadProgress = progress;
+            });
+          },
         );
       }
 
@@ -279,11 +296,29 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _uploadError = e.toString();
+        _uploadError = _friendlyUploadError(e);
         _isLoading = false;
+        _uploadProgress = null;
       });
       _showError(_uploadError!);
     }
+  }
+
+  String _friendlyUploadError(Object error) {
+    final message = error.toString();
+    final lower = message.toLowerCase();
+
+    if (lower.contains('storage bucket not found')) {
+      return 'Firebase Storage is not set up for this project. Open Firebase Console > Build > Storage > Get started, then retry.';
+    }
+    if (lower.contains('upload timed out')) {
+      return 'Upload timed out. Check internet connection and try again.';
+    }
+    if (lower.contains('permission-denied') ||
+        lower.contains('permission denied')) {
+      return 'Upload permission denied. Sign in again and verify Storage rules.';
+    }
+    return message;
   }
 
   void _showError(String message) {
@@ -423,6 +458,18 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
                     maxLines: 3,
                   ),
                   const SizedBox(height: 32),
+
+                  if (_isLoading && _uploadProgress != null) ...[
+                    LinearProgressIndicator(value: _uploadProgress),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Uploading ${(100 * _uploadProgress!).toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Submit Button
                   SizedBox(

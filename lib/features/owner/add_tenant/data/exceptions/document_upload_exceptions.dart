@@ -7,10 +7,10 @@ class DocumentUploadException implements Exception {
   String toString() => message;
 }
 
-class CloudinaryUploadException extends DocumentUploadException {
+class StorageUploadException extends DocumentUploadException {
   final int? statusCode;
 
-  const CloudinaryUploadException(super.message, {this.statusCode});
+  const StorageUploadException(super.message, {this.statusCode});
 }
 
 class FirestoreSaveException extends DocumentUploadException {

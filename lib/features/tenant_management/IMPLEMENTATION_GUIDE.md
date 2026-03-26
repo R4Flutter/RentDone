@@ -49,7 +49,7 @@
 ├── fullName: string
 ├── phone: string (unique per owner)
 ├── email: string (optional)
-├── profileImageUrl: string (Cloudinary URL)
+├── profileImageUrl: string (Firebase Storage URL)
 ├── roomNumber: string
 ├── rentAmount: integer
 ├── securityDeposit: integer
@@ -63,8 +63,8 @@
 ├── maintenanceCharge: double
 ├── noticePeriodDays: integer
 ├── idProofType: string (aadhar, pan, passport)
-├── idProofUrl: string (Cloudinary)
-├── agreementUrl: string (Cloudinary)
+├── idProofUrl: string (Firebase Storage URL)
+├── agreementUrl: string (Firebase Storage URL)
 ├── additionalDocumentUrls: array
 ├── companyName: string
 ├── jobTitle: string
@@ -249,8 +249,8 @@ await ref.read(paymentNotifierProvider.notifier).recordPayment(payment);
 - [ ] Payment Recording Form
 - [ ] Tenant Search Widget
 
-### 2. Cloudinary Integration
-- [ ] Create CloudinaryService
+### 2. Firebase Storage Integration
+- [ ] Create FirebaseTenantStorageService
 - [ ] Profile picture upload
 - [ ] ID proof upload
 - [ ] Agreement document upload
@@ -300,7 +300,7 @@ The system generates:
 ✅ **Data Validation**: All inputs validated before database write  
 ✅ **Audit Trail**: All payments have reference IDs  
 ✅ **Soft Delete**: Tenants deactivated, never permanently deleted  
-✅ **Document Upload**: Cloudinary signed URLs (never raw files)  
+✅ **Document Upload**: Firebase Storage download URLs (never raw files)  
 ✅ **Transaction Integrity**: Payment records immutable after creation  
 
 ---
@@ -353,7 +353,7 @@ DOMAIN LAYER
 - [x] Immutable data models
 - [x] Soft delete (never hard delete)
 - [ ] UI screens built & tested
-- [ ] Cloudinary integration done
+- [ ] Firebase Storage integration done
 - [ ] Load tested with 100+ records
 - [ ] Firebase rules deployed
 - [ ] Analytics dashboard created

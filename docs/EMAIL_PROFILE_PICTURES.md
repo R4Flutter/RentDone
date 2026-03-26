@@ -223,7 +223,7 @@ CircularProfileAvatar(
 To allow users to upload custom profile pictures:
 
 1. Add image picker in profile screen
-2. Upload to Firebase Storage or Cloudinary
+2. Upload to Firebase Storage
 3. Update `photoUrl` field in Firestore
 4. System will automatically use uploaded photo over Gravatar
 

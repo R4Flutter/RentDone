@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:rentdone/features/owner/add_tenant/data/repositories/tenant_repository.dart';
-import 'package:rentdone/features/owner/add_tenant/data/services/cloudinary_service.dart';
+import 'package:rentdone/features/owner/add_tenant/data/services/firebase_storage_service.dart';
 import 'package:rentdone/features/owner/add_tenant/data/exceptions/document_upload_exceptions.dart';
 
 enum DocumentUploadStatus { idle, loading, success, error }
@@ -36,53 +36,16 @@ class DocumentUploadState {
   }
 }
 
-final cloudinaryServiceProvider = Provider<CloudinaryService>((ref) {
-  const cloudNamePrimary = String.fromEnvironment(
-    'CLOUDINARY_CLOUD_NAME',
-    defaultValue: '',
-  );
-  const uploadPresetPrimary = String.fromEnvironment(
-    'CLOUDINARY_UPLOAD_PRESET',
-    defaultValue: '',
-  );
-
-  const cloudNameLegacy = String.fromEnvironment(
-    'CLOUDINARY_CLOUD',
-    defaultValue: 'dmvogtrcg',
-  );
-  const uploadPresetLegacy = String.fromEnvironment(
-    'CLOUDINARY_PRESET',
-    defaultValue: 'rentdoneapp',
-  );
-  const apiHostPrimary = String.fromEnvironment(
-    'CLOUDINARY_API_HOST',
-    defaultValue: '',
-  );
-  const apiHostLegacy = String.fromEnvironment(
-    'CLOUDINARY_UPLOAD_API_HOST',
-    defaultValue: '',
-  );
-
-  final cloudName = cloudNamePrimary.isNotEmpty
-      ? cloudNamePrimary
-      : cloudNameLegacy;
-  final uploadPreset = uploadPresetPrimary.isNotEmpty
-      ? uploadPresetPrimary
-      : uploadPresetLegacy;
-  final apiHost = apiHostPrimary.isNotEmpty ? apiHostPrimary : apiHostLegacy;
-
-  return CloudinaryService(
-    cloudName: cloudName.isNotEmpty ? cloudName : '__NOT_CONFIGURED__',
-    uploadPreset: uploadPreset.isNotEmpty ? uploadPreset : '__NOT_CONFIGURED__',
-    apiHost: apiHost,
-  );
-});
+final firebaseDocumentStorageServiceProvider =
+    Provider<FirebaseDocumentStorageService>((ref) {
+      return FirebaseDocumentStorageService();
+    });
 
 final tenantDocumentRepositoryProvider = Provider<TenantDocumentRepository>((
   ref,
 ) {
-  final cloudinary = ref.watch(cloudinaryServiceProvider);
-  return TenantDocumentRepository(cloudinaryService: cloudinary);
+  final storageService = ref.watch(firebaseDocumentStorageServiceProvider);
+  return TenantDocumentRepository(storageService: storageService);
 });
 
 class DocumentUploadNotifier extends Notifier<DocumentUploadState> {
@@ -96,20 +59,6 @@ class DocumentUploadNotifier extends Notifier<DocumentUploadState> {
   }
 
   Future<void> uploadTenantDocument(File file, String tenantId) async {
-    final cloudName = _repository.cloudinaryService.cloudName.trim();
-    final uploadPreset = _repository.cloudinaryService.uploadPreset.trim();
-    if (cloudName.isEmpty ||
-        uploadPreset.isEmpty ||
-        cloudName == '__NOT_CONFIGURED__' ||
-        uploadPreset == '__NOT_CONFIGURED__') {
-      state = state.copyWith(
-        status: DocumentUploadStatus.error,
-        errorMessage:
-            'Cloudinary is not configured. Start app with --dart-define=CLOUDINARY_CLOUD_NAME=... --dart-define=CLOUDINARY_UPLOAD_PRESET=...',
-      );
-      return;
-    }
-
     if (_inFlightPaths.contains(file.path)) {
       // Already uploading this file
       return;
@@ -146,7 +95,7 @@ class DocumentUploadNotifier extends Notifier<DocumentUploadState> {
         progress: 1.0,
         errorMessage: null,
       );
-    } on CloudinaryUploadException catch (error) {
+    } on StorageUploadException catch (error) {
       state = state.copyWith(
         status: DocumentUploadStatus.error,
         errorMessage: error.message,
@@ -184,8 +133,8 @@ class DocumentUploadNotifier extends Notifier<DocumentUploadState> {
     final msg = error.toString();
 
     // Remove common prefixes
-    if (msg.startsWith('CloudinaryUploadException: ')) {
-      return msg.replaceFirst('CloudinaryUploadException: ', '');
+    if (msg.startsWith('StorageUploadException: ')) {
+      return msg.replaceFirst('StorageUploadException: ', '');
     }
     if (msg.startsWith('FirestoreSaveException: ')) {
       return msg.replaceFirst('FirestoreSaveException: ', '');

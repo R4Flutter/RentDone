@@ -130,7 +130,7 @@ CircularProfileAvatar(radius: 60)
 
 ### Want to Add Custom Upload?
 1. Add image picker to profile screen
-2. Upload to Firebase Storage/Cloudinary
+2. Upload to Firebase Storage
 3. Update `photoUrl` in Firestore
 4. System will automatically use uploaded photo
 

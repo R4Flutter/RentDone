@@ -5,7 +5,6 @@ import 'package:rentdone/features/payment/domain/entities/payment_due.dart';
 import 'package:rentdone/features/payment/domain/entities/payment_failure.dart';
 import 'package:rentdone/features/payment/domain/entities/payment_intent.dart';
 import 'package:rentdone/features/payment/presentation/providers/payment_di.dart';
-import 'package:uuid/uuid.dart';
 
 enum PaymentFlowStatus { idle, loading, processingPayment, success, failure }
 
@@ -38,8 +37,6 @@ class PaymentDashboardState {
 }
 
 class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
-  final _uuid = const Uuid();
-
   @override
   Future<PaymentDashboardState> build() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -100,7 +97,8 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
             month: due.dueDate.month,
             year: due.dueDate.year,
             gateway: gateway,
-            idempotencyKey: _uuid.v4(),
+            idempotencyKey:
+                'tenant_${FirebaseAuth.instance.currentUser!.uid}_${due.leaseId}_${due.dueDate.year}_${due.dueDate.month}_${gateway.toLowerCase()}',
           );
 
       if (gateway == 'razorpay' &&
@@ -115,11 +113,17 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
         throw const ServerFailure('Cashfree payment session not available');
       }
 
+      final payableAmount = gateway == 'razorpay'
+          ? (intent.totalPayableInPaise > 0
+                ? intent.totalPayableInPaise
+                : intent.amount)
+          : intent.amount;
+
       final gatewayResult = await paymentGateway.initializePayment(
         PaymentGatewayRequest(
           orderId: intent.orderId ?? '',
           gatewayKey: intent.keyId ?? '',
-          amount: intent.amount,
+          amount: payableAmount,
           currency: intent.currency,
           paymentId: intent.paymentId,
           tenantEmail: tenantEmail,

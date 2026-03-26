@@ -33,11 +33,14 @@ class TenantDocumentsStore {
   Future<void> saveUploaded({
     required String tenantId,
     required String fileUrl,
+    String? thumbnailUrl,
     required String fileType,
     required String publicId,
+    required String storagePath,
+    String? thumbnailStoragePath,
     required String description,
     required int fileSizeBytes,
-    String? deleteToken,
+    int? thumbnailSizeBytes,
   }) {
     return firestore
         .collection('tenants')
@@ -45,13 +48,18 @@ class TenantDocumentsStore {
         .collection('documents')
         .add({
           'fileUrl': fileUrl,
+          'originalUrl': fileUrl,
+          'thumbnailUrl': thumbnailUrl,
           'fileType': fileType,
           'publicId': publicId,
+          'storagePath': storagePath,
+          'thumbnailStoragePath': thumbnailStoragePath,
           'uploadedAt': FieldValue.serverTimestamp(),
           'description': description,
           'fileSizeBytes': fileSizeBytes,
-          if (deleteToken != null && deleteToken.isNotEmpty)
-            'deleteToken': deleteToken,
+          if (thumbnailSizeBytes != null)
+            'thumbnailSizeBytes': thumbnailSizeBytes,
+          'status': 'active',
         });
   }
 

@@ -23,8 +23,9 @@ or set `security.allowed_origin="*"` temporarily while rolling out.
 ```bash
 firebase functions:config:set razorpay.key_id="..." razorpay.key_secret="..." razorpay.webhook_secret="..."
 firebase functions:config:set cashfree.app_id="..." cashfree.secret_key="..." cashfree.webhook_secret="..."
-firebase functions:config:set cloudinary.cloud_name="..." cloudinary.api_key="..." cloudinary.api_secret="..."
 ```
+
+Use Firebase Storage security rules and Firestore rules for upload access control.
 
 Never place these secrets in Flutter app code, `.env` files committed to git, or client bundle.
 
@@ -52,7 +53,7 @@ firebase deploy --only firestore:rules,firestore:indexes,functions
 - `verifyPayment` rejects users who do not own the payment.
 - `createRazorpayOrder` rejects client-side amount tampering.
 - `confirmRazorpayPayment` rejects mismatched `razorpayOrderId`.
-- `createTenantImageUploadSignature` rejects missing/invalid bearer token and missing App Check (when enforced).
+- Tenant document uploads are enforced through Firebase Storage rules and authenticated user paths.
 - `razorpayWebhook` and `cashfreeWebhook` reject invalid signatures and non-POST methods.
 
 ## 6) Recommended next hardening tasks

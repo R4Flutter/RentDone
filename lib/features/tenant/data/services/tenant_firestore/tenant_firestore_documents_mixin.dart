@@ -26,19 +26,25 @@ mixin TenantFirestoreDocumentsMixin {
   Future<void> saveUploadedDocument({
     required String tenantId,
     required String fileUrl,
+    String? thumbnailUrl,
     required String fileType,
     required String publicId,
+    required String storagePath,
+    String? thumbnailStoragePath,
     required String description,
     required int fileSizeBytes,
-    String? deleteToken,
+    int? thumbnailSizeBytes,
   }) => TenantDocumentsStore(firestore).saveUploaded(
     tenantId: tenantId,
     fileUrl: fileUrl,
+    thumbnailUrl: thumbnailUrl,
     fileType: fileType,
     publicId: publicId,
+    storagePath: storagePath,
+    thumbnailStoragePath: thumbnailStoragePath,
     description: description,
     fileSizeBytes: fileSizeBytes,
-    deleteToken: deleteToken,
+    thumbnailSizeBytes: thumbnailSizeBytes,
   );
 
   Future<void> deleteDocument(String tenantId, String documentId) =>

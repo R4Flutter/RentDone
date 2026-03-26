@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,26 +10,25 @@ import 'package:rentdone/features/tenant/data/models/tenant_payment.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_reminder.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_room_details.dart';
 import 'package:rentdone/features/tenant/data/repositories/tenant_dashboard_repository_impl.dart';
-import 'package:rentdone/features/tenant/data/services/cloudinary_document_service.dart';
+import 'package:rentdone/features/tenant/data/services/firebase_document_storage_service.dart';
 import 'package:rentdone/features/tenant/data/services/tenant_firestore_service.dart';
 import 'package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart';
 import 'package:rentdone/features/tenant/domain/repositories/tenant_dashboard_repository.dart';
-
-final dioProvider = Provider<Dio>((ref) => Dio());
 
 final tenantFirestoreServiceProvider = Provider<TenantFirestoreService>(
   (ref) => TenantFirestoreService(),
 );
 
-final cloudinaryDocumentServiceProvider = Provider<CloudinaryDocumentService>(
-  (ref) => CloudinaryDocumentService(dio: ref.read(dioProvider)),
-);
+final firebaseDocumentStorageServiceProvider =
+    Provider<FirebaseDocumentStorageService>(
+      (ref) => FirebaseDocumentStorageService(),
+    );
 
 final tenantDashboardRepositoryProvider = Provider<TenantDashboardRepository>(
   (ref) => TenantDashboardRepositoryImpl(
     auth: FirebaseAuth.instance,
     firestoreService: ref.read(tenantFirestoreServiceProvider),
-    cloudinaryService: ref.read(cloudinaryDocumentServiceProvider),
+    documentStorageService: ref.read(firebaseDocumentStorageServiceProvider),
   ),
 );
 

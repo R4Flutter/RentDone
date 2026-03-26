@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:rentdone/features/tenant/data/models/tenant_document.dart';
 import 'package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_documents_coordinator.dart';
-import 'package:rentdone/features/tenant/data/services/cloudinary_document_service.dart';
+import 'package:rentdone/features/tenant/data/services/firebase_document_storage_service.dart';
 import 'package:rentdone/features/tenant/data/services/tenant_firestore_service.dart';
 
 mixin TenantDashboardDocumentsMixin {
   TenantFirestoreService get firestoreService;
-  CloudinaryDocumentService get cloudinaryService;
+  FirebaseDocumentStorageService get documentStorageService;
 
   Future<List<TenantDocument>> getDocumentsPage(
     String tenantId, {
@@ -28,7 +28,7 @@ mixin TenantDashboardDocumentsMixin {
   }) =>
       TenantDashboardDocumentsCoordinator(
         firestoreService: firestoreService,
-        cloudinaryService: cloudinaryService,
+        documentStorageService: documentStorageService,
       ).upload(
         tenantId: tenantId,
         file: file,
@@ -42,6 +42,6 @@ mixin TenantDashboardDocumentsMixin {
     required TenantDocument document,
   }) => TenantDashboardDocumentsCoordinator(
     firestoreService: firestoreService,
-    cloudinaryService: cloudinaryService,
+    documentStorageService: documentStorageService,
   ).delete(tenantId: tenantId, document: document);
 }

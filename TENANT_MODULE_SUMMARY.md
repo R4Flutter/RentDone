@@ -6,7 +6,7 @@
 |----------|-------|----------------|--------|
 | **Backend Infrastructure** | 11 | ~2,500 | ✅ Complete |
 | **Frontend Screens** | 5 | ~3,400 | ✅ Complete |
-| **Cloudinary Service** | 1 | ~200 | ✅ Complete |
+| **Firebase Storage Service** | 1 | ~200 | ✅ Complete |
 | **Router Integration** | 1 | ~100 | ✅ Complete |
 | **Total Module** | **18** | **~6,200** | **✅ PRODUCTION READY** |
 
@@ -69,7 +69,7 @@
    - Real-time validation with error display
    - Image picker for profile photo
    - File picker for ID proof & agreement
-   - Document upload to Cloudinary
+   - Document upload to Firebase Storage
    - Date picker for lease dates
    - Responsive design with scrolling
 
@@ -126,11 +126,11 @@
 
 ### TIER 5: SUPPORTING SERVICES
 ```
-✅ CloudinaryService (200 lines)
-   - uploadProfileImage() → Cloudinary URL
-   - uploadIdProof() → Cloudinary URL
-   - uploadAgreement() → Cloudinary URL
-   - uploadDocument() → Cloudinary URL
+✅ FirebaseTenantStorageService (200 lines)
+   - uploadProfileImage() → Firebase Storage URL
+   - uploadIdProof() → Firebase Storage URL
+   - uploadAgreement() → Firebase Storage URL
+   - uploadDocument() → Firebase Storage URL
    - Error handling & retry logic
    - Integration with Riverpod provider
 
@@ -160,7 +160,7 @@
 - [x] User isolation (every tenant partitioned by ownerId)
 - [x] Immutable fields (id, createdAt, ownerId)
 - [x] Firestore security rules configured
-- [x] Cloudinary unsigned uploads (no exposure)
+- [x] Firebase Storage secured uploads (no exposure)
 - [x] Soft deletes (deactivate, not permanent removal)
 
 ### Data Integrity
@@ -242,9 +242,9 @@ User fills form (20+ fields)
          ↓
 Submit button → TenantValidator runs 15+ checks
          ↓
-Validation passes → cloudinaryService.uploadProfileImage()
+Validation passes → firebaseTenantStorageService.uploadProfileImage()
          ↓
-Cloudinary returns URL → Create TenantEntity
+Firebase Storage returns URL → Create TenantEntity
          ↓
 tenantNotifierProvider.addTenant(entity)
          ↓
@@ -319,7 +319,7 @@ User sees new tenant in list (with success toast)
 ✅ Can handle 50,000+ users  
 ✅ 1M+ tenant records  
 ✅ Auto-scaling Firestore  
-✅ Cloudinary CDN for images  
+✅ Firebase Storage + CDN-backed delivery for images  
 ✅ Indexed queries for fast search  
 ✅ Pagination prevents data overload  
 
@@ -337,9 +337,9 @@ User sees new tenant in list (with success toast)
 ├─────────────────────────────────────┤
 │   DATA (Repositories)               │ ← TenantRepository, PaymentRepository
 ├─────────────────────────────────────┤
-│   SERVICES (Firestore + Cloudinary) │ ← TenantFirestoreService, CloudinaryService
+│   SERVICES (Firestore + Storage)    │ ← TenantFirestoreService, FirebaseTenantStorageService
 ├─────────────────────────────────────┤
-│   EXTERNAL SERVICES                 │ ← Google Firestore, Cloudinary API
+│   EXTERNAL SERVICES                 │ ← Google Firestore, Firebase Storage
 └─────────────────────────────────────┘
 ```
 

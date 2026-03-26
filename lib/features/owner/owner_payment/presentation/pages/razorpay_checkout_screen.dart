@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_payment/data/services/owner_razorpay_payment_service.dart';
 import 'package:rentdone/features/owner/owner_payment/data/services/razorpay_service.dart';
@@ -34,16 +35,29 @@ class RazorpayCheckoutScreen extends ConsumerStatefulWidget {
 
 class _RazorpayCheckoutScreenState
     extends ConsumerState<RazorpayCheckoutScreen> {
+  static final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: 'Rs ',
+    decimalDigits: 2,
+  );
+
   StreamSubscription<PaymentState>? _paymentStateSubscription;
   StreamSubscription<PaymentResponse>? _paymentResponseSubscription;
   bool _didHandleSuccess = false;
   bool _didNavigateFailure = false;
   OwnerRazorpayPaymentIntent? _activeIntent;
+  OwnerPaymentQuote? _paymentQuote;
+  bool _isQuoteLoading = true;
+  String? _quoteError;
+  late final String _idempotencyKey;
 
   @override
   void initState() {
     super.initState();
+    _idempotencyKey =
+        'owner_${widget.tenantId}_${widget.propertyId}_${DateTime.now().millisecondsSinceEpoch}';
     _setupPaymentListeners();
+    _loadPaymentQuote();
   }
 
   @override
@@ -99,6 +113,44 @@ class _RazorpayCheckoutScreenState
       },
     );
   }
+
+  Future<void> _loadPaymentQuote() async {
+    setState(() {
+      _isQuoteLoading = true;
+      _quoteError = null;
+    });
+
+    try {
+      final paymentGatewayService = ref.read(
+        ownerRazorpayPaymentServiceProvider,
+      );
+      final quote = await paymentGatewayService.quotePayment(
+        amount: widget.amount,
+      );
+      if (!mounted) return;
+      setState(() {
+        _paymentQuote = quote;
+        _isQuoteLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _quoteError = 'Unable to load payment breakdown. Pull to retry.';
+        _isQuoteLoading = false;
+      });
+    }
+  }
+
+  String _formatPaise(int paise) {
+    return _currencyFormat.format(paise / 100);
+  }
+
+  int get _rentAmountInPaise =>
+      _paymentQuote?.rentAmountInPaise ?? widget.amount * 100;
+  int get _convenienceFeeInPaise => _paymentQuote?.convenienceFeeInPaise ?? 0;
+  int get _totalPayableInPaise =>
+      _paymentQuote?.totalPayableInPaise ??
+      (_rentAmountInPaise + _convenienceFeeInPaise);
 
   Future<void> _onPaymentSuccess(PaymentResponse response) async {
     if (_didHandleSuccess) return;
@@ -265,7 +317,7 @@ class _RazorpayCheckoutScreenState
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _initiatePayment,
+                        onPressed: _isQuoteLoading ? null : _initiatePayment,
                         style: FilledButton.styleFrom(
                           backgroundColor: OwnerDashboardColors.brandPrimary(
                             context,
@@ -278,7 +330,7 @@ class _RazorpayCheckoutScreenState
                             const Icon(Icons.credit_card_rounded, size: 20),
                             const SizedBox(width: 8),
                             Text(
-                              'Pay Rs ${widget.amount}',
+                              'Pay ${_formatPaise(_totalPayableInPaise)}',
                               style: Theme.of(context).textTheme.labelLarge
                                   ?.copyWith(
                                     color: Colors.white,
@@ -332,7 +384,7 @@ class _RazorpayCheckoutScreenState
 
             PaymentProcessingOverlay(
               isVisible: paymentState == PaymentState.processing,
-              amount: widget.amount,
+              amount: (_totalPayableInPaise / 100).ceil(),
               message: 'Processing Payment...',
             ),
           ],
@@ -364,7 +416,7 @@ class _RazorpayCheckoutScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Rs ${widget.amount}',
+            _formatPaise(_rentAmountInPaise),
             style: Theme.of(context).textTheme.displaySmall?.copyWith(
               color: OwnerDashboardColors.brandPrimary(context),
               fontWeight: FontWeight.w800,
@@ -448,16 +500,61 @@ class _RazorpayCheckoutScreenState
       ),
       child: Column(
         children: [
+          if (_isQuoteLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+          if (_quoteError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _quoteError!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.errorRed,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _loadPaymentQuote,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
           _summaryRow(
             context,
-            'Amount',
-            'Rs ${widget.amount}',
+            'Rent Amount',
+            _formatPaise(_rentAmountInPaise),
             fontWeight: FontWeight.w600,
+          ),
+          const SizedBox(height: 8),
+          _summaryRow(
+            context,
+            'Convenience Fee',
+            _formatPaise(_convenienceFeeInPaise),
+            leading: Tooltip(
+              message: 'This fee is charged by payment providers.',
+              child: Icon(
+                Icons.info_outline_rounded,
+                size: 16,
+                color: OwnerDashboardColors.textSecondary(context),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           Divider(color: OwnerDashboardColors.border(context)),
           const SizedBox(height: 8),
-          _summaryRow(context, 'Total', 'Rs ${widget.amount}', highlight: true),
+          _summaryRow(
+            context,
+            'Total Payable',
+            _formatPaise(_totalPayableInPaise),
+            highlight: true,
+          ),
         ],
       ),
     );
@@ -467,17 +564,24 @@ class _RazorpayCheckoutScreenState
     BuildContext context,
     String label,
     String value, {
+    Widget? leading,
     bool highlight = false,
     FontWeight fontWeight = FontWeight.w500,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: OwnerDashboardColors.textSecondary(context),
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: OwnerDashboardColors.textSecondary(context),
+              ),
+            ),
+            if (leading != null) ...[const SizedBox(width: 6), leading],
+          ],
         ),
         Text(
           value,
@@ -523,10 +627,12 @@ class _RazorpayCheckoutScreenState
   }
 
   Future<void> _initiatePayment() async {
+    if (_isQuoteLoading) {
+      return;
+    }
+
     final paymentNotifier = ref.read(paymentStateNotifierProvider.notifier);
     final paymentGatewayService = ref.read(ownerRazorpayPaymentServiceProvider);
-    final idempotencyKey =
-        'owner_${widget.tenantId}_${DateTime.now().millisecondsSinceEpoch}';
 
     late final OwnerRazorpayPaymentIntent intent;
     try {
@@ -534,9 +640,21 @@ class _RazorpayCheckoutScreenState
         tenantId: widget.tenantId,
         propertyId: widget.propertyId,
         amount: widget.amount,
-        idempotencyKey: idempotencyKey,
+        idempotencyKey: _idempotencyKey,
       );
       _activeIntent = intent;
+
+      if (mounted) {
+        setState(() {
+          _paymentQuote = OwnerPaymentQuote(
+            rentAmountInPaise: intent.rentAmountInPaise,
+            convenienceFeeInPaise: intent.convenienceFeeInPaise,
+            totalPayableInPaise: intent.totalPayableInPaise,
+            gatewayPercent: _paymentQuote?.gatewayPercent ?? 0,
+            gstPercent: _paymentQuote?.gstPercent ?? 18,
+          );
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       _navigateToFailure('Unable to start payment. Please try again.');
@@ -545,7 +663,7 @@ class _RazorpayCheckoutScreenState
 
     final paymentRequest = PaymentRequest(
       orderId: intent.orderId,
-      amount: intent.amountInPaise,
+      amount: intent.totalPayableInPaise,
       currency: intent.currency,
       key: intent.keyId,
       description: 'Rent payment for ${widget.tenantName}',
@@ -556,6 +674,9 @@ class _RazorpayCheckoutScreenState
         'idempotencyKey': intent.idempotencyKey,
         'tenantId': widget.tenantId,
         'propertyId': widget.propertyId,
+        'rentAmountInPaise': intent.rentAmountInPaise,
+        'convenienceFeeInPaise': intent.convenienceFeeInPaise,
+        'totalPayableInPaise': intent.totalPayableInPaise,
         'tenantName': widget.tenantName,
         'propertyName': widget.propertyName,
       },

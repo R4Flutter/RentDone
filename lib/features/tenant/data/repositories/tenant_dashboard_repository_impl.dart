@@ -5,7 +5,7 @@ import 'package:rentdone/features/tenant/data/repositories/tenant_dashboard/tena
 import 'package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_documents_mixin.dart';
 import 'package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_payments_mixin.dart';
 import 'package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_summary_mixin.dart';
-import 'package:rentdone/features/tenant/data/services/cloudinary_document_service.dart';
+import 'package:rentdone/features/tenant/data/services/firebase_document_storage_service.dart';
 import 'package:rentdone/features/tenant/data/services/tenant_firestore_service.dart';
 import 'package:rentdone/features/tenant/domain/repositories/tenant_dashboard_repository.dart';
 
@@ -20,17 +20,18 @@ class TenantDashboardRepositoryImpl
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
   final TenantFirestoreService _firestoreService;
-  final CloudinaryDocumentService _cloudinaryService;
+  final FirebaseDocumentStorageService _documentStorageService;
 
   TenantDashboardRepositoryImpl({
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
     TenantFirestoreService? firestoreService,
-    CloudinaryDocumentService? cloudinaryService,
+    FirebaseDocumentStorageService? documentStorageService,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _functions = functions ?? FirebaseFunctions.instance,
        _firestoreService = firestoreService ?? TenantFirestoreService(),
-       _cloudinaryService = cloudinaryService ?? CloudinaryDocumentService();
+       _documentStorageService =
+           documentStorageService ?? FirebaseDocumentStorageService();
 
   @override
   FirebaseAuth get auth => _auth;
@@ -42,5 +43,6 @@ class TenantDashboardRepositoryImpl
   TenantFirestoreService get firestoreService => _firestoreService;
 
   @override
-  CloudinaryDocumentService get cloudinaryService => _cloudinaryService;
+  FirebaseDocumentStorageService get documentStorageService =>
+      _documentStorageService;
 }

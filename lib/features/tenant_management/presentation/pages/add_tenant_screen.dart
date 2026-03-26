@@ -8,7 +8,7 @@ import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/tenant_management/domain/entities/tenant_entity.dart';
 import 'package:rentdone/features/tenant_management/domain/usecases/validators.dart';
 import 'package:rentdone/features/tenant_management/presentation/providers/tenant_providers.dart';
-import 'package:rentdone/features/tenant_management/data/services/cloudinary_service.dart';
+import 'package:rentdone/features/tenant_management/data/services/firebase_tenant_storage_service.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 
 class AddTenantScreen extends ConsumerStatefulWidget {
@@ -44,6 +44,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   final Map<String, String> _fieldErrors = {};
   bool _isLoading = false;
   String? _uploadError;
+  double? _uploadProgress;
 
   @override
   void initState() {
@@ -74,9 +75,44 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
   }
 
   Future<void> _pickProfileImage() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from gallery'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _pickProfileImageFromSource(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Take a photo'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _pickProfileImageFromSource(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickProfileImageFromSource(ImageSource source) async {
     try {
       final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
 
       if (image != null) {
         setState(() {
@@ -223,10 +259,11 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     setState(() {
       _isLoading = true;
       _uploadError = null;
+      _uploadProgress = 0;
     });
 
     try {
-      final cloudinary = ref.read(cloudinaryServiceProvider);
+      final storageService = ref.read(firebaseTenantStorageServiceProvider);
       final userId = ref.read(firebaseAuthProvider).currentUser?.uid;
 
       if (userId == null) {
@@ -238,25 +275,46 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       String agreementUrl = '';
 
       if (_idProofFile != null) {
-        idProofUrl = await cloudinary.uploadIdProof(
+        idProofUrl = await storageService.uploadIdProof(
           documentFile: _idProofFile!,
           tenantId: '${DateTime.now().millisecondsSinceEpoch}',
           idType: _selectedIdProofType,
+          userId: userId,
+          onProgress: (progress) {
+            if (!mounted) return;
+            setState(() {
+              _uploadProgress = progress;
+            });
+          },
         );
       }
 
       if (_agreementFile != null) {
-        agreementUrl = await cloudinary.uploadAgreement(
+        agreementUrl = await storageService.uploadAgreement(
           documentFile: _agreementFile!,
           tenantId: '${DateTime.now().millisecondsSinceEpoch}',
+          userId: userId,
+          onProgress: (progress) {
+            if (!mounted) return;
+            setState(() {
+              _uploadProgress = progress;
+            });
+          },
         );
       }
 
       String? profileImageUrl;
       if (_profileImage != null) {
-        profileImageUrl = await cloudinary.uploadProfileImage(
+        profileImageUrl = await storageService.uploadProfileImage(
           imageFile: _profileImage!,
           tenantId: '${DateTime.now().millisecondsSinceEpoch}',
+          userId: userId,
+          onProgress: (progress) {
+            if (!mounted) return;
+            setState(() {
+              _uploadProgress = progress;
+            });
+          },
         );
       }
 
@@ -321,11 +379,29 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _uploadError = e.toString();
+        _uploadError = _friendlyUploadError(e);
         _isLoading = false;
+        _uploadProgress = null;
       });
       _showError(_uploadError!);
     }
+  }
+
+  String _friendlyUploadError(Object error) {
+    final message = error.toString();
+    final lower = message.toLowerCase();
+
+    if (lower.contains('storage bucket not found')) {
+      return 'Firebase Storage is not set up for this project. Open Firebase Console > Build > Storage > Get started, then retry.';
+    }
+    if (lower.contains('upload timed out')) {
+      return 'Upload timed out. Check internet connection and try again.';
+    }
+    if (lower.contains('permission-denied') ||
+        lower.contains('permission denied')) {
+      return 'Upload permission denied. Sign in again and verify Storage rules.';
+    }
+    return message;
   }
 
   void _showError(String message) {
@@ -531,6 +607,18 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 32),
+
+              if (_isLoading && _uploadProgress != null) ...[
+                LinearProgressIndicator(value: _uploadProgress),
+                const SizedBox(height: 8),
+                Text(
+                  'Uploading ${(100 * _uploadProgress!).toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Submit Button
               SizedBox(

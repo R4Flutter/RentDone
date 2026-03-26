@@ -11,7 +11,7 @@
 4. ✅ **TenantDTO & PaymentDTO** - Firestore serialization
 5. ✅ **TenantFirestoreService & PaymentFirestoreService** - Database operations (11+8 methods)
 6. ✅ **TenantRepositoryImpl & PaymentRepositoryImpl** - Concrete implementations
-7. ✅ **CloudinaryService** - Document upload to Cloudinary (production-ready)
+7. ✅ **FirebaseTenantStorageService** - Document upload to Firebase Storage (production-ready)
 8. ✅ **TenantValidator & PaymentValidator** - Comprehensive validation (15+ rules)
 9. ✅ **Tenant Use Cases & Payment Use Cases** - Business logic orchestration
 10. ✅ **Dependency Injection** - Full Riverpod provider setup
@@ -92,7 +92,7 @@ lib/features/tenant_management/
 │   ├── services/
 │   │   ├── tenant_firestore_service.dart ✅
 │   │   ├── payment_firestore_service.dart ✅
-│   │   └── cloudinary_service.dart ✅
+│   │   └── firebase_tenant_storage_service.dart ✅
 │   ├── repositories/
 │   │   ├── tenant_repository_impl.dart ✅
 │   │   └── payment_repository_impl.dart ✅
@@ -140,13 +140,13 @@ _fieldErrors['phone'] ??= 'Invalid phone format'
 
 ### Document Management
 ```dart
-// Cloudinary integration for secure file uploads
-final profileUrl = await cloudinary.uploadProfileImage(
+// Firebase Storage integration for secure file uploads
+final profileUrl = await storageService.uploadProfileImage(
   imageFile: file,
   tenantId: tenantId,
 );
 
-// Returns: https://res.cloudinary.com/rentdone/image/upload/...
+// Returns: Firebase Storage download URL
 ```
 
 ### State Management
@@ -182,7 +182,7 @@ final tenants = await repo.getTenants(
 ✅ **User Isolation**: Every tenant partitioned by ownerId  
 ✅ **Immutable Fields**: createdAt, id, ownerId cannot be updated  
 ✅ **Firestore Rules**: Role-based access control implemented  
-✅ **Document Uploads**: Cloudinary signed URLs (no raw files)  
+✅ **Document Uploads**: Firebase Storage download URLs (no raw files)  
 ✅ **Soft Deletes**: Deactivate instead of permanent deletion  
 ✅ **Validation Layer**: Client-side validation before Firestore write  
 ✅ **Transaction Integrity**: Payment records immutable after creation  
@@ -200,7 +200,7 @@ final tenants = await repo.getTenants(
   fullName: string,
   phone: string,
   email: string,
-  profileImageUrl: string,  // Cloudinary URL
+  profileImageUrl: string,  // Firebase Storage URL
   roomNumber: string,
   rentAmount: integer,
   securityDeposit: integer,
@@ -210,8 +210,8 @@ final tenants = await repo.getTenants(
   rentFrequency: string,    // monthly, quarterly, annual
   paymentMode: string,      // UPI, cash, bank_transfer, check
   upiId: string,
-  idProofUrl: string,       // Cloudinary
-  agreementUrl: string,     // CloudinaryURL
+  idProofUrl: string,       // Firebase Storage URL
+  agreementUrl: string,     // Firebase Storage URL
   status: string,           // active, inactive, notice_period, suspended
   createdAt: timestamp,
   updatedAt: timestamp
@@ -302,7 +302,7 @@ final analytics = ref.watch(tenantAnalyticsProvider(userId));
 - [ ] Add intl dependency to pubspec.yaml
 - [ ] Deploy Firestore rules from firestore.rules  
 - [ ] Create Firestore composite indexes (optional, for performance)
-- [ ] Set up Cloudinary account with unsigned preset
+- [ ] Confirm Firebase Storage rules and folder paths
 - [ ] Test all screens in emulator
 - [ ] Run `flutter pub get`
 - [ ] Run `flutter analyze` - should pass
@@ -344,7 +344,7 @@ DOMAIN LAYER (Business Logic - Use Cases)
          ↓
 DATA LAYER (Repositories)
          ↓
-FIRESTORE & CLOUDINARY (External Services)
+FIRESTORE & FIREBASE STORAGE (External Services)
 ```
 
 **Each layer is independent**:
@@ -361,7 +361,7 @@ FIRESTORE & CLOUDINARY (External Services)
 2. ✅ **UI Screens**: COMPLETE
 3. ⏳ **Fix dependencies & colors** (2 min)
 4. ⏳ **Deploy Firestore rules** (1 min)
-5. ⏳ **Add Cloudinary preset** (5 min)
+5. ⏳ **Validate Firebase Storage deployment** (5 min)
 6. ⏳ **Run tests** (automation ready)
 7. ⏳ **Play Store submission** (standard process)
 

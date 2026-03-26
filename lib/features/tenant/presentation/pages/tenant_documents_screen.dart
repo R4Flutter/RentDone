@@ -7,8 +7,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/core/storage/document_cache_service.dart';
 
 import 'package:rentdone/features/tenant/data/models/tenant_document.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
@@ -36,7 +38,16 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
 
   static const _maxSyncAttempts = 10;
   static const _syncRetryInterval = Duration(seconds: 2);
-  static const _maxUploadBytes = 5 * 1024 * 1024;
+  static const _maxUploadBytes = 12 * 1024 * 1024;
+  static const _documentCacheTtl = Duration(days: 7);
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(
+      () => DocumentCacheService.clearExpired(_documentCacheTtl),
+    );
+  }
 
   @override
   void dispose() {
@@ -52,13 +63,16 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
     final docsAsync = docsState.documents;
 
     return summaryAsync.when(
-      loading: () =>
-          _vaultScaffold(const Center(child: CircularProgressIndicator())),
+      loading: () => _vaultScaffold(
+        Center(
+          child: CircularProgressIndicator(color: _VaultTheme.brand(context)),
+        ),
+      ),
       error: (e, _) => _vaultScaffold(
         Center(
           child: Text(
             'Error: $e',
-            style: TextStyle(color: AppColors.white.withValues(alpha: 0.85)),
+            style: TextStyle(color: _VaultTheme.textPrimary(context)),
           ),
         ),
       ),
@@ -76,15 +90,16 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                     Text(
                       'Profile sync in progress. We are refreshing automatically.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.white.withValues(alpha: 0.9),
-                      ),
+                      style: TextStyle(color: _VaultTheme.textPrimary(context)),
                     ),
                     const SizedBox(height: 14),
-                    const SizedBox(
+                    SizedBox(
                       width: 22,
                       height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: _VaultTheme.brand(context),
+                      ),
                     ),
                   ],
                 ),
@@ -132,34 +147,18 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
 
   Widget _vaultScaffold(Widget child) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            _VaultTokens.bgTop,
-            _VaultTokens.bgMiddle,
-            _VaultTokens.bgBottom,
-          ],
-        ),
-      ),
+      decoration: BoxDecoration(gradient: _VaultTheme.pageGradient(context)),
       child: Stack(
         children: [
           Positioned(
             top: -100,
             right: -60,
-            child: _GlowOrb(
-              color: _VaultTokens.primaryAccent.withValues(alpha: 0.24),
-              size: 220,
-            ),
+            child: _GlowOrb(color: _VaultTheme.topBlob(context), size: 220),
           ),
           Positioned(
             top: 140,
             left: -80,
-            child: _GlowOrb(
-              color: _VaultTokens.secondaryAccent.withValues(alpha: 0.18),
-              size: 200,
-            ),
+            child: _GlowOrb(color: _VaultTheme.bottomBlob(context), size: 200),
           ),
           child,
         ],
@@ -188,6 +187,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
     return Stack(
       children: [
         RefreshIndicator(
+          color: _VaultTheme.brand(context),
           onRefresh: () =>
               ref.read(tenantDocumentsProvider.notifier).loadInitial(tenantId),
           child: ListView(
@@ -264,7 +264,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                 Text(
                   'Document Vault',
                   style: TextStyle(
-                    color: AppColors.white,
+                    color: _VaultTheme.textPrimary(context),
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.2,
@@ -272,9 +272,9 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Secure • Encrypted • Private',
+                  'Secure | Encrypted | Private',
                   style: TextStyle(
-                    color: AppColors.white.withValues(alpha: 0.76),
+                    color: _VaultTheme.textSecondary(context),
                     fontSize: 13,
                     letterSpacing: 0.3,
                   ),
@@ -327,15 +327,19 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                 ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(999),
-                  color: _VaultTokens.success.withValues(alpha: 0.18),
+                  color: TenantGlassTheme.success(
+                    context,
+                  ).withValues(alpha: 0.18),
                   border: Border.all(
-                    color: _VaultTokens.success.withValues(alpha: 0.5),
+                    color: TenantGlassTheme.success(
+                      context,
+                    ).withValues(alpha: 0.38),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'AES-256 Encrypted',
                   style: TextStyle(
-                    color: _VaultTokens.success,
+                    color: TenantGlassTheme.success(context),
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
                   ),
@@ -345,7 +349,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
               Text(
                 '${(progress * 100).toStringAsFixed(1)}%',
                 style: TextStyle(
-                  color: AppColors.white.withValues(alpha: 0.8),
+                  color: _VaultTheme.textSecondary(context),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -363,7 +367,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
       borderRadius: BorderRadius.circular(18),
       child: TextField(
         controller: _descriptionController,
-        style: const TextStyle(color: AppColors.white),
+        style: TextStyle(color: _VaultTheme.textPrimary(context)),
         decoration: tenantGlassInputDecoration(
           context,
           label: 'File description (optional)',
@@ -391,28 +395,23 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                gradient: selected
-                    ? const LinearGradient(
-                        colors: [
-                          _VaultTokens.primaryAccent,
-                          _VaultTokens.secondaryAccent,
-                        ],
-                      )
-                    : null,
+                gradient: selected ? _VaultTheme.accentGradient(context) : null,
                 color: selected
                     ? null
-                    : AppColors.white.withValues(alpha: 0.05),
+                    : TenantGlassTheme.elevated(
+                        context,
+                      ).withValues(alpha: 0.92),
                 border: Border.all(
                   color: selected
-                      ? AppColors.white.withValues(alpha: 0.28)
-                      : AppColors.white.withValues(alpha: 0.12),
+                      ? _VaultTheme.brand(context).withValues(alpha: 0.24)
+                      : TenantGlassTheme.border(context),
                 ),
                 boxShadow: selected
                     ? [
                         BoxShadow(
-                          color: _VaultTokens.primaryAccent.withValues(
-                            alpha: 0.36,
-                          ),
+                          color: _VaultTheme.brand(
+                            context,
+                          ).withValues(alpha: 0.36),
                           blurRadius: 26,
                           spreadRadius: -5,
                         ),
@@ -422,7 +421,9 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
               child: Text(
                 category,
                 style: TextStyle(
-                  color: AppColors.white,
+                  color: selected
+                      ? AppColors.white
+                      : _VaultTheme.textPrimary(context),
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 12,
                   letterSpacing: 0.2,
@@ -452,6 +453,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
                 compact: i.isOdd,
                 uploadedAtLabel: _formatUploadedAt(documents[i].uploadedAt),
                 onOpen: () => _openDocument(documents[i]),
+                onDownload: () => _downloadDocument(documents[i]),
                 onDelete: () => _deleteDocument(tenantId, documents[i]),
               )
               .animate(delay: Duration(milliseconds: 60 * (i % 6)))
@@ -483,21 +485,29 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
         ),
         if (isLoadingMore) ...[
           const SizedBox(height: 12),
-          const Center(child: CircularProgressIndicator(strokeWidth: 2.2)),
+          Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: _VaultTheme.brand(context),
+            ),
+          ),
         ] else if (hasMore) ...[
           const SizedBox(height: 12),
           TenantGlassCard(
             onTap: () =>
                 ref.read(tenantDocumentsProvider.notifier).loadMore(tenantId),
             borderRadius: BorderRadius.circular(16),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.expand_more_rounded, color: AppColors.white70),
-                SizedBox(width: 6),
+                Icon(
+                  Icons.expand_more_rounded,
+                  color: _VaultTheme.textSecondary(context),
+                ),
+                const SizedBox(width: 6),
                 Text(
                   'Load more documents',
-                  style: TextStyle(color: AppColors.white70),
+                  style: TextStyle(color: _VaultTheme.textSecondary(context)),
                 ),
               ],
             ),
@@ -519,13 +529,13 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
             Icon(
               Icons.folder_open_rounded,
               size: 58,
-              color: _VaultTokens.highlightAccent.withValues(alpha: 0.9),
+              color: _VaultTheme.brand(context),
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'No Documents Yet',
               style: TextStyle(
-                color: AppColors.white,
+                color: _VaultTheme.textPrimary(context),
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
               ),
@@ -535,7 +545,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
               'Your secure files will appear here',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppColors.white.withValues(alpha: 0.72),
+                color: _VaultTheme.textSecondary(context),
                 fontSize: 13,
               ),
             ),
@@ -545,15 +555,10 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  gradient: const LinearGradient(
-                    colors: [
-                      _VaultTokens.primaryAccent,
-                      _VaultTokens.secondaryAccent,
-                    ],
-                  ),
+                  gradient: _VaultTheme.accentGradient(context),
                   boxShadow: [
                     BoxShadow(
-                      color: _VaultTokens.primaryAccent.withValues(alpha: 0.4),
+                      color: _VaultTheme.brand(context).withValues(alpha: 0.28),
                       blurRadius: 30,
                       spreadRadius: -8,
                     ),
@@ -587,10 +592,8 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
             height: 120 + (index.isEven ? 20 : 0),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              color: AppColors.white.withValues(alpha: 0.05),
-              border: Border.all(
-                color: AppColors.white.withValues(alpha: 0.08),
-              ),
+              color: TenantGlassTheme.elevated(context).withValues(alpha: 0.96),
+              border: Border.all(color: TenantGlassTheme.border(context)),
             ),
           ),
         ),
@@ -603,15 +606,15 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
       borderRadius: BorderRadius.circular(20),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
-            color: _VaultTokens.danger,
+            color: TenantGlassTheme.error(context),
             size: 34,
           ),
           const SizedBox(height: 10),
           Text(
             errorText,
-            style: TextStyle(color: AppColors.white.withValues(alpha: 0.85)),
+            style: TextStyle(color: _VaultTheme.textPrimary(context)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -627,15 +630,10 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
             height: 62,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [
-                  _VaultTokens.primaryAccent,
-                  _VaultTokens.secondaryAccent,
-                ],
-              ),
+              gradient: _VaultTheme.accentGradient(context),
               boxShadow: [
                 BoxShadow(
-                  color: _VaultTokens.primaryAccent.withValues(alpha: 0.5),
+                  color: _VaultTheme.brand(context).withValues(alpha: 0.34),
                   blurRadius: 26,
                   spreadRadius: -4,
                 ),
@@ -707,12 +705,15 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppColors.cFF16263C, AppColors.cFF111C30],
-            ),
-            border: Border.all(color: AppColors.white.withValues(alpha: 0.1)),
+            gradient: _VaultTheme.sheetGradient(context),
+            border: Border.all(color: TenantGlassTheme.border(context)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
           child: SafeArea(
             child: Column(
@@ -809,7 +810,9 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('File too large. Max allowed size is 5 MB.'),
+            content: Text(
+              'Source file too large. Max allowed source size is 12 MB.',
+            ),
           ),
         );
       }
@@ -892,25 +895,65 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
   }
 
   Future<void> _openDocument(TenantDocument document) async {
-    if (document.fileType == 'image') {
-      await showDialog<void>(
-        context: context,
-        builder: (_) => Dialog(
-          backgroundColor: AppTheme.nearBlack,
-          child: InteractiveViewer(
-            child: Image.network(document.fileUrl, fit: BoxFit.contain),
-          ),
-        ),
+    try {
+      final file = await DocumentCacheService.getOrFetch(
+        document.fileUrl,
+        _documentCacheTtl,
       );
-      return;
-    }
 
-    final uri = Uri.parse(document.fileUrl);
-    final opened = await launchUrl(uri, mode: LaunchMode.platformDefault);
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Unable to open document')));
+      if (document.fileType == 'image') {
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (_) => Dialog(
+            backgroundColor: AppTheme.nearBlack,
+            child: InteractiveViewer(
+              child: Image.file(file, fit: BoxFit.contain),
+            ),
+          ),
+        );
+        return;
+      }
+
+      final openResult = await OpenFilex.open(file.path);
+      if (openResult.type != ResultType.done) {
+        final uri = Uri.parse(document.fileUrl);
+        final opened = await launchUrl(uri, mode: LaunchMode.platformDefault);
+        if (!opened && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to open document')),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Open failed. ${_friendlyError(e)}')),
+      );
+    }
+  }
+
+  Future<void> _downloadDocument(TenantDocument document) async {
+    try {
+      await DocumentCacheService.getOrFetch(
+        document.fileUrl,
+        _documentCacheTtl,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Document saved in local cache')),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Download failed. ${_friendlyError(e)}')),
+      );
     }
   }
 
@@ -936,59 +979,28 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
   String _friendlyError(Object error) {
     final raw = error.toString();
     final text = raw.toLowerCase();
-    if (text.contains('cloudinary upload preset is missing')) {
-      return 'Cloudinary preset is missing in app config. Start app with CLOUDINARY_UPLOAD_PRESET.';
-    }
-    if (text.contains('cloudinary upload failed for all configurations') ||
-        text.contains('cloudinary unsigned upload failed') ||
-        text.contains('upload failed with status') ||
-        text.contains('http 400')) {
-      return _cloudinaryReason(raw);
-    }
-    if (text.contains('http 401') || text.contains('http 403')) {
-      return 'Upload authorization failed. Please sign in again and retry.';
-    }
-    if (text.contains('http 404')) {
-      return 'Upload endpoint not found. Backend upload route is not deployed correctly.';
-    }
-    if (text.contains('http 500')) {
-      return 'Upload server error. Please verify Cloudinary config on backend.';
-    }
-    if (text.contains('file exceeds 50mb')) {
-      return 'File is larger than 50 MB. Please choose a smaller file.';
+    if (text.contains('file too large') ||
+        text.contains('exceeds 2mb') ||
+        text.contains('exceeds 12mb')) {
+      return 'File is too large. Keep scans clear and under allowed limits.';
     }
     if (text.contains('permission-denied') ||
         text.contains('permission denied')) {
-      return 'You do not have access yet. Please wait for profile sync to complete.';
+      return 'Upload permission denied. Please sign in again and retry.';
     }
     if (text.contains('not-found') || text.contains('not found')) {
-      return 'Tenant profile not found. Ask owner to assign this account to your room.';
+      return 'Requested storage path was not found. Please try uploading again.';
+    }
+    if (text.contains('unauthenticated') || text.contains('unauthorized')) {
+      return 'Session expired. Please sign in again and retry.';
+    }
+    if (text.contains('cancelled') || text.contains('aborted')) {
+      return 'Upload was interrupted. Please retry.';
     }
     if (text.contains('network') || text.contains('socket')) {
       return 'Network issue detected. Check internet and try again.';
     }
     return 'Please try again in a moment.';
-  }
-
-  String _cloudinaryReason(String rawError) {
-    final text = rawError.toLowerCase();
-    if (text.contains('upload preset not found')) {
-      return 'Upload preset not found on Cloudinary. Configure valid CLOUDINARY_UPLOAD_PRESET.';
-    }
-    if (text.contains('unsigned uploads are disabled') ||
-        text.contains('must be unsigned')) {
-      return 'Cloudinary preset is not unsigned. Enable unsigned mode in Cloudinary preset settings.';
-    }
-    if (text.contains('invalid cloud name')) {
-      return 'Cloudinary cloud name is invalid. Check CLOUDINARY_CLOUD_NAME.';
-    }
-    if (text.contains('public_id is not allowed')) {
-      return 'Cloudinary preset blocks public_id. Update preset options to allow app uploads.';
-    }
-    if (text.contains('resource not found')) {
-      return 'Cloudinary API endpoint not found. Verify cloud name and API host.';
-    }
-    return 'Cloudinary rejected upload config. Please verify cloud name and upload preset.';
   }
 
   String _formatUploadedAt(DateTime? uploadedAt) {
@@ -1009,17 +1021,41 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
   }
 }
 
+class _VaultTheme {
+  static Color brand(BuildContext context) => TenantGlassTheme.brand(context);
+
+  static Color brandStrong(BuildContext context) =>
+      TenantGlassTheme.brandStrong(context);
+
+  static Color textPrimary(BuildContext context) =>
+      TenantGlassTheme.textPrimary(context);
+
+  static Color textSecondary(BuildContext context) =>
+      TenantGlassTheme.textSecondary(context);
+
+  static Color textMuted(BuildContext context) =>
+      TenantGlassTheme.textMuted(context);
+
+  static LinearGradient pageGradient(BuildContext context) =>
+      OwnerDashboardColors.ownerPageBackgroundGradient(context);
+
+  static LinearGradient accentGradient(BuildContext context) => LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [brand(context), brandStrong(context)],
+  );
+
+  static LinearGradient sheetGradient(BuildContext context) =>
+      TenantGlassTheme.surfaceGradient(context, accent: brand(context));
+
+  static Color topBlob(BuildContext context) =>
+      OwnerDashboardColors.ownerTopBlobColor(context);
+
+  static Color bottomBlob(BuildContext context) =>
+      OwnerDashboardColors.ownerBottomBlobColor(context);
+}
+
 class _VaultTokens {
-  static const Color bgTop = AppColors.cFF0B1220;
-  static const Color bgMiddle = AppColors.cFF0E1A2B;
-  static const Color bgBottom = AppColors.cFF111C30;
-
-  static const Color primaryAccent = AppColors.cFF4F7CFF;
-  static const Color secondaryAccent = AppColors.cFF7A5CFF;
-  static const Color highlightAccent = AppColors.cFF3FE0FF;
-  static const Color danger = AppColors.cFFFF5A5F;
-  static const Color success = AppColors.cFF22C55E;
-
   static const double outerMargin = 20;
   static const double sectionSpacing = 24;
 }
@@ -1063,12 +1099,10 @@ class _NeonCircleButton extends StatelessWidget {
         height: 46,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            colors: [_VaultTokens.primaryAccent, _VaultTokens.highlightAccent],
-          ),
+          gradient: _VaultTheme.accentGradient(context),
           boxShadow: [
             BoxShadow(
-              color: _VaultTokens.highlightAccent.withValues(alpha: 0.45),
+              color: _VaultTheme.brand(context).withValues(alpha: 0.28),
               blurRadius: 18,
               spreadRadius: -4,
             ),
@@ -1098,22 +1132,18 @@ class _MetricTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: AppColors.white.withValues(alpha: 0.04),
-          border: Border.all(color: AppColors.white.withValues(alpha: 0.08)),
+          color: TenantGlassTheme.elevated(context).withValues(alpha: 0.96),
+          border: Border.all(color: TenantGlassTheme.border(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              color: AppColors.white.withValues(alpha: 0.85),
-              size: 16,
-            ),
+            Icon(icon, color: _VaultTheme.brand(context), size: 16),
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(
-                color: AppColors.white,
+              style: TextStyle(
+                color: _VaultTheme.textPrimary(context),
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
@@ -1122,7 +1152,7 @@ class _MetricTile extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                color: AppColors.white.withValues(alpha: 0.66),
+                color: _VaultTheme.textSecondary(context),
                 fontSize: 11,
               ),
             ),
@@ -1144,7 +1174,7 @@ class _NeonProgressBar extends StatelessWidget {
       height: 10,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: AppColors.white.withValues(alpha: 0.08),
+        color: TenantGlassTheme.elevated(context).withValues(alpha: 0.92),
       ),
       child: Stack(
         children: [
@@ -1156,15 +1186,10 @@ class _NeonProgressBar extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                gradient: const LinearGradient(
-                  colors: [
-                    _VaultTokens.primaryAccent,
-                    _VaultTokens.highlightAccent,
-                  ],
-                ),
+                gradient: _VaultTheme.accentGradient(context),
                 boxShadow: [
                   BoxShadow(
-                    color: _VaultTokens.highlightAccent.withValues(alpha: 0.52),
+                    color: _VaultTheme.brand(context).withValues(alpha: 0.34),
                     blurRadius: 18,
                     spreadRadius: -3,
                   ),
@@ -1183,6 +1208,7 @@ class _VaultDocumentTile extends StatefulWidget {
   final bool compact;
   final String uploadedAtLabel;
   final VoidCallback onOpen;
+  final VoidCallback onDownload;
   final VoidCallback onDelete;
 
   const _VaultDocumentTile({
@@ -1191,6 +1217,7 @@ class _VaultDocumentTile extends StatefulWidget {
     required this.compact,
     required this.uploadedAtLabel,
     required this.onOpen,
+    required this.onDownload,
     required this.onDelete,
   });
 
@@ -1227,32 +1254,46 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: AppColors.white.withValues(alpha: 0.06),
-                  border: Border.all(
-                    color: AppColors.white.withValues(alpha: 0.08),
-                  ),
+                  color: TenantGlassTheme.elevated(
+                    context,
+                  ).withValues(alpha: 0.96),
+                  border: Border.all(color: TenantGlassTheme.border(context)),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(14),
                   child: Center(
                     child: isImage
                         ? Image.network(
-                            widget.document.fileUrl,
+                            widget.document.thumbnailUrl ??
+                                widget.document.fileUrl,
                             fit: BoxFit.cover,
                             width: double.infinity,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(
-                                  Icons.broken_image_outlined,
-                                  color: AppColors.white70,
-                                  size: 34,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) {
+                                return child;
+                              }
+                              return Center(
+                                child: SizedBox.square(
+                                  dimension: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _VaultTheme.brand(context),
+                                  ),
                                 ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.broken_image_outlined,
+                              color: _VaultTheme.textMuted(context),
+                              size: 34,
+                            ),
                           )
                         : Icon(
                             isPdf
                                 ? Icons.picture_as_pdf_rounded
                                 : Icons.insert_drive_file_rounded,
                             size: 40,
-                            color: AppColors.white.withValues(alpha: 0.82),
+                            color: _VaultTheme.brand(context),
                           ),
                   ),
                 ),
@@ -1267,8 +1308,8 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                           : widget.document.description,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.white,
+                      style: TextStyle(
+                        color: _VaultTheme.textPrimary(context),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1276,20 +1317,48 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
                   PopupMenuButton<String>(
                     icon: Icon(
                       Icons.more_horiz_rounded,
-                      color: AppColors.white.withValues(alpha: 0.78),
+                      color: _VaultTheme.textSecondary(context),
                     ),
-                    color: AppColors.cFF152238,
+                    color: TenantGlassTheme.surface(context),
                     onSelected: (value) {
                       if (value == 'open') {
                         widget.onOpen();
+                      }
+                      if (value == 'download') {
+                        widget.onDownload();
                       }
                       if (value == 'delete') {
                         widget.onDelete();
                       }
                     },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'open', child: Text('Open')),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'open',
+                        child: Text(
+                          'Open',
+                          style: TextStyle(
+                            color: _VaultTheme.textPrimary(context),
+                          ),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'download',
+                        child: Text(
+                          'Download',
+                          style: TextStyle(
+                            color: _VaultTheme.textPrimary(context),
+                          ),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: TenantGlassTheme.error(context),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -1297,7 +1366,7 @@ class _VaultDocumentTileState extends State<_VaultDocumentTile> {
               Text(
                 widget.uploadedAtLabel,
                 style: TextStyle(
-                  color: AppColors.white.withValues(alpha: 0.65),
+                  color: _VaultTheme.textSecondary(context),
                   fontSize: 11,
                 ),
               ),
@@ -1334,23 +1403,23 @@ class _UploadOptionTile extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _VaultTokens.primaryAccent.withValues(alpha: 0.22),
+                color: _VaultTheme.brand(context).withValues(alpha: 0.14),
               ),
-              child: Icon(icon, color: AppColors.white, size: 18),
+              child: Icon(icon, color: _VaultTheme.brand(context), size: 18),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.white,
+                style: TextStyle(
+                  color: _VaultTheme.textPrimary(context),
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.white.withValues(alpha: 0.75),
+              color: _VaultTheme.textSecondary(context),
             ),
           ],
         ),

@@ -6,6 +6,9 @@ class OwnerRazorpayPaymentIntent {
     required this.orderId,
     required this.keyId,
     required this.amountInPaise,
+    required this.rentAmountInPaise,
+    required this.convenienceFeeInPaise,
+    required this.totalPayableInPaise,
     required this.currency,
     required this.idempotencyKey,
   });
@@ -14,6 +17,9 @@ class OwnerRazorpayPaymentIntent {
   final String orderId;
   final String keyId;
   final int amountInPaise;
+  final int rentAmountInPaise;
+  final int convenienceFeeInPaise;
+  final int totalPayableInPaise;
   final String currency;
   final String idempotencyKey;
 
@@ -23,8 +29,39 @@ class OwnerRazorpayPaymentIntent {
       orderId: (map['orderId'] as String? ?? '').trim(),
       keyId: (map['keyId'] as String? ?? '').trim(),
       amountInPaise: (map['amountInPaise'] as num?)?.toInt() ?? 0,
+      rentAmountInPaise: (map['rentAmountInPaise'] as num?)?.toInt() ?? 0,
+      convenienceFeeInPaise:
+          (map['convenienceFeeInPaise'] as num?)?.toInt() ?? 0,
+      totalPayableInPaise: (map['totalPayableInPaise'] as num?)?.toInt() ?? 0,
       currency: (map['currency'] as String? ?? 'INR').trim(),
       idempotencyKey: (map['idempotencyKey'] as String? ?? '').trim(),
+    );
+  }
+}
+
+class OwnerPaymentQuote {
+  const OwnerPaymentQuote({
+    required this.rentAmountInPaise,
+    required this.convenienceFeeInPaise,
+    required this.totalPayableInPaise,
+    required this.gatewayPercent,
+    required this.gstPercent,
+  });
+
+  final int rentAmountInPaise;
+  final int convenienceFeeInPaise;
+  final int totalPayableInPaise;
+  final double gatewayPercent;
+  final double gstPercent;
+
+  factory OwnerPaymentQuote.fromMap(Map<String, dynamic> map) {
+    return OwnerPaymentQuote(
+      rentAmountInPaise: (map['rentAmountInPaise'] as num?)?.toInt() ?? 0,
+      convenienceFeeInPaise:
+          (map['convenienceFeeInPaise'] as num?)?.toInt() ?? 0,
+      totalPayableInPaise: (map['totalPayableInPaise'] as num?)?.toInt() ?? 0,
+      gatewayPercent: (map['gatewayPercent'] as num?)?.toDouble() ?? 0,
+      gstPercent: (map['gstPercent'] as num?)?.toDouble() ?? 0,
     );
   }
 }
@@ -34,6 +71,18 @@ class OwnerRazorpayPaymentService {
     : _functions = functions ?? FirebaseFunctions.instance;
 
   final FirebaseFunctions _functions;
+
+  Future<OwnerPaymentQuote> quotePayment({required int amount}) async {
+    final callable = _functions.httpsCallable('quoteOwnerRazorpayPayment');
+    final result = await callable.call(<String, dynamic>{'amount': amount});
+
+    final data = Map<String, dynamic>.from(result.data as Map);
+    final quote = OwnerPaymentQuote.fromMap(data);
+    if (quote.rentAmountInPaise <= 0 || quote.totalPayableInPaise <= 0) {
+      throw StateError('Invalid payment quote returned by backend.');
+    }
+    return quote;
+  }
 
   Future<OwnerRazorpayPaymentIntent> createPaymentIntent({
     required String tenantId,
@@ -57,7 +106,8 @@ class OwnerRazorpayPaymentService {
     if (intent.paymentId.isEmpty ||
         intent.orderId.isEmpty ||
         intent.keyId.isEmpty ||
-        intent.amountInPaise <= 0) {
+        intent.amountInPaise <= 0 ||
+        intent.totalPayableInPaise <= 0) {
       throw StateError('Invalid payment intent returned by backend.');
     }
 

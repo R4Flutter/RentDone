@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -377,24 +378,57 @@ class ReportsFirebaseService {
     final fileName =
         'report_${DateTime.now().millisecondsSinceEpoch}.$normalized';
 
-    final storageRef = _storage
-        .ref()
-        .child('reports')
-        .child(ownerId)
-        .child(fileName);
-
     try {
+      final localUri = await _persistExportLocally(
+        bytes: bytes,
+        ownerId: ownerId,
+        fileName: fileName,
+      );
+
+      // Keep export responsive by returning local file URI immediately.
+      unawaited(
+        _uploadExportToStorageBestEffort(
+          bytes: bytes,
+          ownerId: ownerId,
+          fileName: fileName,
+          contentType: contentType,
+        ),
+      );
+
+      return localUri;
+    } catch (_) {
+      final storageRef = _storage
+          .ref()
+          .child('reports')
+          .child(ownerId)
+          .child(fileName);
+
       await storageRef.putData(
         bytes,
         SettableMetadata(contentType: contentType),
       );
       return storageRef.getDownloadURL();
-    } on FirebaseException {
-      return _persistExportLocally(
-        bytes: bytes,
-        ownerId: ownerId,
-        fileName: fileName,
+    }
+  }
+
+  Future<void> _uploadExportToStorageBestEffort({
+    required Uint8List bytes,
+    required String ownerId,
+    required String fileName,
+    required String contentType,
+  }) async {
+    try {
+      final storageRef = _storage
+          .ref()
+          .child('reports')
+          .child(ownerId)
+          .child(fileName);
+      await storageRef.putData(
+        bytes,
+        SettableMetadata(contentType: contentType),
       );
+    } on FirebaseException {
+      // Local export already succeeded. Ignore upload failures.
     }
   }
 

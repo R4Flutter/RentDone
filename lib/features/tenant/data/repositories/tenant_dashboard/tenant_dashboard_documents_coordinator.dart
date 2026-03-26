@@ -1,18 +1,18 @@
 import 'dart:io';
 
 import 'package:rentdone/features/tenant/data/models/tenant_document.dart';
-import 'package:rentdone/features/tenant/data/services/cloudinary_document_service.dart';
+import 'package:rentdone/features/tenant/data/services/firebase_document_storage_service.dart';
 import 'package:rentdone/features/tenant/data/services/tenant_firestore_service.dart';
 
 import 'tenant_document_file_type.dart';
 
 class TenantDashboardDocumentsCoordinator {
   final TenantFirestoreService firestoreService;
-  final CloudinaryDocumentService cloudinaryService;
+  final FirebaseDocumentStorageService documentStorageService;
 
   const TenantDashboardDocumentsCoordinator({
     required this.firestoreService,
-    required this.cloudinaryService,
+    required this.documentStorageService,
   });
 
   Future<TenantDocument> upload({
@@ -22,7 +22,7 @@ class TenantDashboardDocumentsCoordinator {
     required String description,
     required int fileSizeBytes,
   }) async {
-    final uploadResult = await cloudinaryService.uploadTenantDocument(
+    final uploadResult = await documentStorageService.uploadTenantDocument(
       tenantId: tenantId,
       file: file,
       fileName: fileName,
@@ -31,31 +31,43 @@ class TenantDashboardDocumentsCoordinator {
     try {
       await firestoreService.saveUploadedDocument(
         tenantId: tenantId,
-        fileUrl: uploadResult.secureUrl,
+        fileUrl: uploadResult.downloadUrl,
+        thumbnailUrl: uploadResult.thumbnailUrl,
         fileType: fileType,
-        publicId: uploadResult.publicId,
+        publicId: uploadResult.storagePath,
+        storagePath: uploadResult.storagePath,
+        thumbnailStoragePath: uploadResult.thumbnailStoragePath,
         description: description,
-        fileSizeBytes: fileSizeBytes,
-        deleteToken: uploadResult.deleteToken,
+        fileSizeBytes: uploadResult.uploadedBytes,
+        thumbnailSizeBytes: uploadResult.thumbnailSizeBytes,
       );
     } catch (_) {
-      final deleteToken = uploadResult.deleteToken;
-      if (deleteToken != null && deleteToken.isNotEmpty) {
-        try {
-          await cloudinaryService.deleteWithToken(deleteToken);
-        } catch (_) {}
+      try {
+        await documentStorageService.deleteByStoragePath(
+          uploadResult.storagePath,
+        );
+        if ((uploadResult.thumbnailStoragePath ?? '').isNotEmpty) {
+          await documentStorageService.deleteByStoragePath(
+            uploadResult.thumbnailStoragePath!,
+          );
+        }
+      } catch (_) {
+        // Ignore cleanup failure to preserve original Firestore error.
       }
       rethrow;
     }
     return TenantDocument(
       id: '',
-      fileUrl: uploadResult.secureUrl,
+      fileUrl: uploadResult.downloadUrl,
       fileType: fileType,
       uploadedAt: uploadResult.createdAt,
       description: description,
-      publicId: uploadResult.publicId,
-      fileSizeBytes: fileSizeBytes,
-      deleteToken: uploadResult.deleteToken,
+      publicId: uploadResult.storagePath,
+      fileSizeBytes: uploadResult.uploadedBytes,
+      thumbnailUrl: uploadResult.thumbnailUrl,
+      storagePath: uploadResult.storagePath,
+      thumbnailStoragePath: uploadResult.thumbnailStoragePath,
+      thumbnailSizeBytes: uploadResult.thumbnailSizeBytes,
     );
   }
 
@@ -63,12 +75,25 @@ class TenantDashboardDocumentsCoordinator {
     required String tenantId,
     required TenantDocument document,
   }) async {
-    if (document.deleteToken == null || document.deleteToken!.isEmpty) {
-      throw Exception(
-        'Delete token missing. Upload should be deleted by backend Cloudinary signature flow.',
-      );
+    final storagePath = document.storagePath.trim().isEmpty
+        ? document.publicId.trim()
+        : document.storagePath.trim();
+    if (storagePath.isNotEmpty) {
+      try {
+        await documentStorageService.deleteByStoragePath(storagePath);
+      } catch (_) {
+        // Allow deleting Firestore reference even if remote file cleanup fails.
+      }
     }
-    await cloudinaryService.deleteWithToken(document.deleteToken!);
+    if ((document.thumbnailStoragePath ?? '').trim().isNotEmpty) {
+      try {
+        await documentStorageService.deleteByStoragePath(
+          document.thumbnailStoragePath!.trim(),
+        );
+      } catch (_) {
+        // Ignore thumbnail cleanup failure.
+      }
+    }
     await firestoreService.deleteDocument(tenantId, document.id);
   }
 }

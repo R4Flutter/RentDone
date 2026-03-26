@@ -14,6 +14,7 @@ import 'package:rentdone/features/payment/domain/usecases/get_current_due.dart';
 import 'package:rentdone/features/payment/domain/usecases/get_transaction_history.dart';
 import 'package:rentdone/features/payment/domain/usecases/prevent_duplicate_payment.dart';
 import 'package:rentdone/features/payment/domain/usecases/verify_payment.dart';
+import 'package:rentdone/features/owner/owner_payment/data/services/razorpay_service.dart';
 
 final leaseFirestoreDataSourceProvider = Provider<LeaseFirestoreDataSource>(
   (ref) => LeaseFirestoreDataSource(),
@@ -75,4 +76,11 @@ final preventDuplicatePaymentUseCaseProvider =
 
 final calculateLateFeeUseCaseProvider = Provider<CalculateLateFee>((ref) {
   return CalculateLateFee();
+});
+
+final razorpayServiceProvider = Provider<RazorpayService>((ref) {
+  const key = String.fromEnvironment('RAZORPAY_KEY', defaultValue: '');
+  final service = RazorpayService(razorpayKey: key);
+  ref.onDispose(service.dispose);
+  return service;
 });

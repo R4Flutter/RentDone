@@ -6,6 +6,7 @@ library;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 
 class OfflineCacheService {
   static const _dashboardCacheKey = 'dashboard_cache';
@@ -28,10 +29,15 @@ class OfflineCacheService {
     try {
       await _prefs.setString(_dashboardCacheKey, jsonEncode(data));
       await _setCacheExpiry(_dashboardCacheKey);
-      debugPrint('✅ Dashboard cached locally');
+      if (kDebugMode) {
+        AppLogger.debug('Dashboard cached locally', tag: 'OfflineCacheService');
+      }
       return true;
     } catch (e) {
-      debugPrint('❌ Failed to cache dashboard: $e');
+      AppLogger.warning(
+        'Failed to cache dashboard: $e',
+        tag: 'OfflineCacheService',
+      );
       return false;
     }
   }
@@ -47,7 +53,12 @@ class OfflineCacheService {
 
       return jsonDecode(cached) as Map<String, dynamic>;
     } catch (e) {
-      debugPrint('❌ Failed to retrieve dashboard cache: $e');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Failed to retrieve dashboard cache: $e',
+          tag: 'OfflineCacheService',
+        );
+      }
       return null;
     }
   }
@@ -57,10 +68,18 @@ class OfflineCacheService {
     try {
       await _prefs.setString(_paymentsCacheKey, jsonEncode(payments));
       await _setCacheExpiry(_paymentsCacheKey);
-      debugPrint('✅ Payments cached locally (${payments.length} records)');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Payments cached locally (${payments.length} records)',
+          tag: 'OfflineCacheService',
+        );
+      }
       return true;
     } catch (e) {
-      debugPrint('❌ Failed to cache payments: $e');
+      AppLogger.warning(
+        'Failed to cache payments: $e',
+        tag: 'OfflineCacheService',
+      );
       return false;
     }
   }
@@ -79,7 +98,12 @@ class OfflineCacheService {
       }
       return [];
     } catch (e) {
-      debugPrint('❌ Failed to retrieve payments cache: $e');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Failed to retrieve payments cache: $e',
+          tag: 'OfflineCacheService',
+        );
+      }
       return [];
     }
   }
@@ -89,10 +113,18 @@ class OfflineCacheService {
     try {
       await _prefs.setString(_propertiesCacheKey, jsonEncode(properties));
       await _setCacheExpiry(_propertiesCacheKey);
-      debugPrint('✅ Properties cached locally (${properties.length} records)');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Properties cached locally (${properties.length} records)',
+          tag: 'OfflineCacheService',
+        );
+      }
       return true;
     } catch (e) {
-      debugPrint('❌ Failed to cache properties: $e');
+      AppLogger.warning(
+        'Failed to cache properties: $e',
+        tag: 'OfflineCacheService',
+      );
       return false;
     }
   }
@@ -111,7 +143,12 @@ class OfflineCacheService {
       }
       return [];
     } catch (e) {
-      debugPrint('❌ Failed to retrieve properties cache: $e');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Failed to retrieve properties cache: $e',
+          tag: 'OfflineCacheService',
+        );
+      }
       return [];
     }
   }
@@ -121,10 +158,18 @@ class OfflineCacheService {
     try {
       await _prefs.setString(_tenantsCacheKey, jsonEncode(tenants));
       await _setCacheExpiry(_tenantsCacheKey);
-      debugPrint('✅ Tenants cached locally (${tenants.length} records)');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Tenants cached locally (${tenants.length} records)',
+          tag: 'OfflineCacheService',
+        );
+      }
       return true;
     } catch (e) {
-      debugPrint('❌ Failed to cache tenants: $e');
+      AppLogger.warning(
+        'Failed to cache tenants: $e',
+        tag: 'OfflineCacheService',
+      );
       return false;
     }
   }
@@ -143,7 +188,12 @@ class OfflineCacheService {
       }
       return [];
     } catch (e) {
-      debugPrint('❌ Failed to retrieve tenants cache: $e');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Failed to retrieve tenants cache: $e',
+          tag: 'OfflineCacheService',
+        );
+      }
       return [];
     }
   }
@@ -159,9 +209,14 @@ class OfflineCacheService {
       await _prefs.remove('$_cacheExpiryKey$_paymentsCacheKey');
       await _prefs.remove('$_cacheExpiryKey$_propertiesCacheKey');
       await _prefs.remove('$_cacheExpiryKey$_tenantsCacheKey');
-      debugPrint('✅ All caches cleared');
+      if (kDebugMode) {
+        AppLogger.debug('All caches cleared', tag: 'OfflineCacheService');
+      }
     } catch (e) {
-      debugPrint('❌ Failed to clear caches: $e');
+      AppLogger.warning(
+        'Failed to clear caches: $e',
+        tag: 'OfflineCacheService',
+      );
     }
   }
 

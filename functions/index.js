@@ -231,6 +231,165 @@ function getCashfreeConfig() {
   };
 }
 
+function parsePercent(value, fallback) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) {
+    return fallback;
+  }
+  return num;
+}
+
+function ceilDivide(numerator, denominator) {
+  return Math.floor((numerator + denominator - 1) / denominator);
+}
+
+function percentToBps(value) {
+  return Math.round(parsePercent(value, 0) * 100);
+}
+
+function defaultPaymentFeeConfig() {
+  const cfg = functions.config().payment_fee || {};
+  const gstPercent = parsePercent(cfg.gst_percent, 18);
+  const defaultGatewayPercent = parsePercent(cfg.default_gateway_percent, 2);
+  const defaultGatewayCostPercent = parsePercent(
+    cfg.default_gateway_cost_percent,
+    defaultGatewayPercent,
+  );
+
+  return {
+    gstPercent,
+    defaultGatewayPercent,
+    defaultGatewayCostPercent,
+    gatewayPercents: {
+      razorpay: parsePercent(cfg.razorpay_percent, defaultGatewayPercent),
+      cashfree: parsePercent(cfg.cashfree_percent, defaultGatewayPercent),
+    },
+    gatewayCostPercents: {
+      razorpay: parsePercent(cfg.razorpay_cost_percent, defaultGatewayCostPercent),
+      cashfree: parsePercent(cfg.cashfree_cost_percent, defaultGatewayCostPercent),
+    },
+  };
+}
+
+async function loadPaymentFeeConfig(gateway) {
+  const safeGateway = String(gateway || 'razorpay').trim().toLowerCase();
+  const defaults = defaultPaymentFeeConfig();
+
+  let firestoreConfig = {};
+  try {
+    const cfgDoc = await db.collection('system_config').doc('payment_fee').get();
+    if (cfgDoc.exists) {
+      firestoreConfig = cfgDoc.data() || {};
+    }
+  } catch (error) {
+    functions.logger.warn('Using default payment fee config. Firestore config read failed.', {
+      gateway: safeGateway,
+      message: error?.message || 'unknown',
+    });
+  }
+
+  const gatewayPercent = parsePercent(
+    firestoreConfig?.gatewayPercents?.[safeGateway]
+      || firestoreConfig?.[`${safeGateway}Percent`]
+      || defaults.gatewayPercents[safeGateway]
+      || defaults.defaultGatewayPercent,
+    defaults.defaultGatewayPercent,
+  );
+
+  const gatewayCostPercent = parsePercent(
+    firestoreConfig?.gatewayCostPercents?.[safeGateway]
+      || firestoreConfig?.[`${safeGateway}CostPercent`]
+      || defaults.gatewayCostPercents[safeGateway]
+      || defaults.defaultGatewayCostPercent,
+    defaults.defaultGatewayCostPercent,
+  );
+
+  const gstPercent = parsePercent(
+    firestoreConfig?.gstPercent,
+    defaults.gstPercent,
+  );
+
+  return {
+    gateway: safeGateway,
+    gatewayPercent,
+    gatewayCostPercent,
+    gstPercent,
+  };
+}
+
+function calculateFeeBreakdownInPaise({
+  rentAmountInRupees,
+  gatewayPercent,
+  gstPercent,
+  gatewayCostPercent,
+}) {
+  const rentAmount = Math.trunc(Number(rentAmountInRupees || 0));
+  if (!Number.isFinite(rentAmount) || rentAmount <= 0) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Rent amount must be a positive integer in rupees',
+    );
+  }
+
+  const rentAmountInPaise = rentAmount * 100;
+  const gstBps = percentToBps(gstPercent);
+  const gatewayBps = percentToBps(gatewayPercent);
+  const gatewayCostBps = percentToBps(gatewayCostPercent);
+
+  // Round upward at every fee stage to ensure the platform never under-collects.
+  const feeNumerator = rentAmountInPaise * gatewayBps * (10000 + gstBps);
+  const convenienceFeeInPaise = Math.max(1, ceilDivide(feeNumerator, 10000 * 10000));
+
+  const costNumerator = rentAmountInPaise * gatewayCostBps * (10000 + gstBps);
+  const estimatedGatewayCostInPaise = Math.max(0, ceilDivide(costNumerator, 10000 * 10000));
+
+  const totalPayableInPaise = rentAmountInPaise + convenienceFeeInPaise;
+  const netProfitInPaise = convenienceFeeInPaise - estimatedGatewayCostInPaise;
+
+  return {
+    rentAmountInPaise,
+    convenienceFeeInPaise,
+    totalPayableInPaise,
+    estimatedGatewayCostInPaise,
+    netProfitInPaise,
+    gatewayPercent,
+    gatewayCostPercent,
+    gstPercent,
+  };
+}
+
+async function incrementFeeAnalytics({
+  gateway,
+  rentAmountInPaise,
+  convenienceFeeInPaise,
+  totalPayableInPaise,
+  estimatedGatewayCostInPaise,
+}) {
+  const now = new Date();
+  const period = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const analyticsRef = db.collection('payment_fee_analytics').doc(period);
+
+  await analyticsRef.set({
+    period,
+    updatedAt: FieldValue.serverTimestamp(),
+    totalTransactions: FieldValue.increment(1),
+    totalRentAmountInPaise: FieldValue.increment(Math.trunc(rentAmountInPaise || 0)),
+    totalFeeCollectedInPaise: FieldValue.increment(Math.trunc(convenienceFeeInPaise || 0)),
+    totalGatewayCostInPaise: FieldValue.increment(Math.trunc(estimatedGatewayCostInPaise || 0)),
+    totalNetProfitInPaise: FieldValue.increment(
+      Math.trunc((convenienceFeeInPaise || 0) - (estimatedGatewayCostInPaise || 0)),
+    ),
+    totalPayableCollectedInPaise: FieldValue.increment(Math.trunc(totalPayableInPaise || 0)),
+    byGateway: {
+      [String(gateway || 'unknown').toLowerCase()]: {
+        transactions: FieldValue.increment(1),
+        feeCollectedInPaise: FieldValue.increment(Math.trunc(convenienceFeeInPaise || 0)),
+        gatewayCostInPaise: FieldValue.increment(Math.trunc(estimatedGatewayCostInPaise || 0)),
+      },
+    },
+  }, { merge: true });
+}
+
 function getWhatsAppConfig() {
   const cfg = functions.config().whatsapp || {};
   return {
@@ -245,15 +404,6 @@ function getWhatsAppConfig() {
   };
 }
 
-function getCloudinaryConfig() {
-  const cfg = functions.config().cloudinary || {};
-  return {
-    cloudName: cfg.cloud_name,
-    apiKey: cfg.api_key,
-    apiSecret: cfg.api_secret,
-  };
-}
-
 function monthKey(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   return `${date.getFullYear()}-${m}`;
@@ -261,6 +411,103 @@ function monthKey(date) {
 
 function normalizePaymentStatus(value) {
   return String(value || '').trim().toLowerCase();
+}
+
+function stableStringify(value) {
+  if (value === undefined) {
+    return '__undefined__';
+  }
+  if (value === null) {
+    return 'null';
+  }
+  if (value instanceof Timestamp) {
+    return `ts:${value.toMillis()}`;
+  }
+  if (value instanceof Date) {
+    return `dt:${value.getTime()}`;
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(',')}]`;
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value).sort();
+    return `{${keys.map((key) => `${key}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return String(value);
+}
+
+function hasAnyFieldChanged(beforeData, afterData, fields) {
+  return fields.some((field) => {
+    const beforeValue = beforeData?.[field];
+    const afterValue = afterData?.[field];
+    return stableStringify(beforeValue) !== stableStringify(afterValue);
+  });
+}
+
+function shouldRecomputeOwnerSummaryForPaymentWrite(change) {
+  const beforeExists = change.before.exists;
+  const afterExists = change.after.exists;
+  if (beforeExists !== afterExists) {
+    return true;
+  }
+  if (!beforeExists && !afterExists) {
+    return false;
+  }
+
+  const beforeData = change.before.data() || {};
+  const afterData = change.after.data() || {};
+  const ownerChanged = String(beforeData.ownerId || '').trim() !== String(afterData.ownerId || '').trim();
+  if (ownerChanged) {
+    return true;
+  }
+
+  return hasAnyFieldChanged(beforeData, afterData, [
+    'status',
+    'amount',
+    'baseAmount',
+    'paidAmount',
+    'paidAt',
+    'dueDate',
+    'date',
+    'method',
+    'paymentMethod',
+    'tenantId',
+  ]);
+}
+
+function shouldRecomputeOwnerSummaryForTenantWrite(change) {
+  const beforeExists = change.before.exists;
+  const afterExists = change.after.exists;
+  if (beforeExists !== afterExists) {
+    return true;
+  }
+  if (!beforeExists && !afterExists) {
+    return false;
+  }
+
+  const beforeData = change.before.data() || {};
+  const afterData = change.after.data() || {};
+  return String(beforeData.ownerId || '').trim() !== String(afterData.ownerId || '').trim();
+}
+
+function shouldRecomputeOwnerSummaryForPropertyWrite(change) {
+  const beforeExists = change.before.exists;
+  const afterExists = change.after.exists;
+  if (beforeExists !== afterExists) {
+    return true;
+  }
+  if (!beforeExists && !afterExists) {
+    return false;
+  }
+
+  const beforeData = change.before.data() || {};
+  const afterData = change.after.data() || {};
+  const ownerChanged = String(beforeData.ownerId || '').trim() !== String(afterData.ownerId || '').trim();
+  if (ownerChanged) {
+    return true;
+  }
+
+  return hasAnyFieldChanged(beforeData, afterData, ['rooms']);
 }
 
 function isUnpaidStatus(value) {
@@ -494,6 +741,12 @@ function toDate(value) {
   if (!value) return null;
   if (value.toDate) return value.toDate();
   if (value instanceof Date) return value;
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
   return null;
 }
 
@@ -537,6 +790,230 @@ async function deleteQueryInChunks(query, chunkSize = 400) {
       break;
     }
   }
+}
+
+async function deleteQueryInChunksCapped(query, {
+  chunkSize = 400,
+  maxDocs = 1200,
+} = {}) {
+  let deleted = 0;
+  while (deleted < maxDocs) {
+    const remaining = maxDocs - deleted;
+    const effectiveChunk = Math.min(chunkSize, remaining);
+    const snapshot = await query.limit(effectiveChunk).get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+    deleted += snapshot.size;
+
+    if (snapshot.size < effectiveChunk) {
+      break;
+    }
+  }
+  return deleted;
+}
+
+function isSameMonth(date, now = new Date()) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return false;
+  }
+  return date.getFullYear() === now.getFullYear()
+    && date.getMonth() === now.getMonth();
+}
+
+async function recomputeOwnerSummary(ownerId) {
+  const safeOwnerId = String(ownerId || '').trim();
+  if (!safeOwnerId) {
+    return;
+  }
+
+  const [propertiesSnap, tenantsSnap, paymentsSnap] = await Promise.all([
+    db.collection('properties').where('ownerId', '==', safeOwnerId).get(),
+    db.collection('tenants').where('ownerId', '==', safeOwnerId).get(),
+    db.collection('payments').where('ownerId', '==', safeOwnerId).get(),
+  ]);
+
+  const totalProperties = propertiesSnap.size;
+  const totalTenants = tenantsSnap.size;
+
+  let vacantProperties = 0;
+  propertiesSnap.forEach((doc) => {
+    const rooms = Array.isArray(doc.data()?.rooms) ? doc.data().rooms : [];
+    const occupied = rooms.filter((room) => room?.isOccupied === true).length;
+    vacantProperties += Math.max(rooms.length - occupied, 0);
+  });
+
+  const now = new Date();
+  let collectedAmount = 0;
+  let collectedPayments = 0;
+  let pendingAmount = 0;
+  let pendingPayments = 0;
+  const pendingTenantIds = new Set();
+  let cashAmount = 0;
+  let onlineAmount = 0;
+  let lastPaymentAt = null;
+
+  paymentsSnap.forEach((doc) => {
+    const payment = doc.data() || {};
+    const status = normalizePaymentStatus(payment.status);
+    const amount = Number(payment.amount || payment.baseAmount || 0) || 0;
+    const paidAmountRaw = Number(payment.paidAmount || 0) || 0;
+    const paidAmount = paidAmountRaw > 0 ? paidAmountRaw : amount;
+
+    const paidAt = toDate(payment.paidAt)
+      || toDate(payment.date)
+      || toDate(payment.updatedAt)
+      || toDate(payment.createdAt)
+      || new Date();
+    const dueDate = toDate(payment.dueDate)
+      || toDate(payment.date)
+      || toDate(payment.createdAt)
+      || new Date();
+
+    const collected = status === 'paid' || (status === 'partial' && paidAmount > 0);
+
+    if (collected && isSameMonth(paidAt, now)) {
+      collectedPayments += 1;
+      collectedAmount += paidAmount;
+      if (!lastPaymentAt || paidAt > lastPaymentAt) {
+        lastPaymentAt = paidAt;
+      }
+
+      const method = String(payment.method || payment.paymentMethod || '').trim().toLowerCase();
+      if (method === 'cash') {
+        cashAmount += paidAmount;
+      } else if (method === 'upi' || method === 'online' || method === 'razorpay') {
+        onlineAmount += paidAmount;
+      }
+    }
+
+    if (status !== 'paid' && isSameMonth(dueDate, now)) {
+      pendingPayments += 1;
+      pendingAmount += amount;
+      const tenantId = String(payment.tenantId || '').trim();
+      if (tenantId) {
+        pendingTenantIds.add(tenantId);
+      }
+    }
+  });
+
+  const summaryPayload = {
+    ownerId: safeOwnerId,
+    totalProperties,
+    vacantProperties,
+    totalTenants,
+    collectedAmount,
+    collectedPayments,
+    pendingAmount,
+    pendingPayments,
+    pendingTenants: pendingTenantIds.size,
+    cashAmount,
+    onlineAmount,
+    totalRent: collectedAmount + pendingAmount,
+    pendingRent: pendingAmount,
+    paidRent: collectedAmount,
+    tenantCount: totalTenants,
+    lastPaymentDate: lastPaymentAt ? Timestamp.fromDate(lastPaymentAt) : null,
+    lastUpdated: FieldValue.serverTimestamp(),
+  };
+
+  await db.collection('owners_summary').doc(safeOwnerId).set(summaryPayload, { merge: true });
+}
+
+async function deleteStoragePathIfExists(path) {
+  const safePath = String(path || '').trim();
+  if (!safePath) {
+    return;
+  }
+
+  try {
+    await admin.storage().bucket().file(safePath).delete();
+  } catch (error) {
+    const code = String(error?.code || '').toLowerCase();
+    const message = String(error?.message || '').toLowerCase();
+    const isNotFound = code === '404'
+      || code === 'storage/object-not-found'
+      || message.includes('no such object');
+    if (!isNotFound) {
+      throw error;
+    }
+  }
+}
+
+async function cleanupOrphanTenantDocumentFiles({
+  staleHours = 48,
+  maxDocs = 250,
+} = {}) {
+  const cutoff = Timestamp.fromDate(new Date(Date.now() - (staleHours * 60 * 60 * 1000)));
+
+  const staleImagesSnap = await db
+    .collection('user_images')
+    .where('uploadedAt', '<=', cutoff)
+    .limit(maxDocs)
+    .get();
+
+  let deletedCount = 0;
+  for (const doc of staleImagesSnap.docs) {
+    const data = doc.data() || {};
+    const storagePath = String(data.storagePath || '').trim();
+    const thumbnailStoragePath = String(data.thumbnailStoragePath || '').trim();
+
+    if (!storagePath) {
+      await doc.ref.delete();
+      deletedCount += 1;
+      continue;
+    }
+
+    const activeDocumentSnap = await db
+      .collectionGroup('documents')
+      .where('storagePath', '==', storagePath)
+      .limit(1)
+      .get();
+
+    if (!activeDocumentSnap.empty) {
+      continue;
+    }
+
+    await deleteStoragePathIfExists(storagePath);
+    if (thumbnailStoragePath) {
+      await deleteStoragePathIfExists(thumbnailStoragePath);
+    }
+    await doc.ref.delete();
+    deletedCount += 1;
+  }
+
+  return deletedCount;
+}
+
+async function cleanupOldReportExports({
+  olderThanDays = 14,
+  maxFiles = 500,
+} = {}) {
+  const cutoff = new Date(Date.now() - (olderThanDays * 24 * 60 * 60 * 1000));
+  const [files] = await admin.storage().bucket().getFiles({
+    prefix: 'reports/',
+    autoPaginate: false,
+    maxResults: maxFiles,
+  });
+
+  let deletedCount = 0;
+  for (const file of files) {
+    const metaDate = toDate(file?.metadata?.updated)
+      || toDate(file?.metadata?.timeCreated);
+    if (!metaDate || metaDate > cutoff) {
+      continue;
+    }
+    await deleteStoragePathIfExists(file.name);
+    deletedCount += 1;
+  }
+
+  return deletedCount;
 }
 
 async function postWhatsAppMessage({ token, phoneNumberId, apiVersion, payload }) {
@@ -690,27 +1167,127 @@ async function getPaymentIdFromPayload(payload) {
   );
 }
 
-exports.cleanupExpiredWebhookEvents = functions.pubsub
-  .schedule('every 6 hours')
+exports.cleanupExpiredWebhookEvents = functions
+  .runWith({ memory: '128MB', timeoutSeconds: 120 })
+  .pubsub
+  .schedule('every day 03:40')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
     const now = Timestamp.now();
-    await deleteQueryInChunks(
+    const deletedWebhookEvents = await deleteQueryInChunksCapped(
       db.collection('_webhookEvents').where('expiresAt', '<=', now),
+      { chunkSize: 300, maxDocs: 1200 },
     );
-    await deleteQueryInChunks(
+    const deletedSecuritySignals = await deleteQueryInChunksCapped(
       db.collection('_securitySignals').where('expiresAt', '<=', now),
+      { chunkSize: 300, maxDocs: 1200 },
     );
-    await deleteQueryInChunks(
+    const deletedSecurityAlerts = await deleteQueryInChunksCapped(
       db.collection('_securityAlerts').where('expiresAt', '<=', now),
+      { chunkSize: 300, maxDocs: 1200 },
     );
-    await deleteQueryInChunks(
+    const deletedNotificationEvents = await deleteQueryInChunksCapped(
       db.collection('_notificationEvents').where('expiresAt', '<=', now),
+      { chunkSize: 300, maxDocs: 1200 },
     );
+
+    const deletedTotal = deletedWebhookEvents
+      + deletedSecuritySignals
+      + deletedSecurityAlerts
+      + deletedNotificationEvents;
+    if (deletedTotal > 0) {
+      functions.logger.info('cleanupExpiredWebhookEvents deleted expired docs', {
+        deletedWebhookEvents,
+        deletedSecuritySignals,
+        deletedSecurityAlerts,
+        deletedNotificationEvents,
+      });
+    }
     return null;
   });
 
-exports.generateMonthlyPayments = functions.pubsub
+exports.cleanupStorageOrphansAndExports = functions
+  .runWith({ memory: '256MB', timeoutSeconds: 240 })
+  .pubsub
+  .schedule('every day 03:10')
+  .timeZone('Asia/Kolkata')
+  .onRun(async () => {
+    const deletedOrphans = await cleanupOrphanTenantDocumentFiles({
+      staleHours: 48,
+      maxDocs: 250,
+    });
+    const deletedReports = await cleanupOldReportExports({
+      olderThanDays: 14,
+      maxFiles: 500,
+    });
+
+    if (deletedOrphans > 0 || deletedReports > 0) {
+      functions.logger.info('Storage cleanup finished', {
+        deletedOrphans,
+        deletedReports,
+      });
+    }
+
+    return null;
+  });
+
+exports.syncOwnerSummaryOnPaymentWrite = functions
+  .runWith({ memory: '128MB', timeoutSeconds: 90 })
+  .firestore
+  .document('payments/{paymentId}')
+  .onWrite(async (change) => {
+    if (!shouldRecomputeOwnerSummaryForPaymentWrite(change)) {
+      return null;
+    }
+
+    const beforeOwnerId = String(change.before.data()?.ownerId || '').trim();
+    const afterOwnerId = String(change.after.data()?.ownerId || '').trim();
+    const ownerIds = new Set([beforeOwnerId, afterOwnerId]);
+    ownerIds.delete('');
+
+    await Promise.all(Array.from(ownerIds).map((ownerId) => recomputeOwnerSummary(ownerId)));
+    return null;
+  });
+
+exports.syncOwnerSummaryOnTenantWrite = functions
+  .runWith({ memory: '128MB', timeoutSeconds: 90 })
+  .firestore
+  .document('tenants/{tenantId}')
+  .onWrite(async (change) => {
+    if (!shouldRecomputeOwnerSummaryForTenantWrite(change)) {
+      return null;
+    }
+
+    const beforeOwnerId = String(change.before.data()?.ownerId || '').trim();
+    const afterOwnerId = String(change.after.data()?.ownerId || '').trim();
+    const ownerIds = new Set([beforeOwnerId, afterOwnerId]);
+    ownerIds.delete('');
+
+    await Promise.all(Array.from(ownerIds).map((ownerId) => recomputeOwnerSummary(ownerId)));
+    return null;
+  });
+
+exports.syncOwnerSummaryOnPropertyWrite = functions
+  .runWith({ memory: '128MB', timeoutSeconds: 90 })
+  .firestore
+  .document('properties/{propertyId}')
+  .onWrite(async (change) => {
+    if (!shouldRecomputeOwnerSummaryForPropertyWrite(change)) {
+      return null;
+    }
+
+    const beforeOwnerId = String(change.before.data()?.ownerId || '').trim();
+    const afterOwnerId = String(change.after.data()?.ownerId || '').trim();
+    const ownerIds = new Set([beforeOwnerId, afterOwnerId]);
+    ownerIds.delete('');
+
+    await Promise.all(Array.from(ownerIds).map((ownerId) => recomputeOwnerSummary(ownerId)));
+    return null;
+  });
+
+exports.generateMonthlyPayments = functions
+  .runWith({ memory: '256MB', timeoutSeconds: 540 })
+  .pubsub
   .schedule('0 0 1 * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
@@ -756,7 +1333,9 @@ exports.generateMonthlyPayments = functions.pubsub
     await writer.close();
   });
 
-exports.sendRentDueReminders = functions.pubsub
+exports.sendRentDueReminders = functions
+  .runWith({ memory: '256MB', timeoutSeconds: 300 })
+  .pubsub
   .schedule('0 9 * * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
@@ -996,23 +1575,20 @@ exports.sendMonthlyRentStatusNotifications = functions.pubsub
   .schedule('15 10 1 * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
-    functions.logger.info('sendMonthlyRentStatusNotifications disabled. RentDone supports only rent_due and payment_received push notifications.');
     return null;
   });
 
 exports.sendRentDueWhatsAppReminders = functions.pubsub
-  .schedule('0 9,12,15,18,21 * * *')
+  .schedule('15 4 * * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
-    functions.logger.info('sendRentDueWhatsAppReminders disabled. RentDone supports only rent_due and payment_received push notifications.');
     return null;
   });
 
 exports.sendTenantPreDueReminders = functions.pubsub
-  .schedule('0 9 * * *')
+  .schedule('30 4 * * *')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
-    functions.logger.info('sendTenantPreDueReminders disabled. RentDone supports only rent_due and payment_received push notifications.');
     return null;
   });
 
@@ -1060,6 +1636,41 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   const paymentId = `${leaseId}_${year}_${String(month).padStart(2, '0')}`;
   const paymentRef = db.collection('payments').doc(paymentId);
   const transactionRef = db.collection('transactions').doc(idempotencyKey);
+  const currency = String(lease.currency || 'INR').trim() || 'INR';
+
+  const baseAmount = Number(lease.rentAmount || 0);
+  const lateFeePercentage = Number(lease.lateFeePercentage || 0);
+  const dueDate = toDate(lease.dueDate) || new Date();
+  const now = new Date();
+  const isOverdue = now > dueDate;
+  const lateFeeAmount = isOverdue
+    ? Math.round(baseAmount * (lateFeePercentage / 100))
+    : 0;
+  const rentAmount = baseAmount + lateFeeAmount;
+
+  if (!Number.isInteger(rentAmount) || rentAmount <= 0) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Calculated rent amount is invalid',
+    );
+  }
+
+  const feeConfig = await loadPaymentFeeConfig(gateway);
+  const feeBreakdown = calculateFeeBreakdownInPaise({
+    rentAmountInRupees: rentAmount,
+    gatewayPercent: feeConfig.gatewayPercent,
+    gstPercent: feeConfig.gstPercent,
+    gatewayCostPercent: feeConfig.gatewayCostPercent,
+  });
+
+  if (feeBreakdown.convenienceFeeInPaise < feeBreakdown.estimatedGatewayCostInPaise) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Configured fee is below gateway cost. Refusing payment intent to prevent platform loss.',
+    );
+  }
+
+  const totalAmount = feeBreakdown.totalPayableInPaise / 100;
 
   const existingPayment = await paymentRef.get();
   if (existingPayment.exists) {
@@ -1075,11 +1686,24 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   const existingTransaction = await transactionRef.get();
   if (existingTransaction.exists) {
     const payment = await paymentRef.get();
+    const storedTotalPayableInPaise = Number(payment.get('totalPayableInPaise') || 0);
+    const storedRentAmountInPaise = Number(payment.get('rentAmountInPaise') || 0);
+    const storedFeeInPaise = Number(payment.get('convenienceFeeInPaise') || 0);
     return {
       paymentId,
       gateway,
-      amount: payment.get('totalAmount') || 0,
-      currency: payment.get('currency') || 'INR',
+      amount: gateway === 'razorpay'
+        ? (storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise)
+        : ((storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise) / 100),
+      rentAmountInPaise: storedRentAmountInPaise || feeBreakdown.rentAmountInPaise,
+      convenienceFeeInPaise: storedFeeInPaise || feeBreakdown.convenienceFeeInPaise,
+      totalPayableInPaise: storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise,
+      estimatedGatewayCostInPaise: Number(
+        payment.get('estimatedGatewayCostInPaise') || feeBreakdown.estimatedGatewayCostInPaise,
+      ),
+      gatewayPercent: Number(payment.get('gatewayPercent') || feeConfig.gatewayPercent),
+      gstPercent: Number(payment.get('gstPercent') || feeConfig.gstPercent),
+      currency: payment.get('currency') || currency,
       idempotencyKey,
       orderId: payment.get('razorpayOrderId') || null,
       clientSecret: payment.get('stripeClientSecret') || null,
@@ -1087,16 +1711,6 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       paymentSessionId: payment.get('cashfreeTokenData') || payment.get('cashfreePaymentSessionId') || null,
     };
   }
-
-  const baseAmount = Number(lease.rentAmount || 0);
-  const lateFeePercentage = Number(lease.lateFeePercentage || 0);
-  const dueDate = toDate(lease.dueDate) || new Date();
-  const now = new Date();
-  const isOverdue = now > dueDate;
-  const lateFeeAmount = isOverdue
-    ? Math.round(baseAmount * (lateFeePercentage / 100))
-    : 0;
-  const totalAmount = baseAmount + lateFeeAmount;
 
   await db.runTransaction(async (t) => {
     const paymentSnap = await t.get(paymentRef);
@@ -1122,10 +1736,18 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
         year,
         baseAmount,
         lateFeeAmount,
+        rentAmount,
+        rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+        convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+        totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+        estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
+        gatewayPercent: feeConfig.gatewayPercent,
+        gatewayCostPercent: feeConfig.gatewayCostPercent,
+        gstPercent: feeConfig.gstPercent,
         totalAmount,
         status: 'pending',
         gateway,
-        currency: lease.currency || 'INR',
+        currency,
         transactionId: idempotencyKey,
         idempotencyKey,
         updatedAt: FieldValue.serverTimestamp(),
@@ -1141,6 +1763,10 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       tenantId: lease.tenantId || context.auth.uid,
       ownerId: lease.ownerId || '',
       amount: totalAmount,
+      rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+      convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+      totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+      estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
       currency: lease.currency || 'INR',
       status: 'initiated',
       gateway,
@@ -1158,7 +1784,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     }
 
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const amountInPaise = totalAmount * 100;
+    const amountInPaise = feeBreakdown.totalPayableInPaise;
     const receipt = paymentId;
 
     const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
@@ -1169,7 +1795,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       },
       body: JSON.stringify({
         amount: amountInPaise,
-        currency: lease.currency || 'INR',
+        currency,
         receipt,
         notes: { paymentId },
       }),
@@ -1197,6 +1823,12 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       paymentId,
       gateway: 'razorpay',
       amount: order.amount,
+      rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+      convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+      totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+      estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
+      gatewayPercent: feeConfig.gatewayPercent,
+      gstPercent: feeConfig.gstPercent,
       currency: order.currency,
       idempotencyKey,
       orderId: order.id,
@@ -1234,7 +1866,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       : 'https://api.cashfree.com';
 
     const cashfreeOrderId = `cf_${paymentId}`;
-    const orderAmountInRupees = (totalAmount / 100).toFixed(2);
+    const orderAmountInRupees = (feeBreakdown.totalPayableInPaise / 100).toFixed(2);
 
     const tokenResponse = await fetch(`${cashfreeBaseUrl}/api/v2/cftoken/order`, {
       method: 'POST',
@@ -1275,6 +1907,14 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
           cashfreeTokenData: cftoken,
           currency,
           totalAmount,
+          rentAmount,
+          rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+          convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+          totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+          estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
+          gatewayPercent: feeConfig.gatewayPercent,
+          gatewayCostPercent: feeConfig.gatewayCostPercent,
+          gstPercent: feeConfig.gstPercent,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
@@ -1289,6 +1929,12 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       paymentId,
       gateway: 'cashfree',
       amount: totalAmount,
+      rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+      convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+      totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+      estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
+      gatewayPercent: feeConfig.gatewayPercent,
+      gstPercent: feeConfig.gstPercent,
       currency,
       idempotencyKey,
       orderId: cashfreeOrderId,
@@ -1381,9 +2027,14 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
       );
     }
 
-    await db.runTransaction(async (t) => {
+    const finalized = await db.runTransaction(async (t) => {
       const txSnap = await t.get(transactionRef);
-      if (txSnap.exists && txSnap.get('status') === 'success') return;
+      if (txSnap.exists && txSnap.get('status') === 'success') return false;
+
+      const rentAmountInPaise = Number(payment.rentAmountInPaise || (Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100));
+      const convenienceFeeInPaise = Number(payment.convenienceFeeInPaise || 0);
+      const totalPayableInPaise = Number(payment.totalPayableInPaise || payment.amountInPaise || (rentAmountInPaise + convenienceFeeInPaise));
+      const estimatedGatewayCostInPaise = Number(payment.estimatedGatewayCostInPaise || convenienceFeeInPaise);
 
       t.set(
         paymentRef,
@@ -1392,6 +2043,10 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
           method: 'online',
           transactionId: transactionId,
           razorpayOrderId,
+          paidAmount: Math.trunc(rentAmountInPaise / 100),
+          paidRentAmountInPaise: rentAmountInPaise,
+          paidConvenienceFeeInPaise: convenienceFeeInPaise,
+          collectedAmountInPaise: totalPayableInPaise,
           paidAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
         },
@@ -1402,6 +2057,11 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
         transactionRef,
         {
           status: 'success',
+          amount: totalPayableInPaise / 100,
+          rentAmountInPaise,
+          convenienceFeeInPaise,
+          totalPayableInPaise,
+          estimatedGatewayCostInPaise,
           gatewayResponse: {
             razorpayPaymentId,
             razorpayOrderId,
@@ -1411,7 +2071,19 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
         },
         { merge: true },
       );
+
+      return true;
     });
+
+    if (finalized) {
+      await incrementFeeAnalytics({
+        gateway: 'razorpay',
+        rentAmountInPaise: Number(payment.rentAmountInPaise || (Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100)),
+        convenienceFeeInPaise: Number(payment.convenienceFeeInPaise || 0),
+        totalPayableInPaise: Number(payment.totalPayableInPaise || payment.amountInPaise || ((Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100) + Number(payment.convenienceFeeInPaise || 0))),
+        estimatedGatewayCostInPaise: Number(payment.estimatedGatewayCostInPaise || payment.convenienceFeeInPaise || 0),
+      });
+    }
 
     return { ok: true };
   }
@@ -1470,12 +2142,21 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
     const cfTransactionId = orderData.referenceId?.toString() || cashfreeOrderId;
 
     const now = FieldValue.serverTimestamp();
+    const rentAmountInPaise = Number(paymentDoc.get('rentAmountInPaise') || (Number(paymentDoc.get('rentAmount') || paymentDoc.get('baseAmount') || paymentDoc.get('amount') || 0) * 100));
+    const convenienceFeeInPaise = Number(paymentDoc.get('convenienceFeeInPaise') || 0);
+    const totalPayableInPaise = Number(paymentDoc.get('totalPayableInPaise') || (rentAmountInPaise + convenienceFeeInPaise));
+    const estimatedGatewayCostInPaise = Number(paymentDoc.get('estimatedGatewayCostInPaise') || convenienceFeeInPaise);
+
     await db.collection('payments').doc(paymentId).set(
       {
         status: 'paid',
         method: 'online',
         transactionId: cfTransactionId,
         cashfreeOrderId,
+        paidAmount: Math.trunc(rentAmountInPaise / 100),
+        paidRentAmountInPaise: rentAmountInPaise,
+        paidConvenienceFeeInPaise: convenienceFeeInPaise,
+        collectedAmountInPaise: totalPayableInPaise,
         paidAt: now,
         updatedAt: now,
       },
@@ -1488,10 +2169,22 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
       status: 'success',
       transactionId: cfTransactionId,
       cashfreeOrderId,
-      amount: paymentDoc.get('totalAmount') || 0,
+      amount: totalPayableInPaise / 100,
+      rentAmountInPaise,
+      convenienceFeeInPaise,
+      totalPayableInPaise,
+      estimatedGatewayCostInPaise,
       currency: paymentDoc.get('currency') || 'INR',
       createdAt: now,
       updatedAt: now,
+    });
+
+    await incrementFeeAnalytics({
+      gateway: 'cashfree',
+      rentAmountInPaise,
+      convenienceFeeInPaise,
+      totalPayableInPaise,
+      estimatedGatewayCostInPaise,
     });
 
     return { success: true };
@@ -1506,6 +2199,51 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
 // ==========================================================
 // OWNER RAZORPAY PAYMENT INTENT + VERIFICATION
 // ==========================================================
+
+exports.quoteOwnerRazorpayPayment = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+
+  const ownerId = context.auth.uid;
+  await assertOwnerAccessOrThrow(ownerId);
+
+  const amount = Number(data?.amount || 0);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'amount must be a positive integer in rupees',
+    );
+  }
+
+  if (amount > 5000000) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Amount exceeds allowed maximum',
+    );
+  }
+
+  const feeConfig = await loadPaymentFeeConfig('razorpay');
+  const quote = calculateFeeBreakdownInPaise({
+    rentAmountInRupees: amount,
+    gatewayPercent: feeConfig.gatewayPercent,
+    gstPercent: feeConfig.gstPercent,
+    gatewayCostPercent: feeConfig.gatewayCostPercent,
+  });
+
+  if (quote.convenienceFeeInPaise < quote.estimatedGatewayCostInPaise) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Configured fee is below gateway cost. Refusing payment intent to prevent platform loss.',
+    );
+  }
+
+  return {
+    rentAmountInPaise: quote.rentAmountInPaise,
+    convenienceFeeInPaise: quote.convenienceFeeInPaise,
+    totalPayableInPaise: quote.totalPayableInPaise,
+    gatewayPercent: feeConfig.gatewayPercent,
+    gstPercent: feeConfig.gstPercent,
+  };
+});
 
 exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, context) => {
   assertCallableAuth(context);
@@ -1530,6 +2268,21 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
     throw new functions.https.HttpsError(
       'invalid-argument',
       'Amount exceeds allowed maximum',
+    );
+  }
+
+  const feeConfig = await loadPaymentFeeConfig('razorpay');
+  const feeBreakdown = calculateFeeBreakdownInPaise({
+    rentAmountInRupees: amount,
+    gatewayPercent: feeConfig.gatewayPercent,
+    gstPercent: feeConfig.gstPercent,
+    gatewayCostPercent: feeConfig.gatewayCostPercent,
+  });
+
+  if (feeBreakdown.convenienceFeeInPaise < feeBreakdown.estimatedGatewayCostInPaise) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Configured fee is below gateway cost. Refusing payment intent to prevent platform loss.',
     );
   }
 
@@ -1571,7 +2324,20 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
         return {
           paymentId: existingPaymentId,
           gateway: 'razorpay',
-          amountInPaise: Number(existingPayment.get('amountInPaise') || amount * 100),
+          amountInPaise: Number(
+            existingPayment.get('amountInPaise')
+              || existingPayment.get('totalPayableInPaise')
+              || feeBreakdown.totalPayableInPaise,
+          ),
+          rentAmountInPaise: Number(
+            existingPayment.get('rentAmountInPaise') || feeBreakdown.rentAmountInPaise,
+          ),
+          convenienceFeeInPaise: Number(
+            existingPayment.get('convenienceFeeInPaise') || feeBreakdown.convenienceFeeInPaise,
+          ),
+          totalPayableInPaise: Number(
+            existingPayment.get('totalPayableInPaise') || feeBreakdown.totalPayableInPaise,
+          ),
           currency: String(existingPayment.get('currency') || currency),
           idempotencyKey,
           orderId: existingPayment.get('razorpayOrderId') || null,
@@ -1583,7 +2349,7 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
 
   const paymentRef = db.collection('payments').doc();
   const paymentId = paymentRef.id;
-  const amountInPaise = amount * 100;
+  const amountInPaise = feeBreakdown.totalPayableInPaise;
 
   await db.runTransaction(async (txn) => {
     const txSnap = await txn.get(transactionRef);
@@ -1601,6 +2367,13 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
       paidAmount: 0,
       remainingAmount: amount,
       amountInPaise,
+      rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+      convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+      totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+      estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
+      gatewayPercent: feeConfig.gatewayPercent,
+      gatewayCostPercent: feeConfig.gatewayCostPercent,
+      gstPercent: feeConfig.gstPercent,
       status: 'pending',
       method: 'Razorpay',
       currency,
@@ -1616,7 +2389,11 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
       tenantId,
       ownerId,
       propertyId,
-      amount,
+      amount: feeBreakdown.totalPayableInPaise / 100,
+      rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+      convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+      totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+      estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
       currency,
       gateway: 'razorpay',
       status: 'initiated',
@@ -1667,6 +2444,9 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
     paymentId,
     gateway: 'razorpay',
     amountInPaise: order.amount,
+    rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+    convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+    totalPayableInPaise: feeBreakdown.totalPayableInPaise,
     currency: order.currency,
     idempotencyKey,
     orderId: order.id,
@@ -1765,17 +2545,29 @@ exports.verifyOwnerRazorpayPayment = functions.https.onCall(async (data, context
     ? db.collection('transactions').doc(transactionId)
     : db.collection('transactions').doc(`rzp_${paymentId}`);
 
-  await db.runTransaction(async (txn) => {
+  const finalized = await db.runTransaction(async (txn) => {
     const latestPayment = await txn.get(paymentRef);
     if (latestPayment.exists && String(latestPayment.get('status') || '').toLowerCase() === 'paid') {
-      return;
+      return false;
     }
+
+    const rentAmountInPaise = Number(payment.rentAmountInPaise || (Number(payment.amount || 0) * 100));
+    const convenienceFeeInPaise = Number(payment.convenienceFeeInPaise || 0);
+    const totalPayableInPaise = Number(
+      payment.totalPayableInPaise
+        || payment.amountInPaise
+        || (rentAmountInPaise + convenienceFeeInPaise),
+    );
+    const estimatedGatewayCostInPaise = Number(payment.estimatedGatewayCostInPaise || convenienceFeeInPaise);
 
     txn.set(paymentRef, {
       status: 'paid',
       method: 'Razorpay',
       paidAmount: Number(payment.amount || 0),
       remainingAmount: 0,
+      collectedAmountInPaise: totalPayableInPaise,
+      paidRentAmountInPaise: rentAmountInPaise,
+      paidConvenienceFeeInPaise: convenienceFeeInPaise,
       transactionId: transactionId || `rzp_${paymentId}`,
       razorpayPaymentId,
       razorpayOrderId,
@@ -1790,7 +2582,11 @@ exports.verifyOwnerRazorpayPayment = functions.https.onCall(async (data, context
       ownerId,
       tenantId: payment.tenantId || '',
       propertyId: payment.propertyId || '',
-      amount: Number(payment.amount || 0),
+      amount: totalPayableInPaise / 100,
+      rentAmountInPaise,
+      convenienceFeeInPaise,
+      totalPayableInPaise,
+      estimatedGatewayCostInPaise,
       currency: String(payment.currency || 'INR'),
       gateway: 'razorpay',
       status: 'success',
@@ -1804,7 +2600,25 @@ exports.verifyOwnerRazorpayPayment = functions.https.onCall(async (data, context
       updatedAt: FieldValue.serverTimestamp(),
       createdAt: FieldValue.serverTimestamp(),
     }, { merge: true });
+
+    return true;
   });
+
+  if (finalized) {
+    await incrementFeeAnalytics({
+      gateway: 'razorpay',
+      rentAmountInPaise: Number(payment.rentAmountInPaise || (Number(payment.amount || 0) * 100)),
+      convenienceFeeInPaise: Number(payment.convenienceFeeInPaise || 0),
+      totalPayableInPaise: Number(
+        payment.totalPayableInPaise
+          || payment.amountInPaise
+          || ((Number(payment.amount || 0) * 100) + Number(payment.convenienceFeeInPaise || 0)),
+      ),
+      estimatedGatewayCostInPaise: Number(
+        payment.estimatedGatewayCostInPaise || payment.convenienceFeeInPaise || 0,
+      ),
+    });
+  }
 
   return {
     ok: true,
@@ -2735,91 +3549,6 @@ exports.linkTenantAccount = functions.https.onCall(async (data, context) => {
     email,
     autoCreatedTenant,
   };
-});
-
-exports.createTenantImageUploadSignature = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    setCorsHeaders(req, res);
-    res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Firebase-AppCheck');
-    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.status(204).send('');
-    return;
-  }
-
-  setCorsHeaders(req, res);
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  try {
-    await verifyHttpAppCheckOrThrow(req);
-
-    const authHeader = req.get('Authorization') || '';
-    if (!authHeader.startsWith('Bearer ')) {
-      await recordSecuritySignal({
-        type: 'unauthorized_http_access',
-        channel: 'tenant_image_signature',
-        ip: requestIpFromHeaders(req),
-        reason: 'missing_bearer',
-        statusCode: 401,
-      });
-      res.status(401).json({ error: 'Missing Authorization bearer token' });
-      return;
-    }
-
-    const idToken = authHeader.replace('Bearer ', '').trim();
-    if (!idToken) {
-      await recordSecuritySignal({
-        type: 'unauthorized_http_access',
-        channel: 'tenant_image_signature',
-        ip: requestIpFromHeaders(req),
-        reason: 'empty_bearer',
-        statusCode: 401,
-      });
-      res.status(401).json({ error: 'Invalid bearer token' });
-      return;
-    }
-
-    const decoded = await admin.auth().verifyIdToken(idToken);
-    const uid = decoded.uid;
-
-    await assertTenantAccessOrThrow(uid);
-
-    const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
-    if (!cloudName || !apiKey || !apiSecret) {
-      res.status(500).json({ error: 'Cloudinary config missing on server' });
-      return;
-    }
-
-    const timestamp = Math.floor(Date.now() / 1000);
-    const folder = `tenants/${uid}`;
-    const publicId = `tenant_image_${Date.now()}`;
-    const toSign = `folder=${folder}&public_id=${publicId}&timestamp=${timestamp}`;
-    const signature = crypto
-      .createHash('sha1')
-      .update(`${toSign}${apiSecret}`)
-      .digest('hex');
-
-    res.status(200).json({
-      cloudName,
-      apiKey,
-      timestamp,
-      folder,
-      publicId,
-      signature,
-    });
-  } catch (error) {
-    await recordSecuritySignal({
-      type: 'unauthorized_http_access',
-      channel: 'tenant_image_signature',
-      ip: requestIpFromHeaders(req),
-      reason: String(error?.message || 'unknown_error'),
-      statusCode: 401,
-    });
-    functions.logger.error('Failed to create Cloudinary upload signature', { error: String(error) });
-    res.status(401).json({ error: 'Unauthorized' });
-  }
 });
 
 exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {

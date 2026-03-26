@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/presentation/providers/transaction_history_provider.dart';
+import 'package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
 
 class TenantDashboardScreen extends ConsumerStatefulWidget {
@@ -43,24 +44,30 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
     final summaryAsync = ref.watch(tenantDashboardProvider);
 
     return summaryAsync.when(
-      loading: () => const _CommandCenterScaffold(
-        child: Center(child: CircularProgressIndicator()),
+      loading: () => _CommandCenterScaffold(
+        child: Center(
+          child: CircularProgressIndicator(
+            color: OwnerDashboardColors.brandPrimary(context),
+          ),
+        ),
       ),
       error: (error, _) => _CommandCenterScaffold(
         child: Center(
           child: Text(
             'Failed to load dashboard',
-            style: TextStyle(color: AppColors.white.withValues(alpha: 0.85)),
+            style: TextStyle(color: OwnerDashboardColors.textPrimary(context)),
           ),
         ),
       ),
       data: (summary) {
         if (summary.tenantId.isEmpty) {
-          return const _CommandCenterScaffold(
+          return _CommandCenterScaffold(
             child: Center(
               child: Text(
                 'Setting up your account...',
-                style: TextStyle(color: AppColors.white),
+                style: TextStyle(
+                  color: OwnerDashboardColors.textPrimary(context),
+                ),
               ),
             ),
           );
@@ -77,7 +84,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
           child: Stack(
             children: [
               RefreshIndicator(
-                color: _DashboardPalette.highlightAccent,
+                color: OwnerDashboardColors.brandPrimary(context),
                 onRefresh: () async {
                   ref.invalidate(tenantDashboardProvider);
                   ref.invalidate(currentMonthPaymentProvider(summary.tenantId));
@@ -215,34 +222,57 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
 }
 
 class _DashboardPalette {
-  static const Color bgA = AppColors.cFF0B1220;
-  static const Color bgB = AppColors.cFF0F1C2E;
-  static const Color bgC = AppColors.cFF111C30;
+  static Color highlightAccent(BuildContext context) => Color.lerp(
+    OwnerDashboardColors.brandPrimary(context),
+    AppColors.white,
+    OwnerDashboardColors.isDark(context) ? 0.18 : 0.08,
+  )!;
 
-  static const Color primaryAccent = AppColors.cFF4F7CFF;
-  static const Color secondaryAccent = AppColors.cFF7A5CFF;
-  static const Color highlightAccent = AppColors.cFF3FE0FF;
+  static Color success(BuildContext context) => AppTheme.successGreen;
 
-  static const Color success = AppColors.cFF22C55E;
-  static const Color warning = AppColors.cFFFACC15;
+  static Color warning(BuildContext context) => AppTheme.warningAmber;
 
-  static LinearGradient get backgroundGradient => const LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [bgA, bgB, bgC],
-  );
+  static LinearGradient heroGradient(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final card = OwnerDashboardColors.cardBackground(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final elevated = OwnerDashboardColors.elevatedBackground(context);
 
-  static LinearGradient get heroGradient => const LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [AppColors.cFF1C2D52, AppColors.cFF1B2B49, AppColors.cFF151E36],
-  );
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color.lerp(card, AppColors.white, isDark ? 0.04 : 0.42) ?? card,
+        Color.lerp(elevated, brand, isDark ? 0.24 : 0.12) ?? elevated,
+        Color.lerp(card, AppColors.black, isDark ? 0.12 : 0.02) ?? card,
+      ],
+    );
+  }
 
-  static LinearGradient get ctaGradient => const LinearGradient(
+  static LinearGradient ctaGradient(BuildContext context) => LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [primaryAccent, secondaryAccent],
+    colors: [
+      OwnerDashboardColors.brandPrimary(context),
+      OwnerDashboardColors.brandPrimaryHover(context),
+    ],
   );
+
+  static LinearGradient surfaceGradient(BuildContext context, {Color? accent}) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final base = OwnerDashboardColors.cardBackground(context);
+    final elevated = OwnerDashboardColors.elevatedBackground(context);
+    final resolvedAccent = accent ?? OwnerDashboardColors.brandPrimary(context);
+
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color.lerp(base, AppColors.white, isDark ? 0.04 : 0.6) ?? base,
+        Color.lerp(elevated, resolvedAccent, isDark ? 0.18 : 0.08) ?? elevated,
+      ],
+    );
+  }
 }
 
 class _CommandCenterScaffold extends StatelessWidget {
@@ -252,14 +282,11 @@ class _CommandCenterScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(gradient: _DashboardPalette.backgroundGradient),
-      child: Stack(
-        children: [
-          const _BackgroundLayerEffects(),
-          SafeArea(child: child),
-        ],
-      ),
+    return Stack(
+      children: [
+        const _BackgroundLayerEffects(),
+        SafeArea(child: child),
+      ],
     );
   }
 }
@@ -269,6 +296,12 @@ class _BackgroundLayerEffects extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topBlobColor = OwnerDashboardColors.ownerTopBlobColor(context);
+    final bottomBlobColor = OwnerDashboardColors.ownerBottomBlobColor(context);
+    final noiseColor = OwnerDashboardColors.isDark(context)
+        ? AppColors.white.withValues(alpha: 0.02)
+        : AppColors.black.withValues(alpha: 0.035);
+
     return IgnorePointer(
       child: Stack(
         children: [
@@ -282,8 +315,8 @@ class _BackgroundLayerEffects extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    _DashboardPalette.primaryAccent.withValues(alpha: 0.28),
-                    _DashboardPalette.primaryAccent.withValues(alpha: 0.0),
+                    topBlobColor.withValues(alpha: 0.75),
+                    topBlobColor.withValues(alpha: 0),
                   ],
                 ),
               ),
@@ -299,14 +332,16 @@ class _BackgroundLayerEffects extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    _DashboardPalette.secondaryAccent.withValues(alpha: 0.22),
-                    _DashboardPalette.secondaryAccent.withValues(alpha: 0.0),
+                    bottomBlobColor.withValues(alpha: 0.85),
+                    bottomBlobColor.withValues(alpha: 0),
                   ],
                 ),
               ),
             ),
           ),
-          Positioned.fill(child: CustomPaint(painter: _NoisePainter())),
+          Positioned.fill(
+            child: CustomPaint(painter: _NoisePainter(noiseColor)),
+          ),
         ],
       ),
     );
@@ -314,13 +349,16 @@ class _BackgroundLayerEffects extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  final dynamic summary;
+  final TenantDashboardSummary summary;
 
   const _TopBar({required this.summary});
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
+    final elevated = OwnerDashboardColors.elevatedBackground(context);
+    final border = OwnerDashboardColors.border(context);
     return Row(
       children: [
         ClipRRect(
@@ -338,9 +376,9 @@ class _TopBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Tenant Command Center',
+                'Tenant Dashboard',
                 style: TextStyle(
-                  color: scheme.onPrimary.withValues(alpha: 0.96),
+                  color: textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -352,10 +390,7 @@ class _TopBar extends StatelessWidget {
                     : summary.propertyName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: scheme.onPrimary.withValues(alpha: 0.7),
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: textSecondary, fontSize: 12),
               ),
             ],
           ),
@@ -370,16 +405,10 @@ class _TopBar extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.white.withValues(alpha: 0.08),
-                border: Border.all(
-                  color: AppColors.white.withValues(alpha: 0.14),
-                ),
+                color: elevated.withValues(alpha: 0.92),
+                border: Border.all(color: border),
               ),
-              child: Icon(
-                Icons.menu_rounded,
-                color: scheme.onPrimary.withValues(alpha: 0.92),
-                size: 18,
-              ),
+              child: Icon(Icons.menu_rounded, color: textPrimary, size: 18),
             ),
           ),
         ),
@@ -389,22 +418,28 @@ class _TopBar extends StatelessWidget {
 }
 
 class _HeroFinancialCard extends StatelessWidget {
-  final dynamic summary;
+  final TenantDashboardSummary summary;
   final AnimationController controller;
 
   const _HeroFinancialCard({required this.summary, required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final formatter = NumberFormat('#,##,##0', 'en_IN');
     final greeting = _greetingText();
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
+    final displayName = summary.tenantName.trim().isEmpty
+        ? 'Tenant'
+        : summary.tenantName.trim().split(RegExp(r'\s+')).first;
 
     return _CommandGlassCard(
       height: 214,
       padding: const EdgeInsets.all(18),
-      gradient: _DashboardPalette.heroGradient,
-      glowColor: _DashboardPalette.highlightAccent.withValues(alpha: 0.25),
+      gradient: _DashboardPalette.heroGradient(context),
+      glowColor: _DashboardPalette.highlightAccent(
+        context,
+      ).withValues(alpha: 0.18),
       child: Stack(
         children: [
           Positioned(
@@ -422,10 +457,12 @@ class _HeroFinancialCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        _DashboardPalette.highlightAccent.withValues(
-                          alpha: pulse,
-                        ),
-                        _DashboardPalette.highlightAccent.withValues(alpha: 0),
+                        _DashboardPalette.highlightAccent(
+                          context,
+                        ).withValues(alpha: pulse),
+                        _DashboardPalette.highlightAccent(
+                          context,
+                        ).withValues(alpha: 0),
                       ],
                     ),
                   ),
@@ -437,20 +474,17 @@ class _HeroFinancialCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '$greeting, Tenant',
+                '$greeting, $displayName',
                 style: TextStyle(
-                  color: scheme.onPrimary.withValues(alpha: 0.82),
+                  color: textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
-                'Primary Balance',
-                style: TextStyle(
-                  color: scheme.onPrimary.withValues(alpha: 0.68),
-                  fontSize: 12,
-                ),
+                '${summary.currentMonthName.isEmpty ? 'Current' : summary.currentMonthName} Rent',
+                style: TextStyle(color: textSecondary, fontSize: 12),
               ),
               const SizedBox(height: 6),
               AnimatedBuilder(
@@ -459,11 +493,11 @@ class _HeroFinancialCard extends StatelessWidget {
                   curve: Curves.easeOutCubic,
                 ),
                 builder: (context, child) {
-                  final value = (summary.monthlyRent as int) * controller.value;
+                  final value = summary.monthlyRent * controller.value;
                   return Text(
-                    '₹${formatter.format(value.round())}',
+                    _formatCurrency(value.round(), formatter),
                     style: TextStyle(
-                      color: scheme.onPrimary,
+                      color: textPrimary,
                       fontSize: 36,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.6,
@@ -501,23 +535,22 @@ class _ActiveDuesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final formatter = NumberFormat('#,##,##0', 'en_IN');
     final isOverdue = dueAmount > 0;
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
 
     return _CommandGlassCard(
       padding: const EdgeInsets.all(16),
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          AppColors.white.withValues(alpha: 0.09),
-          AppColors.white.withValues(alpha: 0.04),
-        ],
+      gradient: _DashboardPalette.surfaceGradient(
+        context,
+        accent: isOverdue
+            ? _DashboardPalette.warning(context)
+            : _DashboardPalette.success(context),
       ),
       glowColor: isOverdue
-          ? _DashboardPalette.warning.withValues(alpha: 0.2)
-          : _DashboardPalette.success.withValues(alpha: 0.17),
+          ? _DashboardPalette.warning(context).withValues(alpha: 0.14)
+          : _DashboardPalette.success(context).withValues(alpha: 0.12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -526,7 +559,7 @@ class _ActiveDuesCard extends StatelessWidget {
               Text(
                 'Active Dues',
                 style: TextStyle(
-                  color: scheme.onPrimary.withValues(alpha: 0.92),
+                  color: textPrimary,
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                 ),
@@ -535,16 +568,16 @@ class _ActiveDuesCard extends StatelessWidget {
               _StatusTag(
                 text: isOverdue ? 'Overdue' : 'No pending dues',
                 color: isOverdue
-                    ? _DashboardPalette.warning
-                    : _DashboardPalette.success,
+                    ? _DashboardPalette.warning(context)
+                    : _DashboardPalette.success(context),
               ),
             ],
           ),
           const SizedBox(height: 10),
           Text(
-            '₹${formatter.format(dueAmount)}',
+            _formatCurrency(dueAmount, formatter),
             style: TextStyle(
-              color: scheme.onPrimary,
+              color: textPrimary,
               fontSize: 30,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.6,
@@ -555,10 +588,7 @@ class _ActiveDuesCard extends StatelessWidget {
             isOverdue
                 ? 'Payment pending this month'
                 : 'Everything cleared for this cycle',
-            style: TextStyle(
-              color: scheme.onPrimary.withValues(alpha: 0.7),
-              fontSize: 12,
-            ),
+            style: TextStyle(color: textSecondary, fontSize: 12),
           ),
           if (isAmountRefreshing) ...[
             const SizedBox(height: 12),
@@ -573,7 +603,7 @@ class _ActiveDuesCard extends StatelessWidget {
 }
 
 class _FinancialMetricsRow extends StatelessWidget {
-  final dynamic summary;
+  final TenantDashboardSummary summary;
 
   const _FinancialMetricsRow({required this.summary});
 
@@ -585,17 +615,19 @@ class _FinancialMetricsRow extends StatelessWidget {
         Expanded(
           child: _MetricCard(
             title: 'Lifetime Paid',
-            value: '₹${formatter.format(summary.lifetimePaid)}',
-            accentColor: _DashboardPalette.primaryAccent,
+            value: _formatCurrency(summary.lifetimePaid, formatter),
+            accentColor: OwnerDashboardColors.brandPrimary(context),
+            helperText: 'Total settled till date',
           ),
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: _MetricCard(
-            title: 'Growth',
-            value: '+12.4%',
-            accentColor: _DashboardPalette.success,
-            showSparkline: true,
+            title: 'On-Time Rate',
+            value: _formatPercentage(summary.onTimePaymentRate),
+            accentColor: _DashboardPalette.success(context),
+            helperText: 'Payment reliability',
+            progressValue: (summary.onTimePaymentRate / 100).clamp(0.0, 1.0),
           ),
         ),
       ],
@@ -607,52 +639,59 @@ class _MetricCard extends StatelessWidget {
   final String title;
   final String value;
   final Color accentColor;
-  final bool showSparkline;
+  final String? helperText;
+  final double? progressValue;
 
   const _MetricCard({
     required this.title,
     required this.value,
     required this.accentColor,
-    this.showSparkline = false,
+    this.helperText,
+    this.progressValue,
   });
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
+    final isDark = OwnerDashboardColors.isDark(context);
     return _CommandGlassCard(
       padding: const EdgeInsets.all(14),
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          AppColors.white.withValues(alpha: 0.09),
-          accentColor.withValues(alpha: 0.07),
-        ],
-      ),
+      gradient: _DashboardPalette.surfaceGradient(context, accent: accentColor),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: scheme.onPrimary.withValues(alpha: 0.7),
-              fontSize: 12,
-            ),
-          ),
+          Text(title, style: TextStyle(color: textSecondary, fontSize: 12)),
           const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
-              color: scheme.onPrimary,
+              color: textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 24,
-            child: showSparkline ? const _Sparkline() : const SizedBox.shrink(),
-          ),
+          if (helperText != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              helperText!,
+              style: TextStyle(color: textSecondary, fontSize: 11),
+            ),
+          ],
+          if (progressValue != null) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                minHeight: 8,
+                value: progressValue,
+                backgroundColor: accentColor.withValues(
+                  alpha: isDark ? 0.16 : 0.10,
+                ),
+                valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -669,7 +708,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        color: AppColors.white.withValues(alpha: 0.95),
+        color: OwnerDashboardColors.textPrimary(context),
         fontSize: 18,
         fontWeight: FontWeight.w600,
       ),
@@ -699,7 +738,9 @@ class _QuickActionTileState extends State<_QuickActionTile> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
+    final brand = OwnerDashboardColors.brandPrimary(context);
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapCancel: () => setState(() => _pressed = false),
@@ -711,28 +752,27 @@ class _QuickActionTileState extends State<_QuickActionTile> {
         scale: _pressed ? 1.03 : 1,
         child: _CommandGlassCard(
           padding: const EdgeInsets.all(14),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.white.withValues(alpha: 0.08),
-              _DashboardPalette.primaryAccent.withValues(alpha: 0.05),
-            ],
-          ),
-          glowColor: _DashboardPalette.primaryAccent.withValues(alpha: 0.16),
+          gradient: _DashboardPalette.surfaceGradient(context, accent: brand),
+          glowColor: brand.withValues(alpha: 0.10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                widget.icon,
-                color: scheme.onPrimary.withValues(alpha: 0.95),
-                size: 22,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: brand.withValues(
+                    alpha: OwnerDashboardColors.isDark(context) ? 0.18 : 0.10,
+                  ),
+                ),
+                child: Icon(widget.icon, color: brand, size: 22),
               ),
               const Spacer(),
               Text(
                 widget.title,
                 style: TextStyle(
-                  color: scheme.onPrimary,
+                  color: textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -745,17 +785,10 @@ class _QuickActionTileState extends State<_QuickActionTile> {
                       widget.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: scheme.onPrimary.withValues(alpha: 0.66),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: textSecondary, fontSize: 12),
                     ),
                   ),
-                  Icon(
-                    Icons.arrow_outward_rounded,
-                    size: 16,
-                    color: scheme.onPrimary.withValues(alpha: 0.7),
-                  ),
+                  Icon(Icons.arrow_outward_rounded, size: 16, color: brand),
                 ],
               ),
             ],
@@ -774,7 +807,8 @@ class _SystemStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final textSecondary = OwnerDashboardColors.textSecondary(context);
     final text = reminders.isEmpty
         ? 'All updates are synced'
         : (reminders.first.title.isNotEmpty
@@ -784,13 +818,9 @@ class _SystemStatusCard extends StatelessWidget {
     return _CommandGlassCard(
       onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          AppColors.white.withValues(alpha: 0.09),
-          _DashboardPalette.success.withValues(alpha: 0.05),
-        ],
+      gradient: _DashboardPalette.surfaceGradient(
+        context,
+        accent: _DashboardPalette.success(context),
       ),
       child: Row(
         children: [
@@ -799,11 +829,11 @@ class _SystemStatusCard extends StatelessWidget {
             height: 34,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(11),
-              color: _DashboardPalette.success.withValues(alpha: 0.18),
+              color: _DashboardPalette.success(context).withValues(alpha: 0.18),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.shield_outlined,
-              color: AppColors.white,
+              color: _DashboardPalette.success(context),
               size: 18,
             ),
           ),
@@ -817,7 +847,7 @@ class _SystemStatusCard extends StatelessWidget {
                     Text(
                       'Vault Updates',
                       style: TextStyle(
-                        color: scheme.onPrimary,
+                        color: textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -825,8 +855,8 @@ class _SystemStatusCard extends StatelessWidget {
                     Container(
                       width: 7,
                       height: 7,
-                      decoration: const BoxDecoration(
-                        color: _DashboardPalette.success,
+                      decoration: BoxDecoration(
+                        color: _DashboardPalette.success(context),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -837,17 +867,14 @@ class _SystemStatusCard extends StatelessWidget {
                   text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: scheme.onPrimary.withValues(alpha: 0.72),
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: textSecondary, fontSize: 12),
                 ),
               ],
             ),
           ),
           Icon(
             Icons.chevron_right_rounded,
-            color: scheme.onPrimary.withValues(alpha: 0.78),
+            color: OwnerDashboardColors.brandPrimary(context),
           ),
         ],
       ),
@@ -903,6 +930,7 @@ class _ExpandableCommandFabState extends State<_ExpandableCommandFab>
 
   @override
   Widget build(BuildContext context) {
+    final brand = OwnerDashboardColors.brandPrimary(context);
     final actions = <_FabActionData>[
       _FabActionData('Pay Rent', Icons.payments_outlined, widget.onPayRent),
       _FabActionData(
@@ -958,19 +986,17 @@ class _ExpandableCommandFabState extends State<_ExpandableCommandFab>
             height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: _DashboardPalette.ctaGradient,
+              gradient: _DashboardPalette.ctaGradient(context),
               boxShadow: [
                 BoxShadow(
-                  color: _DashboardPalette.primaryAccent.withValues(
-                    alpha: 0.45,
-                  ),
+                  color: brand.withValues(alpha: 0.28),
                   blurRadius: 28,
                   offset: const Offset(0, 12),
                 ),
                 BoxShadow(
-                  color: AppColors.black.withValues(alpha: 0.45),
-                  blurRadius: 30,
-                  offset: const Offset(0, 18),
+                  color: AppColors.black.withValues(alpha: 0.18),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
@@ -1004,6 +1030,9 @@ class _MiniFabAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = OwnerDashboardColors.textPrimary(context);
+    final border = OwnerDashboardColors.border(context);
+    final elevated = OwnerDashboardColors.elevatedBackground(context);
     return Material(
       color: AppColors.transparent,
       child: InkWell(
@@ -1012,23 +1041,19 @@ class _MiniFabAction extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.09),
+            color: elevated.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.white.withValues(alpha: 0.16)),
+            border: Border.all(color: border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                color: AppColors.white.withValues(alpha: 0.95),
-                size: 17,
-              ),
+              Icon(icon, color: textPrimary, size: 17),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: AppColors.white.withValues(alpha: 0.92),
+                  color: textPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1068,7 +1093,13 @@ class _CommandGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
     final radius = BorderRadius.circular(20);
+    final borderColor = isDark
+        ? AppColors.white.withValues(alpha: 0.14)
+        : AppColors.black.withValues(alpha: 0.08);
+    final shadowDark = AppColors.black.withValues(alpha: isDark ? 0.22 : 0.10);
+    final shadowLight = AppColors.white.withValues(alpha: isDark ? 0.02 : 0.62);
 
     final content = ClipRRect(
       borderRadius: radius,
@@ -1078,28 +1109,24 @@ class _CommandGlassCard extends StatelessWidget {
           height: height,
           decoration: BoxDecoration(
             borderRadius: radius,
-            gradient:
-                gradient ??
-                LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.white.withValues(alpha: 0.08),
-                    AppColors.white.withValues(alpha: 0.04),
-                  ],
-                ),
-            border: Border.all(color: AppColors.white.withValues(alpha: 0.12)),
+            gradient: gradient ?? _DashboardPalette.surfaceGradient(context),
+            border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: AppColors.black.withValues(alpha: 0.42),
-                blurRadius: 60,
-                offset: const Offset(0, 20),
+                color: shadowDark,
+                blurRadius: 28,
+                offset: const Offset(0, 14),
+              ),
+              BoxShadow(
+                color: shadowLight,
+                blurRadius: 18,
+                offset: const Offset(-6, -6),
               ),
               if (glowColor != null)
                 BoxShadow(
                   color: glowColor!,
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
             ],
           ),
@@ -1154,6 +1181,7 @@ class _PrimaryGradientButtonState extends State<_PrimaryGradientButton>
       animation: _pulseController,
       builder: (context, child) {
         final glow = 0.25 + (_pulseController.value * 0.15);
+        final brand = OwnerDashboardColors.brandPrimary(context);
         return Material(
           color: AppColors.transparent,
           child: InkWell(
@@ -1163,12 +1191,10 @@ class _PrimaryGradientButtonState extends State<_PrimaryGradientButton>
               height: 52,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(30),
-                gradient: _DashboardPalette.ctaGradient,
+                gradient: _DashboardPalette.ctaGradient(context),
                 boxShadow: [
                   BoxShadow(
-                    color: _DashboardPalette.primaryAccent.withValues(
-                      alpha: glow,
-                    ),
+                    color: brand.withValues(alpha: glow),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -1207,17 +1233,21 @@ class _InfoPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = OwnerDashboardColors.brandPrimary(context);
+    final isDark = OwnerDashboardColors.isDark(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.1),
+        color: brand.withValues(alpha: isDark ? 0.16 : 0.09),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.white.withValues(alpha: 0.16)),
+        border: Border.all(
+          color: brand.withValues(alpha: isDark ? 0.24 : 0.16),
+        ),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: AppColors.white.withValues(alpha: 0.86),
+          color: OwnerDashboardColors.textPrimary(context),
           fontSize: 11,
         ),
       ),
@@ -1243,7 +1273,9 @@ class _StatusTag extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          color: AppColors.white.withValues(alpha: 0.9),
+          color: color.computeLuminance() > 0.55
+              ? AppColors.cFF111827
+              : AppColors.white,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -1280,6 +1312,8 @@ class _ShimmerLineState extends State<_ShimmerLine>
 
   @override
   Widget build(BuildContext context) {
+    final base = OwnerDashboardColors.elevatedBackground(context);
+    final highlight = OwnerDashboardColors.brandPrimary(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: SizedBox(
@@ -1293,71 +1327,20 @@ class _ShimmerLineState extends State<_ShimmerLine>
                   begin: Alignment(-1 + (_controller.value * 2), 0),
                   end: Alignment(1 + (_controller.value * 2), 0),
                   colors: [
-                    AppColors.white.withValues(alpha: 0.12),
-                    AppColors.white.withValues(alpha: 0.4),
-                    AppColors.white.withValues(alpha: 0.12),
+                    base.withValues(alpha: 0.35),
+                    highlight.withValues(alpha: 0.26),
+                    base.withValues(alpha: 0.35),
                   ],
                 ).createShader(bounds);
               },
               blendMode: BlendMode.srcATop,
-              child: Container(color: AppColors.white.withValues(alpha: 0.2)),
+              child: Container(color: base.withValues(alpha: 0.45)),
             );
           },
         ),
       ),
     );
   }
-}
-
-class _Sparkline extends StatelessWidget {
-  const _Sparkline();
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _SparklinePainter(),
-      size: const Size(double.infinity, 24),
-    );
-  }
-}
-
-class _SparklinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final points = [0.82, 0.74, 0.77, 0.66, 0.63, 0.58, 0.46, 0.31];
-    final path = Path();
-
-    for (var i = 0; i < points.length; i++) {
-      final x = (size.width / (points.length - 1)) * i;
-      final y = size.height * points[i];
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..shader = const LinearGradient(
-        colors: [_DashboardPalette.success, _DashboardPalette.highlightAccent],
-      ).createShader(Offset.zero & size)
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawPath(path, paint);
-
-    final glowPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5
-      ..color = _DashboardPalette.highlightAccent.withValues(alpha: 0.18)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-    canvas.drawPath(path, glowPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _SkeletonGlassCard extends StatelessWidget {
@@ -1372,9 +1355,13 @@ class _SkeletonGlassCard extends StatelessWidget {
 }
 
 class _NoisePainter extends CustomPainter {
+  final Color color;
+
+  const _NoisePainter(this.color);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AppColors.white.withValues(alpha: 0.02);
+    final paint = Paint()..color = color;
     const step = 14.0;
     for (double x = 0; x < size.width; x += step) {
       for (double y = 0; y < size.height; y += step) {
@@ -1387,6 +1374,19 @@ class _NoisePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+String _formatCurrency(int amount, NumberFormat formatter) {
+  return '\u20B9${formatter.format(amount)}';
+}
+
+String _formatPercentage(double value) {
+  if (!value.isFinite) {
+    return '0%';
+  }
+
+  final precision = value.truncateToDouble() == value ? 0 : 1;
+  return '${value.toStringAsFixed(precision)}%';
 }
 
 String _greetingText() {

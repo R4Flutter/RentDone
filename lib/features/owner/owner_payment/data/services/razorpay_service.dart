@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 import 'package:rentdone/features/owner/owner_payment/domain/exceptions/payment_exceptions.dart';
 import 'package:rentdone/features/owner/owner_payment/models/payment_state.dart';
 
@@ -46,9 +47,17 @@ class RazorpayService {
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
 
     if (razorpayKey.isEmpty) {
-      debugPrint('⚠️ RAZORPAY_KEY not set. Payments will fail.');
-    } else {
-      debugPrint('🔵 Razorpay initialized successfully');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'RAZORPAY_KEY not set. Payments will fail.',
+          tag: 'RazorpayService',
+        );
+      }
+    } else if (kDebugMode) {
+      AppLogger.debug(
+        'Razorpay initialized successfully',
+        tag: 'RazorpayService',
+      );
     }
   }
 
@@ -84,11 +93,13 @@ class RazorpayService {
       _isPaymentInProgress = true;
       _paymentStateController.add(PaymentState.processing);
 
-      debugPrint('💳 Initiating Razorpay payment:');
-      debugPrint('   Order ID: ${paymentRequest.orderId}');
-      debugPrint('   Amount: ${paymentRequest.amount} paise');
-      debugPrint('   Tenant: $tenantId');
-      debugPrint('   Property: $propertyId');
+      if (kDebugMode) {
+        AppLogger.debug('Initiating Razorpay payment', tag: 'RazorpayService');
+        AppLogger.debug(
+          'Amount: ${paymentRequest.amount} paise',
+          tag: 'RazorpayService',
+        );
+      }
 
       // Wrap checkout in timeout to prevent hung states
       await _openCheckout(paymentRequest).timeout(
@@ -100,13 +111,33 @@ class RazorpayService {
 
       return true;
     } on PaymentGatewayException catch (e) {
-      debugPrint('❌ Payment gateway error: ${e.message}');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Payment gateway error: ${e.message}',
+          tag: 'RazorpayService',
+        );
+      }
+      AppLogger.error(
+        'Payment gateway error',
+        error: e,
+        tag: 'RazorpayService',
+      );
       _paymentErrorController.add(e);
       _paymentStateController.add(PaymentState.failed);
       _isPaymentInProgress = false;
       return false;
     } catch (e) {
-      debugPrint('❌ Payment initiation failed: $e');
+      if (kDebugMode) {
+        AppLogger.debug(
+          'Payment initiation failed: $e',
+          tag: 'RazorpayService',
+        );
+      }
+      AppLogger.error(
+        'Payment initiation failed',
+        error: e,
+        tag: 'RazorpayService',
+      );
       final error = PaymentGatewayException.checkoutFailed(
         e is Exception ? e : Exception(e.toString()),
       );
@@ -226,9 +257,9 @@ class RazorpayService {
 
   /// Handle successful payment response
   void _handlePaymentSuccess(PaymentResponse response) {
-    debugPrint('✅ Payment successful:');
-    debugPrint('   Transaction ID: ${response.transactionId}');
-    debugPrint('   Order ID: ${response.orderId}');
+    if (kDebugMode) {
+      AppLogger.debug('Payment successful', tag: 'RazorpayService');
+    }
 
     _paymentStateController.add(PaymentState.success);
     _paymentResponseController.add(response);
@@ -237,9 +268,13 @@ class RazorpayService {
 
   /// Handle payment error with proper classification
   void handlePaymentError(String errorCode, String errorMessage) {
-    debugPrint('❌ Payment error:');
-    debugPrint('   Code: $errorCode');
-    debugPrint('   Message: $errorMessage');
+    if (kDebugMode) {
+      AppLogger.debug(
+        'Payment error code: $errorCode, message: $errorMessage',
+        tag: 'RazorpayService',
+      );
+    }
+    AppLogger.warning('Payment error: $errorCode', tag: 'RazorpayService');
 
     // Classify error for better UX
     final classified = _classifyPaymentError(errorCode, errorMessage);
@@ -282,7 +317,12 @@ class RazorpayService {
 
   /// Handle external wallet selection (Google Pay, Apple Pay, etc.)
   void handleExternalWallet(String walletName) {
-    debugPrint('💳 External wallet selected: $walletName');
+    if (kDebugMode) {
+      AppLogger.debug(
+        'External wallet selected: $walletName',
+        tag: 'RazorpayService',
+      );
+    }
     // User selected external wallet, let Razorpay handle it
   }
 
