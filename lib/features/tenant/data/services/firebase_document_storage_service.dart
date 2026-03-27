@@ -42,8 +42,9 @@ class FirebaseDocumentStorageService {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
 
-  static const int _maxSourceFileSizeBytes = 12 * 1024 * 1024;
-  static const int _targetCompressedBytes = 1024 * 1024;
+  static const int _maxSourceFileSizeBytes = 100 * 1024 * 1024;
+  static const int _targetImageCompressedBytes = 200 * 1024;
+  static const int _targetPdfUploadBytes = 500 * 1024;
   static const int _maxUploadBytes = 2 * 1024 * 1024;
   static const int _maxThumbnailBytes = 120 * 1024;
   static const Set<String> _allowedExtensions = {
@@ -139,7 +140,9 @@ class FirebaseDocumentStorageService {
 
     final sourceSize = await file.length();
     if (sourceSize > _maxSourceFileSizeBytes) {
-      throw Exception('File too large. Maximum allowed source size is 12MB.');
+      throw Exception(
+        'File too large. Maximum selectable source size is 100MB.',
+      );
     }
 
     final userId = _auth.currentUser?.uid;
@@ -170,6 +173,16 @@ class FirebaseDocumentStorageService {
     }
 
     final uploadBytes = await uploadFile.length();
+    if (_isImage(extension) && uploadBytes > _targetImageCompressedBytes) {
+      throw Exception(
+        'Image could not be compressed to 200KB. Please choose a clearer or smaller image.',
+      );
+    }
+    if (extension == 'pdf' && uploadBytes > _targetPdfUploadBytes) {
+      throw Exception(
+        'PDF must be 500KB or below. Please upload a smaller PDF.',
+      );
+    }
     if (uploadBytes > _maxUploadBytes) {
       throw Exception(
         'Compressed file exceeds 2MB. Please upload a clearer or smaller file.',
@@ -337,7 +350,7 @@ class FirebaseDocumentStorageService {
 
       current = File(compressed.path);
       final size = await current.length();
-      if (size <= _targetCompressedBytes) {
+      if (size <= _targetImageCompressedBytes) {
         return current;
       }
 

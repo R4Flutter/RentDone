@@ -13,6 +13,7 @@ const String _typeRentDue = 'RENT_DUE';
 const String _typeRentDueReminder = 'RENT_DUE_REMINDER';
 const String _typePaymentReceived = 'PAYMENT_RECEIVED';
 const String _typePaymentUpdated = 'PAYMENT_UPDATED';
+const String _notificationsEnabledField = 'notificationsEnabled';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -56,6 +57,13 @@ class PushNotificationService {
         return;
       }
       try {
+        final enabled = await isNotificationsEnabled(uid: user.uid);
+        if (!enabled) {
+          await _clearServerTokens(uid: user.uid);
+          await _messaging.setAutoInitEnabled(false);
+          return;
+        }
+
         await _syncCurrentToken(uid: user.uid);
       } catch (error, stackTrace) {
         debugPrint('Push token sync failed on auth change: $error');
@@ -67,6 +75,10 @@ class PushNotificationService {
       final uid = _auth.currentUser?.uid;
       if (uid == null || token.trim().isEmpty) return;
       try {
+        final enabled = await isNotificationsEnabled(uid: uid);
+        if (!enabled) {
+          return;
+        }
         await _saveToken(uid: uid, token: token.trim());
       } catch (error, stackTrace) {
         debugPrint('Push token refresh sync failed: $error');
@@ -92,7 +104,60 @@ class PushNotificationService {
 
     final uid = _auth.currentUser?.uid;
     if (uid != null) {
-      await _syncCurrentToken(uid: uid);
+      final enabled = await isNotificationsEnabled(uid: uid);
+      if (enabled) {
+        await _syncCurrentToken(uid: uid);
+      }
+    }
+  }
+
+  Future<bool> isNotificationsEnabled({String? uid}) async {
+    final resolvedUid = uid ?? _auth.currentUser?.uid;
+    if (resolvedUid == null || resolvedUid.isEmpty) {
+      return true;
+    }
+
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(resolvedUid)
+          .get();
+      final data = snapshot.data();
+      final value = data?[_notificationsEnabledField];
+      if (value is bool) {
+        return value;
+      }
+      return true;
+    } on FirebaseException {
+      return true;
+    }
+  }
+
+  Future<void> setNotificationsEnabled(bool enabled, {String? uid}) async {
+    final resolvedUid = uid ?? _auth.currentUser?.uid;
+    if (resolvedUid == null || resolvedUid.isEmpty) {
+      return;
+    }
+
+    final userRef = _firestore.collection('users').doc(resolvedUid);
+    await userRef.set({
+      _notificationsEnabledField: enabled,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    if (enabled) {
+      await _messaging.setAutoInitEnabled(true);
+      await requestPermission();
+      await _syncCurrentToken(uid: resolvedUid);
+      return;
+    }
+
+    await _messaging.setAutoInitEnabled(false);
+    await _clearServerTokens(uid: resolvedUid);
+    try {
+      await _messaging.deleteToken();
+    } catch (_) {
+      // Best effort only.
     }
   }
 
@@ -172,6 +237,34 @@ class PushNotificationService {
     }
   }
 
+  Future<void> _clearServerTokens({required String uid}) async {
+    final userRef = _firestore.collection('users').doc(uid);
+
+    try {
+      final tokens = await userRef.collection('deviceTokens').get();
+      if (tokens.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (final doc in tokens.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+    } on FirebaseException catch (error) {
+      debugPrint('Device token cleanup skipped: ${error.code}');
+    }
+
+    try {
+      await userRef.set({
+        'fcmToken': FieldValue.delete(),
+        'fcmTokenUpdatedAt': FieldValue.delete(),
+      }, SetOptions(merge: true));
+    } on FirebaseException catch (error) {
+      debugPrint('Legacy token cleanup skipped: ${error.code}');
+    }
+
+    _lastKnownToken = null;
+  }
+
   Future<void> _showForegroundNotification(RemoteMessage message) async {
     final context = appNavigatorKey.currentContext;
     if (context == null) return;
@@ -188,7 +281,22 @@ class PushNotificationService {
         (message.data['tenantId'] ?? message.data['tenant_id'] ?? '')
             .toString()
             .trim();
-    if (tenantId.isEmpty) return;
+    final type =
+        (message.data['type'] ?? message.data['notification_type'] ?? '')
+            .toString()
+            .trim();
+    final actionRoute =
+        (message.data['actionRoute'] ?? message.data['action_route'] ?? '')
+            .toString()
+            .trim();
+    final targetRole = (message.data['targetRole'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final isTenantReminder =
+        type == _typeRentDueReminder || targetRole == 'tenant';
+
+    if (!isTenantReminder && tenantId.isEmpty) return;
 
     await showDialog<void>(
       context: context,
@@ -202,7 +310,9 @@ class PushNotificationService {
           actions: [
             TextButton(
               onPressed: () async {
-                await _snoozeReminder(tenantId: tenantId);
+                if (tenantId.isNotEmpty) {
+                  await _snoozeReminder(tenantId: tenantId);
+                }
                 if (dialogContext.mounted) Navigator.of(dialogContext).pop();
               },
               child: const Text('Remind Later'),
@@ -210,12 +320,21 @@ class PushNotificationService {
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
+                if (isTenantReminder) {
+                  if (actionRoute.isNotEmpty) {
+                    context.go(actionRoute);
+                    return;
+                  }
+                  context.go('/tenant/payments');
+                  return;
+                }
+
                 context.goNamed(
                   'ownerPayments',
                   queryParameters: {'status': 'unpaid', 'tenantId': tenantId},
                 );
               },
-              child: const Text('Mark as Paid'),
+              child: Text(isTenantReminder ? 'Pay' : 'Mark as Paid'),
             ),
           ],
         );
@@ -260,8 +379,27 @@ class PushNotificationService {
         (message.data['tenantId'] ?? message.data['tenant_id'] ?? '')
             .toString()
             .trim();
+    final targetRole = (message.data['targetRole'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final actionRoute =
+        (message.data['actionRoute'] ?? message.data['action_route'] ?? '')
+            .toString()
+            .trim();
 
     if (type == _typeRentDue || type == _typeRentDueReminder) {
+      final isTenantTarget =
+          targetRole == 'tenant' || type == _typeRentDueReminder;
+      if (isTenantTarget) {
+        if (actionRoute.isNotEmpty) {
+          context.go(actionRoute);
+          return;
+        }
+        context.go('/tenant/payments');
+        return;
+      }
+
       if (tenantId.isNotEmpty) {
         context.go('/owner/tenants/edit/$tenantId');
         return;

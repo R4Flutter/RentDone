@@ -10,32 +10,38 @@ class PaymentBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _colorFor(status);
-    final icon = _iconFor(status);
+    final background =
+        Color.lerp(AppColors.white, color, 0.08) ?? AppColors.white;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: background.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.14)),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.2),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: color.withValues(alpha: 0.10),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          ),
           const SizedBox(width: 6),
           Text(
-            label,
+            label.toUpperCase(),
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: color,
-              fontWeight: FontWeight.w700,
-              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              fontSize: 10.5,
+              letterSpacing: 0.8,
             ),
           ),
         ],
@@ -53,23 +59,7 @@ class PaymentBadge extends StatelessWidget {
       case 'pending':
         return AppTheme.warningAmber;
       default:
-        return AppColors.white70;
-    }
-  }
-
-  IconData _iconFor(String status) {
-    switch (status.toLowerCase()) {
-      case 'success':
-      case 'paid':
-        return Icons.check_circle_outline_rounded;
-      case 'failed':
-        return Icons.error_outline_rounded;
-      case 'pending':
-        return Icons.schedule_rounded;
-      case 'refunded':
-        return Icons.replay_rounded;
-      default:
-        return Icons.circle_outlined;
+        return AppTheme.nearBlack;
     }
   }
 }

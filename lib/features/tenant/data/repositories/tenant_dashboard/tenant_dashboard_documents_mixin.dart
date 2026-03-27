@@ -25,6 +25,7 @@ mixin TenantDashboardDocumentsMixin {
     required String fileName,
     required String description,
     required int fileSizeBytes,
+    String category = 'other',
   }) =>
       TenantDashboardDocumentsCoordinator(
         firestoreService: firestoreService,
@@ -35,6 +36,7 @@ mixin TenantDashboardDocumentsMixin {
         fileName: fileName,
         description: description,
         fileSizeBytes: fileSizeBytes,
+        category: category,
       );
 
   Future<void> deleteDocument({

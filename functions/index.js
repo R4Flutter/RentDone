@@ -1596,6 +1596,99 @@ exports.sendTenantPreDueReminders = functions.pubsub
 // PAYMENT INTENT + VERIFICATION
 // ==========================================================
 
+exports.quotePayment = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  await assertTenantAccessOrThrow(context.auth.uid);
+
+  const leaseId = String(data?.leaseId || '').trim();
+  const gateway = String(data?.gateway || 'razorpay').toLowerCase();
+  const enteredRentAmountInRupees = Number(data?.enteredRentAmountInRupees || 0);
+
+  if (!leaseId) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'leaseId is required',
+    );
+  }
+
+  if (enteredRentAmountInRupees < 0 || !Number.isFinite(enteredRentAmountInRupees)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'enteredRentAmountInRupees must be a positive number when provided',
+    );
+  }
+
+  const leaseDoc = await db.collection('leases').doc(leaseId).get();
+  if (!leaseDoc.exists) {
+    throw new functions.https.HttpsError('not-found', 'Lease not found');
+  }
+
+  const lease = leaseDoc.data() || {};
+  if (lease.tenantId && lease.tenantId !== context.auth.uid) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Lease does not belong to tenant',
+    );
+  }
+
+  if (lease.status && lease.status !== 'active') {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Lease is not active',
+    );
+  }
+
+  const leaseRentAmount = Number(lease.rentAmount || 0);
+  const baseAmount = enteredRentAmountInRupees > 0
+    ? Math.round(enteredRentAmountInRupees)
+    : Math.round(leaseRentAmount);
+
+  if (!Number.isInteger(baseAmount) || baseAmount <= 0) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Calculated rent amount is invalid',
+    );
+  }
+
+  const lateFeePercentage = Number(lease.lateFeePercentage || 0);
+  const dueDate = toDate(lease.dueDate) || new Date();
+  const isOverdue = new Date() > dueDate;
+  const lateFeeAmountInRupees = isOverdue
+    ? Math.round(baseAmount * (lateFeePercentage / 100))
+    : 0;
+  const rentAmountInRupees = baseAmount + lateFeeAmountInRupees;
+
+  const feeConfig = await loadPaymentFeeConfig(gateway);
+  const feeBreakdown = calculateFeeBreakdownInPaise({
+    rentAmountInRupees,
+    gatewayPercent: feeConfig.gatewayPercent,
+    gstPercent: feeConfig.gstPercent,
+    gatewayCostPercent: feeConfig.gatewayCostPercent,
+  });
+
+  if (feeBreakdown.convenienceFeeInPaise < feeBreakdown.estimatedGatewayCostInPaise) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Configured fee is below gateway cost. Refusing quote to prevent platform loss.',
+    );
+  }
+
+  return {
+    leaseId,
+    gateway,
+    baseAmountInRupees: baseAmount,
+    lateFeeAmountInRupees,
+    rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+    convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+    totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+    estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
+    gatewayPercent: feeConfig.gatewayPercent,
+    gstPercent: feeConfig.gstPercent,
+    currency: String(lease.currency || 'INR').trim() || 'INR',
+    isOverdue,
+  };
+});
+
 exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   assertCallableAuth(context);
   await assertTenantAccessOrThrow(context.auth.uid);

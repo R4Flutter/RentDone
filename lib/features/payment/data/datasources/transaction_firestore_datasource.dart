@@ -21,6 +21,7 @@ class TransactionFirestoreDataSource {
   }
 
   Future<QuerySnapshot<Map<String, dynamic>>> getTransactions({
+    String collection = 'transactions',
     required String field,
     required String value,
     required int limit,
@@ -29,7 +30,7 @@ class TransactionFirestoreDataSource {
     DateTime? startAfterCreatedAt,
     String? startAfterDocId,
   }) async {
-    var query = _buildQuery(field, value, year, status);
+    var query = _buildQuery(collection, field, value, year, status);
     if (startAfterCreatedAt != null && startAfterDocId != null) {
       query = query.startAfter([startAfterCreatedAt, startAfterDocId]);
     }
@@ -39,7 +40,7 @@ class TransactionFirestoreDataSource {
     } on FirebaseException catch (error) {
       if (error.code != 'failed-precondition') rethrow;
       return await _firestore
-          .collection('transactions')
+          .collection(collection)
           .where(field, isEqualTo: value)
           .limit(limit * 8)
           .get();
@@ -47,13 +48,14 @@ class TransactionFirestoreDataSource {
   }
 
   Query<Map<String, dynamic>> _buildQuery(
+    String collection,
     String field,
     String value,
     int? year,
     String? status,
   ) {
     var query = _firestore
-        .collection('transactions')
+        .collection(collection)
         .where(field, isEqualTo: value)
         .orderBy('createdAt', descending: true)
         .orderBy(FieldPath.documentId, descending: true);

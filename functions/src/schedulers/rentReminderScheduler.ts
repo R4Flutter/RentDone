@@ -22,7 +22,7 @@ const statusString = (value: unknown): string => String(value ?? "").trim().toLo
 
 const buildRentDueBody = (amount: number): string => {
   const value = Number.isFinite(amount) ? amount : 0;
-  return `Your rent of Rs ${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value)} is due today.`;
+  return `Your due date is close. Please pay Rs ${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value)} to your owner.`;
 };
 
 const getTenantUserId = (tenant: FirebaseFirestore.DocumentData, tenantDocId: string): string => {
@@ -114,6 +114,10 @@ export const sendRentDueReminders = onSchedule(
             type: "RENT_DUE_REMINDER",
             tenantId: tenantDoc.id,
             ownerId,
+            targetRole: "tenant",
+            action: "pay_now",
+            actionLabel: "Pay",
+            actionRoute: "/tenant/payments",
             click_action: "FLUTTER_NOTIFICATION_CLICK",
           },
         };

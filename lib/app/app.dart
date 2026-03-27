@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/core/notifications/push_notification_provider.dart';
 import 'package:rentdone/app/theme_mode_provider.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
-import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 
 import 'app_router.dart';
 import 'app_theme.dart';
@@ -45,13 +44,14 @@ class _RentDoneAppState extends ConsumerState<RentDoneApp> {
 
   @override
   Widget build(BuildContext context) {
-    final ownerSettings = ref.watch(ownerSettingsProvider);
+    final persistedThemeAsync = ref.watch(persistedUserThemeModeProvider);
     final themeOverride = ref.watch(appThemeModeProvider);
     final currentUser = ref.watch(firebaseAuthProvider).currentUser;
 
-    final persistedTheme = ownerSettings.isLoading
-        ? ThemeMode.system
-        : (ownerSettings.darkMode ? ThemeMode.dark : ThemeMode.light);
+    final persistedTheme = persistedThemeAsync.maybeWhen(
+      data: (mode) => mode ?? ThemeMode.light,
+      orElse: () => ThemeMode.system,
+    );
 
     // Keep auth-entry flow (splash, role, login, signup) aligned to system theme.
     final baseThemeMode = currentUser == null

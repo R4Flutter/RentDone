@@ -59,6 +59,7 @@ abstract class TenantDashboardRepository {
     required String fileName,
     required String description,
     required int fileSizeBytes,
+    String category = 'other',
   });
 
   Future<void> deleteDocument({

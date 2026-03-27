@@ -31,6 +31,13 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
       vsync: this,
       duration: const Duration(milliseconds: 820),
     )..forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(
+        ref
+            .read(transactionHistoryProvider.notifier)
+            .loadInitial(actor: TransactionActor.tenant),
+      );
+    });
   }
 
   @override
@@ -76,9 +83,44 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
         final monthPaymentAsync = ref.watch(
           currentMonthPaymentProvider(summary.tenantId),
         );
-        final remindersAsync = ref.watch(
-          recentTenantRemindersProvider(summary.tenantId),
-        );
+
+        final quickActionItems = <_QuickActionItem>[
+          _QuickActionItem(
+            icon: Icons.payments_rounded,
+            title: 'Payments',
+            subtitle: 'Due and secure checkout',
+            accentColor: OwnerDashboardColors.brandPrimary(context),
+            onTap: () => context.push('/tenant/payments'),
+          ),
+          _QuickActionItem(
+            icon: Icons.receipt_long_rounded,
+            title: 'Transactions',
+            subtitle: 'See paid amount and dates',
+            accentColor: OwnerDashboardColors.brandPrimary(context),
+            onTap: () => context.push('/tenant/transactions'),
+          ),
+          _QuickActionItem(
+            icon: Icons.lock_outline_rounded,
+            title: 'Vault',
+            subtitle: 'Secure documents',
+            accentColor: OwnerDashboardColors.brandPrimaryHover(context),
+            onTap: () => context.push('/tenant/documents'),
+          ),
+          _QuickActionItem(
+            icon: Icons.map_outlined,
+            title: 'Map',
+            subtitle: 'Search by city',
+            accentColor: OwnerDashboardColors.brandPrimaryHover(context),
+            onTap: () => context.push('/tenant/city'),
+          ),
+          _QuickActionItem(
+            icon: Icons.person_outline_rounded,
+            title: 'Profile',
+            subtitle: 'Account details',
+            accentColor: OwnerDashboardColors.brandPrimary(context),
+            onTap: () => context.push('/tenant/profile'),
+          ),
+        ];
 
         return _CommandCenterScaffold(
           child: Stack(
@@ -88,9 +130,10 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                 onRefresh: () async {
                   ref.invalidate(tenantDashboardProvider);
                   ref.invalidate(currentMonthPaymentProvider(summary.tenantId));
-                  ref.invalidate(
-                    recentTenantRemindersProvider(summary.tenantId),
-                  );
+                  ref.invalidate(transactionHistoryProvider);
+                  await ref
+                      .read(transactionHistoryProvider.notifier)
+                      .loadInitial(actor: TransactionActor.tenant, force: true);
                   await ref.read(tenantDashboardProvider.future);
                 },
                 child: ListView(
@@ -132,18 +175,18 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                                 .read(transactionHistoryProvider.notifier)
                                 .loadInitial(actor: TransactionActor.tenant),
                           );
-                          context.push('/tenant/transactions');
+                          context.push('/tenant/payments');
                         },
                       ),
                       loading: () => _ActiveDuesCard(
                         dueAmount: summary.dueAmount,
                         isAmountRefreshing: true,
-                        onPayNow: () => context.push('/tenant/transactions'),
+                        onPayNow: () => context.push('/tenant/payments'),
                       ),
                       error: (_, _) => _ActiveDuesCard(
                         dueAmount: summary.dueAmount,
                         isAmountRefreshing: false,
-                        onPayNow: () => context.push('/tenant/transactions'),
+                        onPayNow: () => context.push('/tenant/payments'),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -151,54 +194,27 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                     const SizedBox(height: 28),
                     _SectionTitle(title: 'Quick Actions'),
                     const SizedBox(height: 12),
-                    GridView.count(
-                      crossAxisCount: 2,
+                    GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.25,
-                      children: [
-                        _QuickActionTile(
-                          icon: Icons.payments_rounded,
-                          title: 'Payments',
-                          subtitle: 'Due & history',
-                          onTap: () => context.push('/tenant/transactions'),
-                        ),
-                        _QuickActionTile(
-                          icon: Icons.lock_outline_rounded,
-                          title: 'Vault',
-                          subtitle: 'Documents',
-                          onTap: () => context.push('/tenant/documents'),
-                        ),
-                        _QuickActionTile(
-                          icon: Icons.description_outlined,
-                          title: 'Complaints',
-                          subtitle: 'Submit / track',
-                          onTap: () => context.push('/tenant/complaints'),
-                        ),
-                        _QuickActionTile(
-                          icon: Icons.map_outlined,
-                          title: 'Map',
-                          subtitle: 'Search by city',
-                          onTap: () => context.push('/tenant/city'),
-                        ),
-                        _QuickActionTile(
-                          icon: Icons.person_outline_rounded,
-                          title: 'Profile',
-                          subtitle: 'Account details',
-                          onTap: () => context.push('/tenant/profile'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 28),
-                    remindersAsync.when(
-                      data: (items) => _SystemStatusCard(
-                        reminders: items,
-                        onTap: () => context.push('/tenant/documents'),
-                      ),
-                      loading: () => const _SkeletonGlassCard(height: 92),
-                      error: (_, _) => const _SkeletonGlassCard(height: 92),
+                      itemCount: quickActionItems.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 1.23,
+                          ),
+                      itemBuilder: (context, index) {
+                        final item = quickActionItems[index];
+                        return _QuickActionTile(
+                          icon: item.icon,
+                          title: item.title,
+                          subtitle: item.subtitle,
+                          accentColor: item.accentColor,
+                          onTap: item.onTap,
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -207,10 +223,8 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                 right: 20,
                 bottom: 26,
                 child: _ExpandableCommandFab(
-                  onPayRent: () => context.push('/tenant/transactions'),
+                  onPayRent: () => context.push('/tenant/payments'),
                   onUploadDocument: () => context.push('/tenant/documents'),
-                  onRaiseComplaint: () => context.push('/tenant/complaints'),
-                  onContactOwner: () => context.push('/tenant/profile'),
                 ),
               ),
             ],
@@ -228,7 +242,8 @@ class _DashboardPalette {
     OwnerDashboardColors.isDark(context) ? 0.18 : 0.08,
   )!;
 
-  static Color success(BuildContext context) => AppTheme.successGreen;
+  static Color positive(BuildContext context) =>
+      OwnerDashboardColors.brandPrimaryHover(context);
 
   static Color warning(BuildContext context) => AppTheme.warningAmber;
 
@@ -296,8 +311,16 @@ class _BackgroundLayerEffects extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topBlobColor = OwnerDashboardColors.ownerTopBlobColor(context);
-    final bottomBlobColor = OwnerDashboardColors.ownerBottomBlobColor(context);
+    final topBlobColor = Color.lerp(
+      OwnerDashboardColors.brandPrimary(context),
+      AppColors.white,
+      0.28,
+    )!;
+    final bottomBlobColor = Color.lerp(
+      OwnerDashboardColors.brandPrimaryHover(context),
+      AppColors.black,
+      0.12,
+    )!;
     final noiseColor = OwnerDashboardColors.isDark(context)
         ? AppColors.white.withValues(alpha: 0.02)
         : AppColors.black.withValues(alpha: 0.035);
@@ -359,6 +382,7 @@ class _TopBar extends StatelessWidget {
     final textSecondary = OwnerDashboardColors.textSecondary(context);
     final elevated = OwnerDashboardColors.elevatedBackground(context);
     final border = OwnerDashboardColors.border(context);
+
     return Row(
       children: [
         ClipRRect(
@@ -399,16 +423,29 @@ class _TopBar extends StatelessWidget {
           color: AppColors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(999),
-            onTap: () => Scaffold.maybeOf(context)?.openDrawer(),
+            onTap: () => context.push('/tenant/profile'),
             child: Container(
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: elevated.withValues(alpha: 0.92),
-                border: Border.all(color: border),
+                color: OwnerDashboardColors.brandPrimary(context),
+                border: Border.all(
+                  color: OwnerDashboardColors.brandPrimary(
+                    context,
+                  ).withValues(alpha: 0.2),
+                ),
               ),
-              child: Icon(Icons.menu_rounded, color: textPrimary, size: 18),
+              child: Center(
+                child: Text(
+                  'C',
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -546,11 +583,11 @@ class _ActiveDuesCard extends StatelessWidget {
         context,
         accent: isOverdue
             ? _DashboardPalette.warning(context)
-            : _DashboardPalette.success(context),
+            : _DashboardPalette.positive(context),
       ),
       glowColor: isOverdue
           ? _DashboardPalette.warning(context).withValues(alpha: 0.14)
-          : _DashboardPalette.success(context).withValues(alpha: 0.12),
+          : _DashboardPalette.positive(context).withValues(alpha: 0.12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -569,7 +606,7 @@ class _ActiveDuesCard extends StatelessWidget {
                 text: isOverdue ? 'Overdue' : 'No pending dues',
                 color: isOverdue
                     ? _DashboardPalette.warning(context)
-                    : _DashboardPalette.success(context),
+                    : _DashboardPalette.positive(context),
               ),
             ],
           ),
@@ -613,21 +650,27 @@ class _FinancialMetricsRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _MetricCard(
-            title: 'Lifetime Paid',
-            value: _formatCurrency(summary.lifetimePaid, formatter),
-            accentColor: OwnerDashboardColors.brandPrimary(context),
-            helperText: 'Total settled till date',
+          child: SizedBox(
+            height: 154,
+            child: _MetricCard(
+              title: 'Lifetime Paid',
+              value: _formatCurrency(summary.lifetimePaid, formatter),
+              accentColor: OwnerDashboardColors.brandPrimary(context),
+              helperText: 'Total settled till date',
+            ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _MetricCard(
-            title: 'On-Time Rate',
-            value: _formatPercentage(summary.onTimePaymentRate),
-            accentColor: _DashboardPalette.success(context),
-            helperText: 'Payment reliability',
-            progressValue: (summary.onTimePaymentRate / 100).clamp(0.0, 1.0),
+          child: SizedBox(
+            height: 154,
+            child: _MetricCard(
+              title: 'On-Time Rate',
+              value: _formatPercentage(summary.onTimePaymentRate),
+              accentColor: _DashboardPalette.positive(context),
+              helperText: 'Payment reliability',
+              progressValue: (summary.onTimePaymentRate / 100).clamp(0.0, 1.0),
+            ),
           ),
         ),
       ],
@@ -720,12 +763,14 @@ class _QuickActionTile extends StatefulWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final Color accentColor;
   final VoidCallback onTap;
 
   const _QuickActionTile({
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.accentColor,
     required this.onTap,
   });
 
@@ -740,7 +785,8 @@ class _QuickActionTileState extends State<_QuickActionTile> {
   Widget build(BuildContext context) {
     final textPrimary = OwnerDashboardColors.textPrimary(context);
     final textSecondary = OwnerDashboardColors.textSecondary(context);
-    final brand = OwnerDashboardColors.brandPrimary(context);
+    final brand = widget.accentColor;
+    final isDark = OwnerDashboardColors.isDark(context);
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapCancel: () => setState(() => _pressed = false),
@@ -752,8 +798,25 @@ class _QuickActionTileState extends State<_QuickActionTile> {
         scale: _pressed ? 1.03 : 1,
         child: _CommandGlassCard(
           padding: const EdgeInsets.all(14),
-          gradient: _DashboardPalette.surfaceGradient(context, accent: brand),
-          glowColor: brand.withValues(alpha: 0.10),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.lerp(
+                    OwnerDashboardColors.cardBackground(context),
+                    brand,
+                    isDark ? 0.16 : 0.08,
+                  ) ??
+                  OwnerDashboardColors.cardBackground(context),
+              Color.lerp(
+                    OwnerDashboardColors.elevatedBackground(context),
+                    brand,
+                    isDark ? 0.24 : 0.14,
+                  ) ??
+                  OwnerDashboardColors.elevatedBackground(context),
+            ],
+          ),
+          glowColor: brand.withValues(alpha: 0.13),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -762,8 +825,9 @@ class _QuickActionTileState extends State<_QuickActionTile> {
                 height: 42,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: brand.withValues(
-                    alpha: OwnerDashboardColors.isDark(context) ? 0.18 : 0.10,
+                  color: brand.withValues(alpha: isDark ? 0.22 : 0.14),
+                  border: Border.all(
+                    color: brand.withValues(alpha: isDark ? 0.28 : 0.18),
                   ),
                 ),
                 child: Icon(widget.icon, color: brand, size: 22),
@@ -783,9 +847,13 @@ class _QuickActionTileState extends State<_QuickActionTile> {
                   Expanded(
                     child: Text(
                       widget.subtitle,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: textSecondary, fontSize: 12),
+                      style: TextStyle(
+                        color: textSecondary,
+                        fontSize: 11.5,
+                        height: 1.25,
+                      ),
                     ),
                   ),
                   Icon(Icons.arrow_outward_rounded, size: 16, color: brand),
@@ -799,100 +867,29 @@ class _QuickActionTileState extends State<_QuickActionTile> {
   }
 }
 
-class _SystemStatusCard extends StatelessWidget {
-  final List<dynamic> reminders;
+class _QuickActionItem {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color accentColor;
   final VoidCallback onTap;
 
-  const _SystemStatusCard({required this.reminders, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final textPrimary = OwnerDashboardColors.textPrimary(context);
-    final textSecondary = OwnerDashboardColors.textSecondary(context);
-    final text = reminders.isEmpty
-        ? 'All updates are synced'
-        : (reminders.first.title.isNotEmpty
-              ? reminders.first.title
-              : reminders.first.body);
-
-    return _CommandGlassCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      gradient: _DashboardPalette.surfaceGradient(
-        context,
-        accent: _DashboardPalette.success(context),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(11),
-              color: _DashboardPalette.success(context).withValues(alpha: 0.18),
-            ),
-            child: Icon(
-              Icons.shield_outlined,
-              color: _DashboardPalette.success(context),
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Vault Updates',
-                      style: TextStyle(
-                        color: textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: _DashboardPalette.success(context),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: textSecondary, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: OwnerDashboardColors.brandPrimary(context),
-          ),
-        ],
-      ),
-    );
-  }
+  const _QuickActionItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.accentColor,
+    required this.onTap,
+  });
 }
 
 class _ExpandableCommandFab extends StatefulWidget {
   final VoidCallback onPayRent;
   final VoidCallback onUploadDocument;
-  final VoidCallback onRaiseComplaint;
-  final VoidCallback onContactOwner;
 
   const _ExpandableCommandFab({
     required this.onPayRent,
     required this.onUploadDocument,
-    required this.onRaiseComplaint,
-    required this.onContactOwner,
   });
 
   @override
@@ -937,16 +934,6 @@ class _ExpandableCommandFabState extends State<_ExpandableCommandFab>
         'Upload Document',
         Icons.upload_file_outlined,
         widget.onUploadDocument,
-      ),
-      _FabActionData(
-        'Raise Complaint',
-        Icons.report_problem_outlined,
-        widget.onRaiseComplaint,
-      ),
-      _FabActionData(
-        'Contact Owner',
-        Icons.call_outlined,
-        widget.onContactOwner,
       ),
     ];
 
@@ -1077,7 +1064,6 @@ class _FabActionData {
 class _CommandGlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final VoidCallback? onTap;
   final LinearGradient? gradient;
   final Color? glowColor;
   final double? height;
@@ -1085,7 +1071,6 @@ class _CommandGlassCard extends StatelessWidget {
   const _CommandGlassCard({
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.onTap,
     this.gradient,
     this.glowColor,
     this.height,
@@ -1135,14 +1120,7 @@ class _CommandGlassCard extends StatelessWidget {
       ),
     );
 
-    if (onTap == null) {
-      return content;
-    }
-
-    return Material(
-      color: AppColors.transparent,
-      child: InkWell(borderRadius: radius, onTap: onTap, child: content),
-    );
+    return content;
   }
 }
 
@@ -1340,17 +1318,6 @@ class _ShimmerLineState extends State<_ShimmerLine>
         ),
       ),
     );
-  }
-}
-
-class _SkeletonGlassCard extends StatelessWidget {
-  final double height;
-
-  const _SkeletonGlassCard({required this.height});
-
-  @override
-  Widget build(BuildContext context) {
-    return _CommandGlassCard(height: height, child: const SizedBox.shrink());
   }
 }
 

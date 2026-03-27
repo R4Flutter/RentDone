@@ -228,6 +228,7 @@ class TenantDocumentsNotifier extends Notifier<TenantDocumentsState> {
     required String tenantId,
     required PlatformFile picked,
     required String description,
+    String category = 'other',
   }) async {
     final path = picked.path;
     if (path == null || path.isEmpty) {
@@ -240,6 +241,7 @@ class TenantDocumentsNotifier extends Notifier<TenantDocumentsState> {
       fileName: picked.name,
       description: description,
       fileSizeBytes: picked.size,
+      category: category,
     );
 
     await loadInitial(tenantId);

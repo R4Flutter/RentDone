@@ -11,6 +11,9 @@ class TransactionRecord {
   final String? failureReason;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final int? baseAmount;
+  final int? paidAmount;
+  final int? remainingAmount;
 
   const TransactionRecord({
     required this.transactionId,
@@ -25,5 +28,8 @@ class TransactionRecord {
     this.failureReason,
     required this.createdAt,
     this.completedAt,
+    this.baseAmount,
+    this.paidAmount,
+    this.remainingAmount,
   });
 }

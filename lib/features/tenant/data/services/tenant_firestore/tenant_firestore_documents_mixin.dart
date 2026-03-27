@@ -34,6 +34,8 @@ mixin TenantFirestoreDocumentsMixin {
     required String description,
     required int fileSizeBytes,
     int? thumbnailSizeBytes,
+    String category = 'other',
+    int? currentDocumentCount,
   }) => TenantDocumentsStore(firestore).saveUploaded(
     tenantId: tenantId,
     fileUrl: fileUrl,
@@ -45,6 +47,8 @@ mixin TenantFirestoreDocumentsMixin {
     description: description,
     fileSizeBytes: fileSizeBytes,
     thumbnailSizeBytes: thumbnailSizeBytes,
+    category: category,
+    currentDocumentCount: currentDocumentCount,
   );
 
   Future<void> deleteDocument(String tenantId, String documentId) =>

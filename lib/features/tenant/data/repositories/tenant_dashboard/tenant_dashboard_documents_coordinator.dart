@@ -7,6 +7,8 @@ import 'package:rentdone/features/tenant/data/services/tenant_firestore_service.
 import 'tenant_document_file_type.dart';
 
 class TenantDashboardDocumentsCoordinator {
+  static const int _maxDocumentsPerTenant = 5;
+
   final TenantFirestoreService firestoreService;
   final FirebaseDocumentStorageService documentStorageService;
 
@@ -21,7 +23,18 @@ class TenantDashboardDocumentsCoordinator {
     required String fileName,
     required String description,
     required int fileSizeBytes,
+    String category = 'other',
   }) async {
+    final existing = await firestoreService.getDocumentsPage(
+      tenantId,
+      limit: 6,
+    );
+    if (existing.length >= _maxDocumentsPerTenant) {
+      throw Exception(
+        'Maximum 5 documents are allowed. Delete one to upload a new file.',
+      );
+    }
+
     final uploadResult = await documentStorageService.uploadTenantDocument(
       tenantId: tenantId,
       file: file,
@@ -40,6 +53,8 @@ class TenantDashboardDocumentsCoordinator {
         description: description,
         fileSizeBytes: uploadResult.uploadedBytes,
         thumbnailSizeBytes: uploadResult.thumbnailSizeBytes,
+        category: category,
+        currentDocumentCount: existing.length,
       );
     } catch (_) {
       try {
@@ -58,6 +73,7 @@ class TenantDashboardDocumentsCoordinator {
     }
     return TenantDocument(
       id: '',
+      category: category,
       fileUrl: uploadResult.downloadUrl,
       fileType: fileType,
       uploadedAt: uploadResult.createdAt,

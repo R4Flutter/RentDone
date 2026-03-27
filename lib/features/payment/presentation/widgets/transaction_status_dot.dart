@@ -14,6 +14,13 @@ class TransactionStatusDot extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: _statusColor(status),
+        boxShadow: [
+          BoxShadow(
+            color: _statusColor(status).withValues(alpha: 0.28),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
     );
   }

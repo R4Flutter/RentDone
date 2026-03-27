@@ -37,9 +37,8 @@ import 'package:rentdone/features/payment/presentation/screens/transaction_histo
 import 'package:rentdone/features/tenant/presentation/pages/tenant_dashboard_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_documents_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_dashboard_shell.dart';
-import 'package:rentdone/features/tenant/presentation/pages/tenant_complaint_screen.dart';
+import 'package:rentdone/features/tenant/presentation/pages/tenant_payments_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_profile_screen.dart';
-import 'package:rentdone/features/tenant/presentation/pages/tenant_tenancy_details_screen.dart';
 import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_city_entry_screen.dart';
 import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_property_map_screen.dart';
 import 'package:rentdone/features/tenant_management/presentation/pages/add_tenant_screen.dart';
@@ -267,11 +266,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const TenantDocumentsScreen(),
           ),
           GoRoute(
-            path: '/tenant/complaints',
-            name: 'tenantComplaints',
-            builder: (context, state) => const TenantComplaintScreen(),
-          ),
-          GoRoute(
             path: '/tenant/profile',
             name: 'tenantProfile',
             builder: (context, state) {
@@ -280,15 +274,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
+            path: '/tenant/payments',
+            name: 'tenantPayments',
+            builder: (context, state) => const TenantPaymentsScreen(),
+          ),
+          GoRoute(
             path: '/tenant/transactions',
             name: 'tenantTransactions',
             builder: (context, state) =>
                 const TransactionHistoryScreen(actor: TransactionActor.tenant),
-          ),
-          GoRoute(
-            path: '/tenant/tenancy-details',
-            name: 'tenantTenancyDetails',
-            builder: (context, state) => const TenantTenancyDetailsScreen(),
           ),
         ],
       ),

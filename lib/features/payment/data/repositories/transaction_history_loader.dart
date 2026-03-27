@@ -22,7 +22,11 @@ class TransactionHistoryLoader {
   }) async {
     try {
       final field = actor == TransactionActor.tenant ? 'tenantId' : 'ownerId';
+      final collection = actor == TransactionActor.tenant
+          ? 'payments'
+          : 'transactions';
       final snap = await _transaction.getTransactions(
+        collection: collection,
         field: field,
         value: actorId,
         limit: limit,

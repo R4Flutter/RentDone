@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rentdone/app/theme_mode_provider.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/core/notifications/push_notification_provider.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_room_details.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
@@ -32,11 +34,15 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
 
   Timer? _syncRetryTimer;
   int _syncAttempts = 0;
-  bool _biometricEnabled = true;
   bool _darkAppearanceEnabled = true;
+  bool _notificationsEnabled = true;
+  bool _isSavingNotificationPreference = false;
+  bool _isSavingThemePreference = false;
   bool _isSavingProfile = false;
   bool _isSavingProperty = false;
   String? _activeTenantId;
+  String? _notificationPreferenceUid;
+  String? _themePreferenceTenantId;
   DateTime? _allocationDate;
 
   static const _maxSyncAttempts = 10;
@@ -104,6 +110,8 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
 
         _stopAutoSync();
         _hydrateProfileFormIfNeeded(summary);
+        _hydrateNotificationPreference();
+        _hydrateThemePreference(summary.tenantId);
 
         return _profileScaffold(
           Stack(
@@ -192,14 +200,13 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                   ),
                   const SizedBox(height: 10),
                   _SettingsCard(
-                        biometricEnabled: _biometricEnabled,
                         darkAppearanceEnabled: _darkAppearanceEnabled,
-                        onBiometricChanged: (value) {
-                          setState(() => _biometricEnabled = value);
-                        },
-                        onDarkAppearanceChanged: (value) {
-                          setState(() => _darkAppearanceEnabled = value);
-                        },
+                        notificationsEnabled: _notificationsEnabled,
+                        isSavingNotificationPreference:
+                            _isSavingNotificationPreference,
+                        isSavingThemePreference: _isSavingThemePreference,
+                        onDarkAppearanceChanged: _setDarkAppearanceEnabled,
+                        onNotificationsChanged: _setNotificationsEnabled,
                       )
                       .animate(delay: const Duration(milliseconds: 190))
                       .fadeIn(duration: const Duration(milliseconds: 300)),
@@ -229,18 +236,118 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                   ),
                 ],
               ),
-              Positioned(
-                right: 20,
-                bottom: 86,
-                child: _QuickActionsFab(
-                  onTap: () => _showQuickActionsSheet(context),
-                ),
-              ),
             ],
           ),
         );
       },
     );
+  }
+
+  void _hydrateNotificationPreference() {
+    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    if (uid == null || uid.isEmpty || _notificationPreferenceUid == uid) {
+      return;
+    }
+
+    _notificationPreferenceUid = uid;
+    final pushService = ref.read(pushNotificationServiceProvider);
+    unawaited(() async {
+      final enabled = await pushService.isNotificationsEnabled(uid: uid);
+      if (!mounted) return;
+      setState(() => _notificationsEnabled = enabled);
+    }());
+  }
+
+  void _hydrateThemePreference(String tenantId) {
+    final normalizedTenantId = tenantId.trim();
+    if (normalizedTenantId.isEmpty ||
+        _themePreferenceTenantId == normalizedTenantId) {
+      return;
+    }
+
+    _themePreferenceTenantId = normalizedTenantId;
+    final service = ref.read(tenantFirestoreServiceProvider);
+
+    unawaited(() async {
+      try {
+        final settings = await service.getTenantAppSettings(normalizedTenantId);
+        final enabled = settings['darkAppearanceEnabled'] ?? true;
+        if (!mounted) return;
+        setState(() => _darkAppearanceEnabled = enabled);
+        ref.read(appThemeModeProvider.notifier).setDarkMode(enabled);
+      } catch (_) {
+        // Keep existing in-memory mode on read failure.
+      }
+    }());
+  }
+
+  Future<void> _setDarkAppearanceEnabled(bool enabled) async {
+    if (_isSavingThemePreference) {
+      return;
+    }
+
+    final tenantId = (_activeTenantId ?? _themePreferenceTenantId ?? '').trim();
+    final previous = _darkAppearanceEnabled;
+
+    setState(() {
+      _darkAppearanceEnabled = enabled;
+      _isSavingThemePreference = true;
+    });
+    ref.read(appThemeModeProvider.notifier).setDarkMode(enabled);
+
+    if (tenantId.isNotEmpty) {
+      final service = ref.read(tenantFirestoreServiceProvider);
+      try {
+        await service.saveTenantAppSettings(
+          tenantId: tenantId,
+          darkAppearanceEnabled: enabled,
+        );
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _darkAppearanceEnabled = previous);
+        ref.read(appThemeModeProvider.notifier).setDarkMode(previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update theme preference.')),
+        );
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isSavingThemePreference = false);
+  }
+
+  Future<void> _setNotificationsEnabled(bool enabled) async {
+    if (_isSavingNotificationPreference) {
+      return;
+    }
+
+    final previous = _notificationsEnabled;
+    setState(() {
+      _notificationsEnabled = enabled;
+      _isSavingNotificationPreference = true;
+    });
+
+    final pushService = ref.read(pushNotificationServiceProvider);
+    try {
+      await pushService.setNotificationsEnabled(enabled);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled ? 'Notifications turned on.' : 'Notifications turned off.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _notificationsEnabled = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not update notification setting.')),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() => _isSavingNotificationPreference = false);
+    }
   }
 
   Widget _profileScaffold(Widget child) {
@@ -266,69 +373,6 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
           ),
           child,
         ],
-      ),
-    );
-  }
-
-  Future<void> _showQuickActionsSheet(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.transparent,
-      builder: (context) => Container(
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 18),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          gradient: _ProfileTheme.sheetGradient(context),
-          border: Border.all(color: TenantGlassTheme.border(context)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _QuickActionItem(
-                icon: Icons.edit_outlined,
-                title: 'Edit Profile',
-                onTap: () => Navigator.pop(context),
-              ),
-              _QuickActionItem(
-                icon: Icons.wallet_outlined,
-                title: 'Update Documents',
-                onTap: () {
-                  Navigator.pop(context);
-                  this.context.go('/tenant/documents');
-                },
-              ),
-              _QuickActionItem(
-                icon: Icons.support_agent_outlined,
-                title: 'Contact Owner',
-                onTap: () {
-                  Navigator.pop(context);
-                  this.context.go('/tenant/tenancy-details');
-                },
-              ),
-              _QuickActionItem(
-                icon: Icons.security_outlined,
-                title: 'Security Settings',
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(this.context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Security settings coming soon'),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -880,7 +924,7 @@ class _HeroIdentityCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: _ProfileTheme.textPrimary(context),
-                    fontSize: 22,
+                    fontSize: 19,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.2,
                   ),
@@ -972,41 +1016,52 @@ class _EditablePersonalDetailsCard extends StatelessWidget {
       child: Form(
         key: formKey,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              'Manage your personal details',
+              style: TextStyle(
+                color: _ProfileTheme.textPrimary(context),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Name can be updated anytime. Email and phone are secured.',
+              style: TextStyle(
+                color: _ProfileTheme.textSecondary(context),
+                fontSize: 11.5,
+              ),
+            ),
+            const SizedBox(height: 12),
             _ProfileInputField(
               controller: tenantNameController,
               icon: Icons.person_outline,
               label: 'Full Name',
+              carded: true,
               validator: (value) =>
                   (value ?? '').trim().isEmpty ? 'Name is required' : null,
             ),
-            Divider(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.7),
-              height: 18,
-            ),
+            const SizedBox(height: 10),
             _ProfileInputField(
               controller: tenantEmailController,
               icon: Icons.email_outlined,
               label: 'Email',
+              carded: true,
+              readOnly: true,
+              protected: true,
               keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                final email = (value ?? '').trim();
-                if (email.isEmpty) return 'Email is required';
-                if (!email.contains('@')) return 'Enter a valid email';
-                return null;
-              },
             ),
-            Divider(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.7),
-              height: 18,
-            ),
+            const SizedBox(height: 10),
             _ProfileInputField(
               controller: tenantPhoneController,
               icon: Icons.phone_outlined,
               label: 'Phone Number',
+              carded: true,
+              readOnly: true,
+              protected: true,
               keyboardType: TextInputType.phone,
-              validator: (value) =>
-                  (value ?? '').trim().isEmpty ? 'Phone is required' : null,
             ),
             const SizedBox(height: 14),
             SizedBox(
@@ -1041,6 +1096,9 @@ class _ProfileInputField extends StatelessWidget {
   final String label;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final bool readOnly;
+  final bool protected;
+  final bool carded;
 
   const _ProfileInputField({
     required this.controller,
@@ -1048,21 +1106,24 @@ class _ProfileInputField extends StatelessWidget {
     required this.label,
     this.keyboardType,
     this.validator,
+    this.readOnly = false,
+    this.protected = false,
+    this.carded = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final fieldRow = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 36,
-          height: 36,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: _ProfileTheme.brand(context).withValues(alpha: 0.12),
           ),
-          child: Icon(icon, color: _ProfileTheme.brand(context), size: 18),
+          child: Icon(icon, color: _ProfileTheme.brand(context), size: 16),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -1070,11 +1131,35 @@ class _ProfileInputField extends StatelessWidget {
             controller: controller,
             keyboardType: keyboardType,
             validator: validator,
+            readOnly: readOnly,
             style: TextStyle(color: _ProfileTheme.textPrimary(context)),
-            decoration: tenantGlassInputDecoration(context, label: label),
+            decoration: tenantGlassInputDecoration(context, label: label)
+                .copyWith(
+                  suffixIcon: protected
+                      ? Icon(
+                          Icons.lock_outline_rounded,
+                          size: 16,
+                          color: _ProfileTheme.textSecondary(context),
+                        )
+                      : null,
+                ),
           ),
         ),
       ],
+    );
+
+    if (!carded) {
+      return fieldRow;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: TenantGlassTheme.elevated(context).withValues(alpha: 0.94),
+        border: Border.all(color: TenantGlassTheme.border(context)),
+      ),
+      child: fieldRow,
     );
   }
 }
@@ -1113,35 +1198,50 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
       child: Form(
         key: formKey,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              'Manage your current property allocation',
+              style: TextStyle(
+                color: _ProfileTheme.textPrimary(context),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Keep room, rent and due date accurate for billing.',
+              style: TextStyle(
+                color: _ProfileTheme.textSecondary(context),
+                fontSize: 11.5,
+              ),
+            ),
+            const SizedBox(height: 12),
             _ProfileInputField(
               controller: propertyNameController,
               icon: Icons.home_work_outlined,
               label: 'Property Name',
+              carded: true,
               validator: (value) => (value ?? '').trim().isEmpty
                   ? 'Property name is required'
                   : null,
             ),
-            Divider(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.7),
-              height: 18,
-            ),
+            const SizedBox(height: 10),
             _ProfileInputField(
               controller: roomNumberController,
               icon: Icons.meeting_room_outlined,
               label: 'Room Number',
+              carded: true,
               validator: (value) => (value ?? '').trim().isEmpty
                   ? 'Room number is required'
                   : null,
             ),
-            Divider(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.7),
-              height: 18,
-            ),
+            const SizedBox(height: 10),
             _ProfileInputField(
               controller: monthlyRentController,
               icon: Icons.currency_rupee,
               label: 'Monthly Rent',
+              carded: true,
               keyboardType: TextInputType.number,
               validator: (value) {
                 final rent = int.tryParse((value ?? '').trim()) ?? 0;
@@ -1149,14 +1249,12 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
                 return null;
               },
             ),
-            Divider(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.7),
-              height: 18,
-            ),
+            const SizedBox(height: 10),
             _ProfileInputField(
               controller: rentDueDayController,
               icon: Icons.payments_outlined,
               label: 'Rent Due Day (1-31)',
+              carded: true,
               keyboardType: TextInputType.number,
               validator: (value) {
                 final day = int.tryParse((value ?? '').trim()) ?? 0;
@@ -1184,9 +1282,20 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.event_outlined,
-                      color: _ProfileTheme.brand(context),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _ProfileTheme.brand(
+                          context,
+                        ).withValues(alpha: 0.12),
+                      ),
+                      child: Icon(
+                        Icons.event_outlined,
+                        color: _ProfileTheme.brand(context),
+                        size: 16,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1456,16 +1565,22 @@ class _TrustMetaRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(color: _ProfileTheme.textSecondary(context)),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: _ProfileTheme.textSecondary(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           Text(
             value,
             style: TextStyle(
               color: _ProfileTheme.textPrimary(context),
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1487,12 +1602,21 @@ class _RuleLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.circle, size: 7, color: _ProfileTheme.brand(context)),
-          const SizedBox(width: 8),
+          Text(
+            '\u2022 ',
+            style: TextStyle(
+              color: _ProfileTheme.brand(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(color: _ProfileTheme.textPrimary(context)),
+              style: TextStyle(
+                color: _ProfileTheme.textSecondary(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -1502,16 +1626,20 @@ class _RuleLine extends StatelessWidget {
 }
 
 class _SettingsCard extends StatelessWidget {
-  final bool biometricEnabled;
   final bool darkAppearanceEnabled;
-  final ValueChanged<bool> onBiometricChanged;
+  final bool notificationsEnabled;
+  final bool isSavingNotificationPreference;
+  final bool isSavingThemePreference;
   final ValueChanged<bool> onDarkAppearanceChanged;
+  final ValueChanged<bool> onNotificationsChanged;
 
   const _SettingsCard({
-    required this.biometricEnabled,
     required this.darkAppearanceEnabled,
-    required this.onBiometricChanged,
+    required this.notificationsEnabled,
+    required this.isSavingNotificationPreference,
+    required this.isSavingThemePreference,
     required this.onDarkAppearanceChanged,
+    required this.onNotificationsChanged,
   });
 
   @override
@@ -1519,22 +1647,39 @@ class _SettingsCard extends StatelessWidget {
     return TenantGlassCard(
       borderRadius: BorderRadius.circular(20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PremiumToggleTile(
-            icon: Icons.fingerprint_rounded,
-            title: 'Biometric Access',
-            value: biometricEnabled,
-            onChanged: onBiometricChanged,
+          Text(
+            'App Preferences',
+            style: TextStyle(
+              color: _ProfileTheme.textPrimary(context),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          Divider(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.7),
-            height: 18,
+          const SizedBox(height: 4),
+          Text(
+            'Control access and appearance settings.',
+            style: TextStyle(
+              color: _ProfileTheme.textSecondary(context),
+              fontSize: 11.5,
+            ),
           ),
+          const SizedBox(height: 12),
           _PremiumToggleTile(
             icon: Icons.dark_mode_outlined,
-            title: 'Dark Appearance',
+            title: darkAppearanceEnabled ? 'Dark Mode' : 'Light Mode',
             value: darkAppearanceEnabled,
+            enabled: !isSavingThemePreference,
             onChanged: onDarkAppearanceChanged,
+          ),
+          const SizedBox(height: 10),
+          _PremiumToggleTile(
+            icon: Icons.notifications_active_outlined,
+            title: 'Notifications',
+            value: notificationsEnabled,
+            enabled: !isSavingNotificationPreference,
+            onChanged: onNotificationsChanged,
           ),
         ],
       ),
@@ -1546,171 +1691,96 @@ class _PremiumToggleTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final bool value;
+  final bool enabled;
   final ValueChanged<bool> onChanged;
 
   const _PremiumToggleTile({
     required this.icon,
     required this.title,
     required this.value,
+    this.enabled = true,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _ProfileTheme.brand(context).withValues(alpha: 0.12),
-          ),
-          child: Icon(icon, color: _ProfileTheme.brand(context), size: 18),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            title,
-            style: TextStyle(
-              color: _ProfileTheme.textPrimary(context),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        GestureDetector(
-          onTap: () => onChanged(!value),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 280),
-            curve: Curves.easeOutCubic,
-            width: 52,
-            height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 3),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              gradient: value ? _ProfileTheme.accentGradient(context) : null,
-              color: value
-                  ? null
-                  : TenantGlassTheme.elevated(context).withValues(alpha: 0.98),
-              border: Border.all(
-                color: value
-                    ? _ProfileTheme.brand(context).withValues(alpha: 0.22)
-                    : TenantGlassTheme.border(context),
-              ),
-              boxShadow: value
-                  ? [
-                      BoxShadow(
-                        color: _ProfileTheme.brand(
-                          context,
-                        ).withValues(alpha: 0.26),
-                        blurRadius: 20,
-                        spreadRadius: -6,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Align(
-              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(
-                  color: AppColors.white,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickActionsFab extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _QuickActionsFab({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 62,
-            height: 62,
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: TenantGlassTheme.elevated(context).withValues(alpha: 0.94),
+        border: Border.all(color: TenantGlassTheme.border(context)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: _ProfileTheme.accentGradient(context),
-              boxShadow: [
-                BoxShadow(
-                  color: _ProfileTheme.brand(context).withValues(alpha: 0.32),
-                  blurRadius: 26,
-                  spreadRadius: -4,
-                ),
-              ],
+              color: _ProfileTheme.brand(context).withValues(alpha: 0.12),
             ),
-            child: const Icon(
-              Icons.bolt_rounded,
-              color: AppColors.white,
-              size: 28,
+            child: Icon(icon, color: _ProfileTheme.brand(context), size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: enabled
+                    ? _ProfileTheme.textPrimary(context)
+                    : _ProfileTheme.textSecondary(context),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-        )
-        .animate(onPlay: (controller) => controller.repeat(reverse: true))
-        .scaleXY(
-          begin: 0.97,
-          end: 1.03,
-          duration: const Duration(milliseconds: 1400),
-        );
-  }
-}
-
-class _QuickActionItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  const _QuickActionItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: TenantGlassCard(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
+          GestureDetector(
+            onTap: enabled ? () => onChanged(!value) : null,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              width: 52,
+              height: 30,
+              padding: const EdgeInsets.symmetric(horizontal: 3),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _ProfileTheme.brand(context).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+                gradient: value ? _ProfileTheme.accentGradient(context) : null,
+                color: value
+                    ? null
+                    : TenantGlassTheme.elevated(
+                        context,
+                      ).withValues(alpha: 0.98),
+                border: Border.all(
+                  color: value
+                      ? _ProfileTheme.brand(context).withValues(alpha: 0.22)
+                      : TenantGlassTheme.border(context),
+                ),
+                boxShadow: value
+                    ? [
+                        BoxShadow(
+                          color: _ProfileTheme.brand(
+                            context,
+                          ).withValues(alpha: 0.26),
+                          blurRadius: 20,
+                          spreadRadius: -6,
+                        ),
+                      ]
+                    : null,
               ),
-              child: Icon(icon, color: _ProfileTheme.brand(context), size: 18),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  color: _ProfileTheme.textPrimary(context),
-                  fontWeight: FontWeight.w600,
+              child: Align(
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    color: AppColors.white,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: _ProfileTheme.textSecondary(context),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -19,10 +19,12 @@ class PaymentHistoryCard extends StatefulWidget {
     super.key,
     required this.payment,
     this.onStatusChanged,
+    this.readOnly = false,
   });
 
   final TenantPaymentRecord payment;
   final PaymentStatusCallback? onStatusChanged;
+  final bool readOnly;
 
   @override
   State<PaymentHistoryCard> createState() => _PaymentHistoryCardState();
@@ -117,9 +119,13 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
   @override
   Widget build(BuildContext context) {
     final payment = widget.payment;
-    final canUpdate = payment.status == 'unpaid' || payment.status == 'partial';
+    final canUpdate =
+      !widget.readOnly &&
+      (payment.status == 'unpaid' || payment.status == 'partial');
     final isPartialOutstanding =
-        payment.status == 'partial' && payment.remainingAmount > 0;
+      !widget.readOnly &&
+      payment.status == 'partial' &&
+      payment.remainingAmount > 0;
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),

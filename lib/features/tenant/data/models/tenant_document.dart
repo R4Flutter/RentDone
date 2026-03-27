@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TenantDocument {
   final String id;
+  final String category;
   final String fileUrl;
   final String? thumbnailUrl;
   final String fileType;
@@ -15,6 +16,7 @@ class TenantDocument {
 
   const TenantDocument({
     required this.id,
+    this.category = 'other',
     required this.fileUrl,
     this.thumbnailUrl,
     required this.fileType,
@@ -38,6 +40,7 @@ class TenantDocument {
 
     return TenantDocument(
       id: doc.id,
+      category: data['category'] as String? ?? 'other',
       fileUrl: resolvedFileUrl,
       thumbnailUrl: data['thumbnailUrl'] as String?,
       fileType: data['fileType'] as String? ?? 'other',
@@ -53,6 +56,7 @@ class TenantDocument {
 
   Map<String, dynamic> toFirestore() {
     return {
+      'category': category,
       'fileUrl': fileUrl,
       'originalUrl': fileUrl,
       'thumbnailUrl': thumbnailUrl,

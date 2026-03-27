@@ -17,7 +17,7 @@ const dueDateKey = (date) => {
 const statusString = (value) => String(value ?? "").trim().toLowerCase();
 const buildRentDueBody = (amount) => {
     const value = Number.isFinite(amount) ? amount : 0;
-    return `Your rent of Rs ${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value)} is due today.`;
+    return `Your due date is close. Please pay Rs ${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value)} to your owner.`;
 };
 const getTenantUserId = (tenant, tenantDocId) => {
     const authUid = String(tenant.authUid ?? "").trim();
@@ -93,6 +93,10 @@ exports.sendRentDueReminders = (0, scheduler_1.onSchedule)({
                     type: "RENT_DUE_REMINDER",
                     tenantId: tenantDoc.id,
                     ownerId,
+                    targetRole: "tenant",
+                    action: "pay_now",
+                    actionLabel: "Pay",
+                    actionRoute: "/tenant/payments",
                     click_action: "FLUTTER_NOTIFICATION_CLICK",
                 },
             };

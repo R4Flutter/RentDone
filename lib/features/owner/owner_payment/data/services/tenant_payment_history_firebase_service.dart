@@ -14,6 +14,14 @@ class TenantPaymentHistoryFirebaseService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
+  String _currentUserIdOrThrow() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null || uid.trim().isEmpty) {
+      throw StateError('User is not authenticated.');
+    }
+    return uid.trim();
+  }
+
   String _ownerIdOrThrow() {
     final ownerId = _auth.currentUser?.uid;
     if (ownerId == null || ownerId.trim().isEmpty) {
@@ -214,13 +222,17 @@ class TenantPaymentHistoryFirebaseService {
     int limit = 20,
     DateTime? cursor,
   }) async {
-    final ownerId = _ownerIdOrThrow();
+    final uid = _currentUserIdOrThrow();
+    final isTenantSelf = uid == tenantId.trim();
 
-    final snapshot = await _firestore
+    var query = _firestore
         .collection('payments')
-        .where('ownerId', isEqualTo: ownerId)
-        .where('tenantId', isEqualTo: tenantId)
-        .get();
+        .where('tenantId', isEqualTo: tenantId);
+    if (!isTenantSelf) {
+      query = query.where('ownerId', isEqualTo: uid);
+    }
+
+    final snapshot = await query.get();
 
     final sorted =
         snapshot.docs
@@ -264,19 +276,44 @@ class TenantPaymentHistoryFirebaseService {
     String? transactionId,
     String? notes,
   }) async {
-    String ownerId;
-    try {
-      ownerId = _ownerIdOrThrow();
-    } catch (_) {
-      throw InvalidPaymentContextException.noAuth();
+    final actorUid = _currentUserIdOrThrow();
+    final normalizedTenantId = tenantId.trim();
+    final normalizedPropertyId = propertyId.trim();
+
+    final tenantDoc = await _firestore
+        .collection('tenants')
+        .doc(normalizedTenantId)
+        .get();
+    if (!tenantDoc.exists) {
+      throw InvalidPaymentContextException.tenantNotFound();
     }
 
-    // SECURITY: Verify ownership BEFORE any payment creation
-    await _verifyTenantOwnershipOrThrow(tenantId: tenantId, ownerId: ownerId);
-    await _verifyPropertyOwnershipOrThrow(
-      propertyId: propertyId,
-      ownerId: ownerId,
-    );
+    final tenantData = tenantDoc.data() ?? <String, dynamic>{};
+    final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
+    final tenantPropertyId = (tenantData['propertyId'] as String? ?? '').trim();
+
+    final isOwnerActor = ownerId.isNotEmpty && ownerId == actorUid;
+    final isTenantActor = actorUid == normalizedTenantId;
+
+    if (!isOwnerActor && !isTenantActor) {
+      throw InvalidPaymentContextException.noOwnership();
+    }
+    if (normalizedPropertyId.isEmpty ||
+        tenantPropertyId != normalizedPropertyId) {
+      throw InvalidPaymentContextException.propertyNotFound();
+    }
+
+    // For owner actor keep explicit ownership/property verification defense.
+    if (isOwnerActor) {
+      await _verifyTenantOwnershipOrThrow(
+        tenantId: normalizedTenantId,
+        ownerId: ownerId,
+      );
+      await _verifyPropertyOwnershipOrThrow(
+        propertyId: normalizedPropertyId,
+        ownerId: ownerId,
+      );
+    }
 
     // Validate inputs
     final normalizedStatus = status.trim().toLowerCase();
@@ -330,8 +367,8 @@ class TenantPaymentHistoryFirebaseService {
 
     final payload = TenantPaymentRecord(
       id: docRef.id,
-      tenantId: tenantId.trim(),
-      propertyId: propertyId.trim(),
+      tenantId: normalizedTenantId,
+      propertyId: normalizedPropertyId,
       amount: safeBase,
       date: date,
       method: method.trim(),

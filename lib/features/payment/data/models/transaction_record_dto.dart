@@ -14,6 +14,9 @@ class TransactionRecordDto {
   final String? failureReason;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final int? baseAmount;
+  final int? paidAmount;
+  final int? remainingAmount;
 
   const TransactionRecordDto({
     required this.id,
@@ -28,6 +31,9 @@ class TransactionRecordDto {
     this.failureReason,
     required this.createdAt,
     this.completedAt,
+    this.baseAmount,
+    this.paidAmount,
+    this.remainingAmount,
   });
 
   factory TransactionRecordDto.fromFirestore(
@@ -42,19 +48,30 @@ class TransactionRecordDto {
 
     return TransactionRecordDto(
       id: id,
-      paymentId: (data['paymentId'] as String?) ?? '',
-      leaseId: (data['leaseId'] as String?) ?? '',
+      paymentId: (data['paymentId'] as String?) ?? id,
+      leaseId:
+          (data['leaseId'] as String?) ?? (data['propertyId'] as String?) ?? '',
       tenantId: (data['tenantId'] as String?) ?? '',
       ownerId: (data['ownerId'] as String?) ?? '',
-      amount: (data['amount'] as num?)?.toInt() ?? 0,
+      amount:
+          (data['baseAmount'] as num?)?.toInt() ??
+          (data['amount'] as num?)?.toInt() ??
+          0,
       currency: (data['currency'] as String?) ?? 'INR',
       status: (data['status'] as String?) ?? 'pending',
-      gateway: (data['gateway'] as String?) ?? 'unknown',
-      failureReason: data['failureReason'] as String?,
+      gateway:
+          (data['gateway'] as String?) ??
+          (data['method'] as String?) ??
+          'manual',
+      failureReason:
+          (data['notes'] as String?) ?? (data['failureReason'] as String?),
       createdAt: toDate(data['createdAt']),
       completedAt: data['completedAt'] != null
           ? toDate(data['completedAt'])
-          : null,
+          : (data['date'] != null ? toDate(data['date']) : null),
+      baseAmount: (data['baseAmount'] as num?)?.toInt(),
+      paidAmount: (data['paidAmount'] as num?)?.toInt(),
+      remainingAmount: (data['remainingAmount'] as num?)?.toInt(),
     );
   }
 
@@ -72,6 +89,9 @@ class TransactionRecordDto {
       failureReason: failureReason,
       createdAt: createdAt,
       completedAt: completedAt,
+      baseAmount: baseAmount,
+      paidAmount: paidAmount,
+      remainingAmount: remainingAmount,
     );
   }
 }
