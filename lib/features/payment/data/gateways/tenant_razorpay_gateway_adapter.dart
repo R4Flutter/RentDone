@@ -75,9 +75,12 @@ class TenantRazorpayGatewayAdapter implements PaymentGateway {
       );
 
       if (!initiated) {
-        return const PaymentGatewayResult(
+        final message = _razorpayService.lastPaymentError?.message.trim() ?? '';
+        return PaymentGatewayResult(
           isSuccess: false,
-          failureReason: 'Unable to start payment right now.',
+          failureReason: message.isEmpty
+              ? 'Unable to start payment right now.'
+              : message,
         );
       }
 

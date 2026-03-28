@@ -7,6 +7,8 @@ import 'package:rentdone/features/owner/owner_payment/presentation/providers/ten
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/add_payment_form.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/payment_history_card.dart';
 import 'package:rentdone/shared/widgets/back_handler.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TenantPaymentHistoryScreen extends ConsumerStatefulWidget {
   const TenantPaymentHistoryScreen({
@@ -37,8 +39,46 @@ class _TenantPaymentHistoryScreenState
     extends ConsumerState<TenantPaymentHistoryScreen> {
   static const int _pageSize = 20;
 
+  String _normalizePropertyName(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  Future<String?> _findOwnerPropertyIdByName({
+    required String ownerId,
+    required String propertyName,
+  }) async {
+    final normalizedTarget = _normalizePropertyName(propertyName);
+    if (normalizedTarget.isEmpty) {
+      return null;
+    }
+
+    final exact = await FirebaseFirestore.instance
+        .collection('properties')
+        .where('ownerId', isEqualTo: ownerId)
+        .where('name', isEqualTo: propertyName.trim())
+        .limit(1)
+        .get();
+    if (exact.docs.isNotEmpty) {
+      return exact.docs.first.id;
+    }
+
+    final ownerProperties = await FirebaseFirestore.instance
+        .collection('properties')
+        .where('ownerId', isEqualTo: ownerId)
+        .get();
+
+    for (final doc in ownerProperties.docs) {
+      final candidateName = (doc.data()['name'] as String? ?? '').trim();
+      if (_normalizePropertyName(candidateName) == normalizedTarget) {
+        return doc.id;
+      }
+    }
+
+    return null;
+  }
+
   final List<TenantPaymentRecord> _items = <TenantPaymentRecord>[];
-  DateTime? _cursor;
+  DocumentSnapshot<Map<String, dynamic>>? _cursor;
 
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -119,20 +159,100 @@ class _TenantPaymentHistoryScreenState
   }
 
   Future<void> _addPayment(AddPaymentPayload payload) async {
+    final messenger = ScaffoldMessenger.of(context);
     final service = ref.read(tenantPaymentHistoryServiceProvider);
-    await service.addPayment(
-      tenantId: widget.tenantId,
-      propertyId: widget.propertyId,
-      amount: payload.baseAmount,
-      date: payload.date,
-      method: payload.method,
-      status: payload.status,
-      baseAmount: payload.baseAmount,
-      paidAmount: payload.paidAmount,
-      remainingAmount: payload.remainingAmount,
-      notes: payload.notes,
-    );
-    await _loadInitial();
+    var propertyId = widget.propertyId.trim();
+    final ownerId = (FirebaseAuth.instance.currentUser?.uid ?? '').trim();
+    var tenantOwnerId = '';
+    var tenantPropertyId = '';
+    var tenantPropertyName = '';
+
+    if (propertyId.isEmpty || ownerId.isNotEmpty) {
+      try {
+        final tenantDoc = await FirebaseFirestore.instance
+            .collection('tenants')
+            .doc(widget.tenantId)
+            .get();
+        if (tenantDoc.exists) {
+          final tenantData = tenantDoc.data() ?? <String, dynamic>{};
+          tenantOwnerId = (tenantData['ownerId'] as String? ?? '').trim();
+          tenantPropertyId = (tenantData['propertyId'] as String? ?? '').trim();
+          tenantPropertyName =
+              (tenantData['propertyName'] as String? ?? '').trim();
+
+          if (propertyId.isEmpty && tenantPropertyId.isNotEmpty) {
+            propertyId = tenantPropertyId;
+          }
+        }
+      } catch (_) {
+        // fall through to error message below
+      }
+    }
+
+    final ownerPropertyName = (widget.propertyName ?? '').trim();
+    final tenantIsLinkedToOwnerApp =
+        tenantOwnerId.isNotEmpty || tenantPropertyId.isNotEmpty;
+
+    if (propertyId.isEmpty && ownerId.isNotEmpty && ownerPropertyName.isNotEmpty) {
+      try {
+        final resolvedPropertyId = await _findOwnerPropertyIdByName(
+          ownerId: ownerId,
+          propertyName: ownerPropertyName,
+        );
+        if (resolvedPropertyId != null && resolvedPropertyId.isNotEmpty) {
+          if (tenantIsLinkedToOwnerApp && tenantPropertyName.isNotEmpty) {
+            final matches = _normalizePropertyName(tenantPropertyName) ==
+                _normalizePropertyName(ownerPropertyName);
+            if (!matches) {
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Tenant property name does not match owner property. Update tenant property details to continue.',
+                  ),
+                ),
+              );
+              return;
+            }
+          }
+
+          propertyId = resolvedPropertyId;
+        }
+      } catch (_) {
+        // fall through to error message below
+      }
+    }
+
+    if (propertyId.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Property linkage missing for this tenant.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await service.addPayment(
+        tenantId: widget.tenantId,
+        propertyId: propertyId,
+        amount: payload.baseAmount,
+        date: payload.date,
+        method: payload.method,
+        status: payload.status,
+        baseAmount: payload.baseAmount,
+        paidAmount: payload.paidAmount,
+        remainingAmount: payload.remainingAmount,
+        notes: payload.notes,
+      );
+      await _loadInitial();
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+    }
   }
 
   /// Update a payment status (paid, partial, unpaid)

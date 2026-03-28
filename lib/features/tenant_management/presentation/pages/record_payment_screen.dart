@@ -7,6 +7,7 @@ import 'package:rentdone/features/tenant_management/domain/usecases/validators.d
 import 'package:rentdone/features/tenant_management/presentation/providers/payment_providers.dart';
 import 'package:rentdone/features/tenant_management/presentation/providers/tenant_providers.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
+import 'package:rentdone/core/config/app_config_service.dart';
 
 class RecordPaymentScreen extends ConsumerStatefulWidget {
   final String tenantId;
@@ -223,6 +224,17 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
     _validateForm();
 
     if (_fieldErrors.isNotEmpty) {
+      return;
+    }
+
+    final config = await AppConfigService().getConfig();
+    if (!config.paymentsEnabled || config.maintenanceMode) {
+      _showError('Payments temporarily unavailable');
+      return;
+    }
+
+    if (!config.manualPaymentsEnabled) {
+      _showError('Manual payments are temporarily disabled');
       return;
     }
 

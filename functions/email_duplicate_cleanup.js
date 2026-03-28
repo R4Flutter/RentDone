@@ -9,72 +9,117 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-/**
- * HTTP Function to find duplicate emails in the users collection
- * Call: https://YOUR_PROJECT.cloudfunctions.net/findDuplicateEmails
- * 
- * Returns:
- * {
- *   duplicates: {
- *     "user@example.com": ["uid1", "uid2"],
- *     ...
- *   },
- *   count: 2,
- *   totalAffectedUsers: 4
- * }
- */
-exports.findDuplicateEmails = functions.https.onRequest(async (req, res) => {
-  try {
-    const db = admin.firestore();
-    const usersSnapshot = await db.collection('users').get();
-    
-    const emailMap = new Map();
-    
-    // Build map of email -> array of user IDs
-    usersSnapshot.forEach((doc) => {
-      const data = doc.data();
-      const email = data.emailLowercase;
-      
-      if (email && email.trim() !== '') {
-        if (!emailMap.has(email)) {
-          emailMap.set(email, []);
-        }
-        emailMap.get(email).push({
-          uid: doc.id,
-          name: data.name || 'Unknown',
-          role: data.role || 'unknown',
-          createdAt: data.createdAt?.toDate?.() || null,
-        });
-      }
-    });
-    
-    // Filter to only duplicates
-    const duplicates = {};
-    let totalAffectedUsers = 0;
-    
-    emailMap.forEach((users, email) => {
-      if (users.length > 1) {
-        duplicates[email] = users;
-        totalAffectedUsers += users.length;
-      }
-    });
-    
-    res.json({
-      success: true,
-      duplicates,
-      count: Object.keys(duplicates).length,
-      totalAffectedUsers,
-      message: Object.keys(duplicates).length === 0 
-        ? 'No duplicate emails found! ✓' 
-        : `Found ${Object.keys(duplicates).length} duplicate email(s) affecting ${totalAffectedUsers} users.`,
-    });
-  } catch (error) {
-    console.error('Error finding duplicates:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+function parseBool(value, fallback = false) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
   }
+  const normalized = String(value).trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
+}
+
+function getSecurityConfig() {
+  const cfg = functions.config().security || {};
+  return {
+    enforceAppCheck: parseBool(cfg.enforce_app_check, true),
+  };
+}
+
+function assertAdminCallableAuth(context) {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Authentication required',
+    );
+  }
+
+  const { enforceAppCheck } = getSecurityConfig();
+  if (enforceAppCheck && !context.app) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'App Check token is required',
+    );
+  }
+
+  if (!context.auth.token || context.auth.token.admin !== true) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Admin access required',
+    );
+  }
+}
+
+async function rateLimitAdminOrThrow({ uid, action, limit = 2 }) {
+  const now = new Date();
+  const bucket = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}`;
+  const safeAction = String(action || 'admin_action').trim().toLowerCase();
+  const docId = `${safeAction}_${uid}_${bucket}`;
+  const ref = admin.firestore().collection('_rateLimits').doc(docId);
+
+  await admin.firestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const current = snap.exists ? Number(snap.data()?.count || 0) : 0;
+    if (current >= limit) {
+      throw new functions.https.HttpsError('resource-exhausted', 'rate-limited');
+    }
+    tx.set(ref, {
+      action: safeAction,
+      uid,
+      bucket,
+      count: current + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: snap.exists ? snap.data().createdAt : admin.firestore.FieldValue.serverTimestamp(),
+      expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + (24 * 60 * 60 * 1000))),
+    }, { merge: true });
+  });
+}
+
+/**
+ * Admin callable to find duplicate emails
+ */
+exports.findDuplicateEmails = functions.https.onCall(async (data, context) => {
+  assertAdminCallableAuth(context);
+  await rateLimitAdminOrThrow({ uid: context.auth.uid, action: 'admin_find_duplicates' });
+
+  const db = admin.firestore();
+  const usersSnapshot = await db.collection('users').get();
+  const emailMap = new Map();
+
+  usersSnapshot.forEach((doc) => {
+    const userData = doc.data();
+    const email = userData.emailLowercase;
+
+    if (email && email.trim() !== '') {
+      if (!emailMap.has(email)) {
+        emailMap.set(email, []);
+      }
+      emailMap.get(email).push({
+        uid: doc.id,
+        name: userData.name || 'Unknown',
+        role: userData.role || 'unknown',
+        createdAt: userData.createdAt?.toDate?.() || null,
+      });
+    }
+  });
+
+  const duplicates = {};
+  let totalAffectedUsers = 0;
+
+  emailMap.forEach((users, email) => {
+    if (users.length > 1) {
+      duplicates[email] = users;
+      totalAffectedUsers += users.length;
+    }
+  });
+
+  return {
+    success: true,
+    duplicates,
+    count: Object.keys(duplicates).length,
+    totalAffectedUsers,
+    message: Object.keys(duplicates).length === 0
+      ? 'No duplicate emails found! ✓'
+      : `Found ${Object.keys(duplicates).length} duplicate email(s) affecting ${totalAffectedUsers} users.`,
+  };
 });
 
 /**
@@ -180,77 +225,71 @@ exports.resolveDuplicateEmail = functions.https.onCall(async (data, context) => 
 });
 
 /**
- * Admin function to clean up all duplicate emails
- * Requires admin authentication
- * Call: https://YOUR_PROJECT.cloudfunctions.net/adminCleanupDuplicateEmails?adminKey=YOUR_SECRET_KEY
+ * Admin callable to clean up duplicate emails
+ * Requires Firebase Auth admin claim
  */
-exports.adminCleanupDuplicateEmails = functions.https.onRequest(async (req, res) => {
-  // Simple admin key check (replace with proper admin auth in production)
-  const adminKey = req.query.adminKey;
-  if (adminKey !== process.env.ADMIN_KEY) {
-    res.status(403).json({ error: 'Unauthorized' });
-    return;
-  }
-  
-  try {
-    const db = admin.firestore();
-    const usersSnapshot = await db.collection('users').get();
-    
-    const emailMap = new Map();
-    
-    // Build map
-    usersSnapshot.forEach((doc) => {
-      const data = doc.data();
-      const email = data.emailLowercase;
-      
-      if (email && email.trim() !== '') {
-        if (!emailMap.has(email)) {
-          emailMap.set(email, []);
-        }
-        emailMap.get(email).push({
-          id: doc.id,
-          createdAt: data.createdAt?.toDate?.() || new Date(0),
-        });
+exports.adminCleanupDuplicateEmails = functions.https.onCall(async (data, context) => {
+  assertAdminCallableAuth(context);
+  await rateLimitAdminOrThrow({ uid: context.auth.uid, action: 'admin_cleanup_emails' });
+
+  const db = admin.firestore();
+  const usersSnapshot = await db.collection('users').get();
+  const emailMap = new Map();
+
+  usersSnapshot.forEach((doc) => {
+    const userData = doc.data();
+    const email = userData.emailLowercase;
+
+    if (email && email.trim() !== '') {
+      if (!emailMap.has(email)) {
+        emailMap.set(email, []);
       }
-    });
-    
-    let clearedCount = 0;
-    const batch = db.batch();
-    
-    // For each duplicate email, keep oldest and clear others
-    emailMap.forEach((users, email) => {
-      if (users.length > 1) {
-        users.sort((a, b) => a.createdAt - b.createdAt);
-        
-        // Clear email from all except the oldest
-        for (let i = 1; i < users.length; i++) {
-          const userRef = db.collection('users').doc(users[i].id);
-          batch.update(userRef, {
-            email: '',
-            emailLowercase: '',
-            previousEmail: email,
-            emailConflictResolvedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-          clearedCount++;
-        }
-      }
-    });
-    
-    if (clearedCount > 0) {
-      await batch.commit();
+      emailMap.get(email).push({
+        id: doc.id,
+        createdAt: userData.createdAt?.toDate?.() || new Date(0),
+      });
     }
-    
-    res.json({
-      success: true,
-      message: `Cleaned up ${clearedCount} duplicate email(s)`,
+  });
+
+  let clearedCount = 0;
+  const batch = db.batch();
+
+  emailMap.forEach((users, email) => {
+    if (users.length > 1) {
+      users.sort((a, b) => a.createdAt - b.createdAt);
+      for (let i = 1; i < users.length; i++) {
+        const userRef = db.collection('users').doc(users[i].id);
+        batch.update(userRef, {
+          email: '',
+          emailLowercase: '',
+          previousEmail: email,
+          emailConflictResolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        clearedCount++;
+      }
+    }
+  });
+
+  if (clearedCount > 0) {
+    await batch.commit();
+  }
+
+  await db.collection('admin_audit_logs').add({
+    action: 'admin_cleanup_duplicate_emails',
+    adminId: context.auth.uid,
+    targetId: 'users',
+    newValue: {
       clearedCount,
       duplicateEmailsFound: emailMap.size,
-    });
-  } catch (error) {
-    console.error('Error cleaning duplicates:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
+    },
+    reason: String(data?.reason || 'cleanup'),
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return {
+    success: true,
+    message: `Cleaned up ${clearedCount} duplicate email(s)`,
+    clearedCount,
+    duplicateEmailsFound: emailMap.size,
+  };
 });

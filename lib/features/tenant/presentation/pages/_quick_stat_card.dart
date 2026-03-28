@@ -7,12 +7,12 @@ class QuickStatCard extends StatelessWidget {
   final Gradient gradient;
 
   const QuickStatCard({
+    super.key,
     required this.icon,
     required this.label,
     required this.value,
     required this.gradient,
-    Key? key,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class QuickStatCard extends StatelessWidget {
         gradient: gradient,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
+            color: Colors.black.withValues(alpha: 0.10),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

@@ -33,12 +33,14 @@ class RazorpayService {
   // Stream for error messages
   final _paymentErrorController =
       StreamController<PaymentGatewayException>.broadcast();
+  PaymentGatewayException? _lastPaymentError;
 
   Stream<PaymentState> get paymentStateStream => _paymentStateController.stream;
   Stream<PaymentResponse> get paymentResponseStream =>
       _paymentResponseController.stream;
   Stream<PaymentGatewayException> get paymentErrorStream =>
       _paymentErrorController.stream;
+  PaymentGatewayException? get lastPaymentError => _lastPaymentError;
 
   void _initializeRazorpay() {
     _razorpay = Razorpay();
@@ -71,19 +73,23 @@ class RazorpayService {
   }) async {
     // Prevent duplicate payment attempts
     if (_isPaymentInProgress) {
-      _paymentErrorController.add(
-        PaymentGatewayException(
-          message:
-              'Payment already in progress. Please wait or close and try again.',
-          code: 'PAYMENT_IN_PROGRESS',
-        ),
+      final error = PaymentGatewayException(
+        message:
+            'Payment already in progress. Please wait or close and try again.',
+        code: 'PAYMENT_IN_PROGRESS',
       );
+      _lastPaymentError = error;
+      _paymentErrorController.add(error);
       return false;
     }
 
     // Validate request
     if (paymentRequest.orderId.isEmpty || paymentRequest.amount <= 0) {
-      final error = PaymentGatewayException.checkoutFailed(null);
+      final error = PaymentGatewayException(
+        message: 'Invalid payment request. Please refresh and try again.',
+        code: 'INVALID_REQUEST',
+      );
+      _lastPaymentError = error;
       _paymentErrorController.add(error);
       _paymentStateController.add(PaymentState.failed);
       return false;
@@ -122,6 +128,7 @@ class RazorpayService {
         error: e,
         tag: 'RazorpayService',
       );
+      _lastPaymentError = e;
       _paymentErrorController.add(e);
       _paymentStateController.add(PaymentState.failed);
       _isPaymentInProgress = false;
@@ -138,9 +145,13 @@ class RazorpayService {
         error: e,
         tag: 'RazorpayService',
       );
-      final error = PaymentGatewayException.checkoutFailed(
-        e is Exception ? e : Exception(e.toString()),
+      final error = PaymentGatewayException(
+        message:
+            'Payment initiation failed. ${e.toString().replaceFirst('Exception: ', '')}',
+        code: 'INITIATION_FAILED',
+        originalException: e is Exception ? e : Exception(e.toString()),
       );
+      _lastPaymentError = error;
       _paymentErrorController.add(error);
       _paymentStateController.add(PaymentState.failed);
       _isPaymentInProgress = false;
@@ -206,6 +217,7 @@ class RazorpayService {
       final error = PaymentGatewayException.checkoutFailed(
         Exception('Incomplete Razorpay success payload.'),
       );
+      _lastPaymentError = error;
       _paymentErrorController.add(error);
       _paymentStateController.add(PaymentState.failed);
       _isPaymentInProgress = false;
@@ -278,6 +290,7 @@ class RazorpayService {
 
     // Classify error for better UX
     final classified = _classifyPaymentError(errorCode, errorMessage);
+    _lastPaymentError = classified;
 
     final response = PaymentResponse(
       transactionId: '',
@@ -298,21 +311,30 @@ class RazorpayService {
     String errorCode,
     String errorMessage,
   ) {
+    final normalizedCode = errorCode.toLowerCase();
+    final normalizedMessage = errorMessage.toLowerCase();
+
     // Map Razorpay error codes to custom exceptions
-    if (errorCode.contains('insufficient') ||
-        errorMessage.contains('insufficient')) {
+    if (normalizedCode.contains('insufficient') ||
+        normalizedMessage.contains('insufficient')) {
       return PaymentGatewayException.insufficientFunds();
-    } else if (errorCode.contains('invalid_card') ||
-        errorMessage.contains('card')) {
+    } else if (normalizedCode.contains('invalid_card') ||
+        normalizedMessage.contains('card')) {
       return PaymentGatewayException.invalidCard();
-    } else if (errorCode.contains('timeout') ||
-        errorMessage.contains('timeout')) {
+    } else if (normalizedCode.contains('timeout') ||
+        normalizedMessage.contains('timeout')) {
       return PaymentGatewayException.timeout();
-    } else if (errorCode.contains('cancelled') ||
-        errorMessage.contains('cancelled')) {
+    } else if (normalizedCode.contains('cancelled') ||
+        normalizedMessage.contains('cancelled')) {
       return PaymentGatewayException.userCancelled();
     }
-    return PaymentGatewayException.checkoutFailed(null);
+    final cleanedMessage = errorMessage.trim();
+    return PaymentGatewayException(
+      message: cleanedMessage.isEmpty
+          ? 'Payment checkout failed. Please try again.'
+          : cleanedMessage,
+      code: errorCode.trim().isEmpty ? 'CHECKOUT_FAILED' : errorCode,
+    );
   }
 
   /// Handle external wallet selection (Google Pay, Apple Pay, etc.)
@@ -329,13 +351,16 @@ class RazorpayService {
   /// Reset payment state for next transaction
   void reset() {
     _isPaymentInProgress = false;
+    _lastPaymentError = null;
     _paymentStateController.add(PaymentState.idle);
   }
 
   /// Cancel payment in progress
   void cancelPayment() {
     if (_isPaymentInProgress) {
-      _paymentErrorController.add(PaymentGatewayException.userCancelled());
+      final error = PaymentGatewayException.userCancelled();
+      _lastPaymentError = error;
+      _paymentErrorController.add(error);
       _paymentStateController.add(PaymentState.cancelled);
       _isPaymentInProgress = false;
     }

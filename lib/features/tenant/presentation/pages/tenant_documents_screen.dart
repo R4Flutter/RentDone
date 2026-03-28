@@ -572,7 +572,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen>
   Widget _buildScaffold(Widget child) {
     return AnimatedBuilder(
       animation: _bgCtrl,
-      builder: (_, __) {
+      builder: (context, _) {
         final t = _bgCtrl.value;
         return Scaffold(
           backgroundColor: AppColors.transparent,

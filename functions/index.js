@@ -44,6 +44,129 @@ function assertCallableAuth(context) {
   }
 }
 
+function assertEmailVerifiedOrThrow(context) {
+  if (!context?.auth?.token?.email_verified) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'email-not-verified',
+    );
+  }
+}
+
+async function getGlobalAppConfig() {
+  const defaults = {
+    paymentsEnabled: true,
+    manualPaymentsEnabled: true,
+    razorpayEnabled: true,
+    maintenanceMode: false,
+  };
+
+  try {
+    const snap = await db.collection('appConfig').doc('global').get();
+    if (!snap.exists) return defaults;
+    const data = snap.data() || {};
+    return {
+      paymentsEnabled: data.paymentsEnabled !== false,
+      manualPaymentsEnabled: data.manualPaymentsEnabled !== false,
+      razorpayEnabled: data.razorpayEnabled !== false,
+      maintenanceMode: data.maintenanceMode === true,
+    };
+  } catch (_) {
+    return defaults;
+  }
+}
+
+async function assertPaymentsEnabledOrThrow({ gateway, manual = false }) {
+  const config = await getGlobalAppConfig();
+
+  if (config.maintenanceMode) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'maintenance-mode',
+    );
+  }
+
+  if (!config.paymentsEnabled) {
+    throw new functions.https.HttpsError(
+      'unavailable',
+      'payments-disabled',
+    );
+  }
+
+  if (manual && !config.manualPaymentsEnabled) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'manual-payments-disabled',
+    );
+  }
+
+  if (String(gateway || '').toLowerCase() === 'razorpay' && !config.razorpayEnabled) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'razorpay-disabled',
+    );
+  }
+
+  return config;
+}
+
+async function assertAdminAccessOrThrow(uid) {
+  if (!uid) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Authentication required',
+    );
+  }
+
+  try {
+    const userRecord = await admin.auth().getUser(uid);
+    if (userRecord?.customClaims?.admin === true) {
+      return;
+    }
+  } catch (_) {
+    // Fall back to Firestore lookup if auth lookup fails.
+  }
+
+  const adminDoc = await db.collection('admins').doc(uid).get();
+  if (adminDoc.exists && adminDoc.get('active') !== false) {
+    return;
+  }
+
+  const userDoc = await db.collection('users').doc(uid).get();
+  if (userDoc.exists) {
+    const role = String(userDoc.data()?.role || '').trim().toLowerCase();
+    if (role === 'admin') {
+      return;
+    }
+  }
+
+  throw new functions.https.HttpsError(
+    'permission-denied',
+    'Admin access required',
+  );
+}
+
+async function logAdminAudit({
+  action,
+  adminId,
+  targetId = null,
+  oldValue = null,
+  newValue = null,
+  reason = null,
+  meta = null,
+}) {
+  await db.collection('admin_audit_logs').add({
+    action: String(action || 'unknown').trim(),
+    adminId: String(adminId || '').trim(),
+    targetId: targetId ? String(targetId) : null,
+    oldValue: oldValue ?? null,
+    newValue: newValue ?? null,
+    reason: reason ? String(reason) : null,
+    meta: meta ?? null,
+    timestamp: FieldValue.serverTimestamp(),
+  });
+}
+
 function setCorsHeaders(req, res) {
   const { allowedOrigin } = getSecurityConfig();
   const requestOrigin = String(req.get('Origin') || '').trim();
@@ -149,6 +272,60 @@ function minuteBucketKey(date = new Date()) {
   return `${y}${m}${d}${h}${min}`;
 }
 
+const PAYMENT_RATE_LIMIT = 5;
+const PAYMENT_RATE_WINDOW_SECONDS = 60;
+
+async function rateLimitOrThrow({
+  uid,
+  action,
+  limit = PAYMENT_RATE_LIMIT,
+  windowSeconds = PAYMENT_RATE_WINDOW_SECONDS,
+  meta = {},
+}) {
+  if (!uid) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const bucket = minuteBucketKey();
+  const safeAction = String(action || 'unknown').trim().toLowerCase();
+  const docId = `${safeAction}_${uid}_${bucket}`;
+  const ref = db.collection('_rateLimits').doc(docId);
+
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const current = snap.exists ? Number(snap.data()?.count || 0) : 0;
+      if (current >= limit) {
+        throw new functions.https.HttpsError('resource-exhausted', 'rate-limited');
+      }
+
+      const expiresAt = Timestamp.fromDate(new Date(Date.now() + (24 * 60 * 60 * 1000)));
+      tx.set(ref, {
+        action: safeAction,
+        uid,
+        bucket,
+        count: current + 1,
+        windowSeconds,
+        updatedAt: FieldValue.serverTimestamp(),
+        expiresAt,
+        ...(snap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      }, { merge: true });
+    });
+  } catch (error) {
+    if (error instanceof functions.https.HttpsError && error.code === 'resource-exhausted') {
+      await recordSecuritySignal({
+        type: 'rate_limit',
+        channel: safeAction,
+        uid,
+        reason: 'rate-limited',
+        statusCode: 429,
+        meta,
+      });
+    }
+    throw error;
+  }
+}
+
 async function recordSecuritySignal({
   type,
   channel,
@@ -206,10 +383,73 @@ async function recordSecuritySignal({
 
 function getRazorpayConfig() {
   const cfg = functions.config().razorpay || {};
+  const normalizedMode = String(cfg.mode || process.env.RAZORPAY_MODE || 'test')
+    .trim()
+    .toLowerCase();
+  const mode = normalizedMode === 'live' ? 'live' : 'test';
+
+  const configuredGenericKeyId = String(
+    cfg.key_id || process.env.RAZORPAY_KEY_ID || '',
+  ).trim();
+
+  const keyId = mode === 'live'
+    ? String(
+        cfg.live_key_id ||
+            process.env.RAZORPAY_LIVE_KEY_ID ||
+            (configuredGenericKeyId.startsWith('rzp_live_')
+              ? configuredGenericKeyId
+              : ''),
+      ).trim()
+    : String(
+        cfg.test_key_id ||
+            process.env.RAZORPAY_TEST_KEY_ID ||
+            (configuredGenericKeyId.startsWith('rzp_test_')
+              ? configuredGenericKeyId
+              : 'rzp_test_SWZErkO7aPAnNO'),
+      ).trim();
+
+  const keySecret = mode === 'live'
+    ? String(
+        cfg.live_key_secret ||
+            process.env.RAZORPAY_LIVE_KEY_SECRET ||
+            cfg.key_secret ||
+            process.env.RAZORPAY_KEY_SECRET ||
+            '',
+      ).trim()
+    : String(
+        cfg.test_key_secret ||
+            process.env.RAZORPAY_TEST_KEY_SECRET ||
+            cfg.key_secret ||
+            process.env.RAZORPAY_KEY_SECRET ||
+            '',
+      ).trim();
+
+  const webhookSecret = mode === 'live'
+    ? String(
+        cfg.live_webhook_secret ||
+            process.env.RAZORPAY_LIVE_WEBHOOK_SECRET ||
+            cfg.webhook_secret ||
+            process.env.RAZORPAY_WEBHOOK_SECRET ||
+            '',
+      ).trim()
+    : String(
+        cfg.test_webhook_secret ||
+            process.env.RAZORPAY_TEST_WEBHOOK_SECRET ||
+            cfg.webhook_secret ||
+            process.env.RAZORPAY_WEBHOOK_SECRET ||
+            '',
+      ).trim();
+
+  const keyPrefixMismatch =
+    (mode === 'test' && keyId.startsWith('rzp_live_')) ||
+    (mode === 'live' && keyId.startsWith('rzp_test_'));
+
   return {
-    keyId: cfg.key_id,
-    keySecret: cfg.key_secret,
-    webhookSecret: cfg.webhook_secret,
+    mode,
+    keyId,
+    keySecret,
+    webhookSecret,
+    keyPrefixMismatch,
   };
 }
 
@@ -273,6 +513,18 @@ function defaultPaymentFeeConfig() {
 
 async function loadPaymentFeeConfig(gateway) {
   const safeGateway = String(gateway || 'razorpay').trim().toLowerCase();
+
+  // Production policy lock: Razorpay convenience fee is fixed at 2%
+  // with 18% GST on gateway fee (effective 2.36% on base rent).
+  if (safeGateway === 'razorpay') {
+    return {
+      gateway: safeGateway,
+      gatewayPercent: 2,
+      gatewayCostPercent: 2,
+      gstPercent: 18,
+    };
+  }
+
   const defaults = defaultPaymentFeeConfig();
 
   let firestoreConfig = {};
@@ -1571,34 +1823,806 @@ exports.onPaymentCreatedPaid = functions.firestore
     });
   });
 
-exports.sendMonthlyRentStatusNotifications = functions.pubsub
-  .schedule('15 10 1 * *')
-  .timeZone('Asia/Kolkata')
-  .onRun(async () => {
-    return null;
-  });
-
-exports.sendRentDueWhatsAppReminders = functions.pubsub
-  .schedule('15 4 * * *')
-  .timeZone('Asia/Kolkata')
-  .onRun(async () => {
-    return null;
-  });
-
-exports.sendTenantPreDueReminders = functions.pubsub
-  .schedule('30 4 * * *')
-  .timeZone('Asia/Kolkata')
-  .onRun(async () => {
-    return null;
-  });
-
 // ==========================================================
 // PAYMENT INTENT + VERIFICATION
 // ==========================================================
 
+const MAX_PAYMENT_AMOUNT_INR = 5000000;
+const PAYMENT_DUPLICATE_WINDOW_MS = 120000;
+
+function normalizePaymentMethod(value) {
+  const method = String(value || '').trim().toLowerCase();
+  if (method === 'manual' || method === 'razorpay') {
+    return method;
+  }
+  return null;
+}
+
+function normalizeIntegerAmount(value) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) {
+    return 0;
+  }
+  return Math.trunc(amount);
+}
+
+function normalizePropertyNameForComparison(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function resolveTenantOwnerLinkPolicy({
+  tenantData,
+  propertyData,
+  propertyId,
+  actorUid,
+  enforceOwnerActor = false,
+}) {
+  const propertyOwnerId = String(propertyData?.ownerId || '').trim();
+  const propertyName = String(propertyData?.name || '').trim();
+  const tenantOwnerId = String(tenantData?.ownerId || '').trim();
+  const tenantPropertyId = String(tenantData?.propertyId || '').trim();
+  const tenantPropertyName = String(tenantData?.propertyName || '').trim();
+
+  if (!propertyOwnerId) {
+    throw new functions.https.HttpsError('failed-precondition', 'invalid-owner');
+  }
+
+  if (enforceOwnerActor && actorUid !== propertyOwnerId) {
+    throw new functions.https.HttpsError('permission-denied', 'property-owner-mismatch');
+  }
+
+  const isLinkedTenantProfile = tenantOwnerId.length > 0 || tenantPropertyId.length > 0;
+
+  if (isLinkedTenantProfile) {
+    if (tenantOwnerId && tenantOwnerId !== propertyOwnerId) {
+      throw new functions.https.HttpsError('failed-precondition', 'invalid-owner');
+    }
+
+    if (tenantPropertyId && tenantPropertyId !== propertyId) {
+      throw new functions.https.HttpsError('failed-precondition', 'invalid-owner');
+    }
+
+    const normalizedTenantPropertyName = normalizePropertyNameForComparison(tenantPropertyName);
+    const normalizedOwnerPropertyName = normalizePropertyNameForComparison(propertyName);
+    if (
+      normalizedTenantPropertyName &&
+      normalizedOwnerPropertyName &&
+      normalizedTenantPropertyName !== normalizedOwnerPropertyName
+    ) {
+      throw new functions.https.HttpsError('failed-precondition', 'property-name-mismatch');
+    }
+  }
+
+  if (!isLinkedTenantProfile && actorUid !== propertyOwnerId) {
+    throw new functions.https.HttpsError('permission-denied', 'tenant-link-required');
+  }
+
+  return {
+    ownerId: propertyOwnerId,
+    needsTenantBackfill: !tenantOwnerId || !tenantPropertyId,
+    isLinkedTenantProfile,
+  };
+}
+
+function hashTenantLinkToken(token) {
+  return crypto
+    .createHash('sha256')
+    .update(String(token || '').trim(), 'utf8')
+    .digest('hex');
+}
+
+function assertTenantBackfillProofOrThrow({ tenantData, providedToken }) {
+  const token = String(providedToken || '').trim();
+  const storedHash = String(
+    tenantData?.ownerAssignmentTokenHash || tenantData?.tenantLinkTokenHash || '',
+  ).trim().toLowerCase();
+  const storedPlain = String(
+    tenantData?.ownerAssignmentToken || tenantData?.tenantLinkToken || '',
+  ).trim();
+
+  const hasProvisionedProof = Boolean(storedHash || storedPlain);
+
+  if (!token) {
+    // Backward compatibility: allow backfill until token provisioning is enabled.
+    if (!hasProvisionedProof) {
+      return;
+    }
+    throw new functions.https.HttpsError('failed-precondition', 'tenant-link-proof-required');
+  }
+
+  if (storedHash) {
+    const candidateHash = hashTenantLinkToken(token);
+    if (candidateHash !== storedHash) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'tenant-link-proof-invalid',
+      );
+    }
+    return;
+  }
+
+  if (storedPlain && token === storedPlain) {
+    return;
+  }
+
+  // Backward compatibility: if no proof is stored on tenant yet, accept provided token.
+  if (!hasProvisionedProof) {
+    return;
+  }
+
+  throw new functions.https.HttpsError(
+    'failed-precondition',
+    'tenant-link-proof-missing-on-tenant',
+  );
+}
+
+function resolvePaymentStatusFromAmounts({ paidAmount, remainingAmount }) {
+  if (remainingAmount === 0) {
+    return 'paid';
+  }
+  if (paidAmount > 0 && remainingAmount > 0) {
+    return 'partial';
+  }
+  return 'pending';
+}
+
+async function logPaymentIntegrityEvent(eventType, payload) {
+  try {
+    await db.collection('_paymentEvents').add({
+      eventType,
+      ...payload,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.warn('Failed to log payment integrity event', {
+      eventType,
+      error: error?.message || String(error),
+    });
+  }
+}
+
+function normalizeLogString(value) {
+  const trimmed = String(value || '').trim();
+  return trimmed.length ? trimmed : null;
+}
+
+function normalizeLogNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function buildPaymentLogPayload({
+  event,
+  userId,
+  tenantId,
+  ownerId,
+  paymentId,
+  idempotencyKey,
+  amount,
+  method,
+  status,
+  errorCode,
+  errorMessage,
+  deviceInfo,
+  extra = {},
+}) {
+  return {
+    event: normalizeLogString(event) || 'UNKNOWN_EVENT',
+    timestamp: new Date().toISOString(),
+    userId: normalizeLogString(userId),
+    tenantId: normalizeLogString(tenantId),
+    ownerId: normalizeLogString(ownerId),
+    paymentId: normalizeLogString(paymentId),
+    idempotencyKey: normalizeLogString(idempotencyKey),
+    amount: normalizeLogNumber(amount),
+    method: normalizeLogString(method),
+    status: normalizeLogString(status),
+    errorCode: normalizeLogString(errorCode),
+    errorMessage: normalizeLogString(errorMessage),
+    deviceInfo: normalizeLogString(deviceInfo) || 'cloud-functions',
+    ...extra,
+  };
+}
+
+function logPaymentEvent(level, event, payload) {
+  const data = buildPaymentLogPayload({ event, ...payload });
+  if (level === 'error') {
+    functions.logger.error(event, data);
+    return;
+  }
+  if (level === 'warn') {
+    functions.logger.warn(event, data);
+    return;
+  }
+  functions.logger.info(event, data);
+}
+
+function validatePaymentDocumentIntegrity({
+  payment,
+  expectedTenantId,
+  expectedOwnerId,
+  expectedMethod,
+}) {
+  const baseAmount = normalizeIntegerAmount(payment?.baseAmount || payment?.amount);
+  const paidAmount = normalizeIntegerAmount(payment?.paidAmount);
+  const remainingAmount = normalizeIntegerAmount(payment?.remainingAmount);
+  const status = String(payment?.status || '').trim().toLowerCase();
+  const tenantId = String(payment?.tenantId || '').trim();
+  const ownerId = String(payment?.ownerId || '').trim();
+  const method = String(payment?.method || '').trim().toLowerCase();
+
+  if (baseAmount <= 0) {
+    return { ok: false, code: 'verification-failed', reason: 'invalid-base-amount' };
+  }
+  if (paidAmount < 0 || remainingAmount < 0) {
+    return { ok: false, code: 'verification-failed', reason: 'negative-amounts' };
+  }
+  if (paidAmount + remainingAmount !== baseAmount) {
+    return { ok: false, code: 'verification-failed', reason: 'amount-mismatch' };
+  }
+
+  const expectedStatus = resolvePaymentStatusFromAmounts({
+    paidAmount,
+    remainingAmount,
+  });
+  if (status !== expectedStatus) {
+    return { ok: false, code: 'verification-failed', reason: 'status-mismatch' };
+  }
+
+  if (expectedTenantId && tenantId !== expectedTenantId) {
+    return { ok: false, code: 'verification-failed', reason: 'tenant-mismatch' };
+  }
+  if (expectedOwnerId && ownerId !== expectedOwnerId) {
+    return { ok: false, code: 'verification-failed', reason: 'owner-mismatch' };
+  }
+  if (expectedMethod && method !== String(expectedMethod).trim().toLowerCase()) {
+    return { ok: false, code: 'verification-failed', reason: 'method-mismatch' };
+  }
+
+  return { ok: true };
+}
+
+async function verifyPaymentAfterWriteOrThrow({
+  paymentRef,
+  tenantId,
+  ownerId,
+  method,
+  idempotencyKey,
+  amount,
+}) {
+  const createdDoc = await paymentRef.get();
+  const created = createdDoc.data() || null;
+  if (!createdDoc.exists || !created) {
+    await logPaymentIntegrityEvent('PAYMENT_VERIFICATION_FAILED', {
+      paymentId: paymentRef.id,
+      tenantId,
+      ownerId,
+      amount,
+      method,
+      idempotencyKey,
+      reason: 'missing-document',
+      timestamp: Date.now(),
+    });
+    throw new functions.https.HttpsError('internal', 'verification-failed');
+  }
+
+  const integrity = validatePaymentDocumentIntegrity({
+    payment: created,
+    expectedTenantId: tenantId,
+    expectedOwnerId: ownerId,
+    expectedMethod: method,
+  });
+
+  if (!integrity.ok) {
+    await paymentRef.set(
+      {
+        status: 'failed',
+        integrityError: integrity.reason,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    await logPaymentIntegrityEvent('PAYMENT_VERIFICATION_FAILED', {
+      paymentId: paymentRef.id,
+      tenantId,
+      ownerId,
+      amount,
+      method,
+      idempotencyKey,
+      reason: integrity.reason,
+      timestamp: Date.now(),
+    });
+
+    throw new functions.https.HttpsError('internal', integrity.code);
+  }
+
+  await logPaymentIntegrityEvent('PAYMENT_VERIFIED', {
+    paymentId: paymentRef.id,
+    tenantId,
+    ownerId,
+    amount,
+    method,
+    idempotencyKey,
+    timestamp: Date.now(),
+  });
+}
+
+async function findPaymentByIdempotencyKey(idempotencyKey) {
+  const existingByIdempotency = await db
+    .collection('payments')
+    .where('idempotencyKey', '==', idempotencyKey)
+    .limit(1)
+    .get();
+
+  if (existingByIdempotency.empty) {
+    return null;
+  }
+
+  return existingByIdempotency.docs[0];
+}
+
+async function blockDuplicatePaymentOrThrow({
+  tenantId,
+  amount,
+  method,
+  idempotencyKey,
+}) {
+  const duplicateCutoff = Timestamp.fromDate(new Date(Date.now() - PAYMENT_DUPLICATE_WINDOW_MS));
+  const duplicates = await db
+    .collection('payments')
+    .where('tenantId', '==', tenantId)
+    .where('baseAmount', '==', amount)
+    .where('method', '==', method)
+    .where('createdAt', '>=', duplicateCutoff)
+    .limit(5)
+    .get();
+
+  const conflictingDoc = duplicates.docs.find((doc) => {
+    const existingKey = String(doc.get('idempotencyKey') || '').trim();
+    return existingKey && existingKey !== idempotencyKey;
+  });
+
+  if (!conflictingDoc) {
+    return;
+  }
+
+  logPaymentEvent('warn', 'DUPLICATE_BLOCKED', {
+    tenantId,
+    paymentId: conflictingDoc.id,
+    amount,
+    method,
+    idempotencyKey,
+    status: 'blocked',
+  });
+
+  await logPaymentIntegrityEvent('DUPLICATE_BLOCKED', {
+    paymentId: conflictingDoc.id,
+    tenantId,
+    amount,
+    method,
+    idempotencyKey,
+    timestamp: Date.now(),
+  });
+
+  throw new functions.https.HttpsError('already-exists', 'duplicate-payment');
+}
+
+exports.createPayment = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  assertEmailVerifiedOrThrow(context);
+
+  const uid = context.auth.uid;
+  const tenantId = String(data?.tenantId || '').trim();
+  const propertyId = String(data?.propertyId || '').trim();
+  const idempotencyKey = String(data?.idempotencyKey || '').trim();
+  const method = normalizePaymentMethod(data?.method);
+  const amount = normalizeIntegerAmount(data?.amount);
+
+  let ownerId = null;
+  let createdPaymentId = null;
+
+  try {
+    await assertPaymentsEnabledOrThrow({
+      gateway: method,
+      manual: method === 'manual',
+    });
+
+    await rateLimitOrThrow({
+      uid,
+      action: 'payment_create',
+      meta: { method: method || 'unknown' },
+    });
+
+    if (!tenantId || !propertyId || !idempotencyKey || !method) {
+      throw new functions.https.HttpsError('invalid-argument', 'invalid-request');
+    }
+
+    if (!Number.isInteger(amount) || amount <= 0 || amount > MAX_PAYMENT_AMOUNT_INR) {
+      throw new functions.https.HttpsError('invalid-argument', 'invalid-amount');
+    }
+
+    logPaymentEvent('info', 'PAYMENT_CREATE_ATTEMPT', {
+      userId: uid,
+      tenantId,
+      paymentId: null,
+      idempotencyKey,
+      amount,
+      method,
+      status: 'initiated',
+    });
+
+    await logPaymentIntegrityEvent('PAYMENT_ATTEMPT', {
+      tenantId,
+      propertyId,
+      actorUid: uid,
+      amount,
+      method,
+      idempotencyKey,
+      timestamp: Date.now(),
+    });
+
+    const [tenantDoc, propertyDoc] = await Promise.all([
+      db.collection('tenants').doc(tenantId).get(),
+      db.collection('properties').doc(propertyId).get(),
+    ]);
+
+    if (!tenantDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'invalid-tenant');
+    }
+    if (!propertyDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'invalid-property');
+    }
+
+    const tenantData = tenantDoc.data() || {};
+    const propertyData = propertyDoc.data() || {};
+    const policy = resolveTenantOwnerLinkPolicy({
+      tenantData,
+      propertyData,
+      propertyId,
+      actorUid: uid,
+      enforceOwnerActor: false,
+    });
+    ownerId = policy.ownerId;
+
+    if (policy.needsTenantBackfill && uid === ownerId) {
+      assertTenantBackfillProofOrThrow({
+        tenantData,
+        providedToken: data?.tenantLinkToken,
+      });
+
+      await tenantDoc.ref.set(
+        {
+          ownerId,
+          propertyId,
+          linkProvenAt: FieldValue.serverTimestamp(),
+          ownerAssignmentTokenHash: FieldValue.delete(),
+          tenantLinkTokenHash: FieldValue.delete(),
+          ownerAssignmentToken: FieldValue.delete(),
+          tenantLinkToken: FieldValue.delete(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
+
+    if (uid !== ownerId && uid !== tenantId) {
+      throw new functions.https.HttpsError('permission-denied', 'unauthorized');
+    }
+
+    const existingByIdempotency = await findPaymentByIdempotencyKey(idempotencyKey);
+    if (existingByIdempotency) {
+      const existingData = existingByIdempotency.data() || {};
+      const existingTenantId = String(existingData.tenantId || '').trim();
+      const existingOwnerId = String(existingData.ownerId || '').trim();
+      const existingBaseAmount = normalizeIntegerAmount(existingData.baseAmount || existingData.amount);
+      const existingMethod = String(existingData.method || '').trim().toLowerCase();
+
+      if (
+        existingTenantId !== tenantId ||
+        existingOwnerId !== ownerId ||
+        existingBaseAmount !== amount ||
+        existingMethod !== method
+      ) {
+        throw new functions.https.HttpsError('failed-precondition', 'idempotency-conflict');
+      }
+
+      logPaymentEvent('info', 'IDEMPOTENCY_HIT', {
+        userId: uid,
+        tenantId,
+        ownerId,
+        paymentId: existingByIdempotency.id,
+        idempotencyKey,
+        amount,
+        method,
+        status: String(existingData.status || 'pending').toLowerCase(),
+      });
+
+      await logPaymentIntegrityEvent('IDEMPOTENCY_HIT', {
+        paymentId: existingByIdempotency.id,
+        tenantId,
+        ownerId,
+        amount,
+        method,
+        idempotencyKey,
+        timestamp: Date.now(),
+      });
+
+      return {
+        paymentId: existingByIdempotency.id,
+        status: String(existingData.status || 'pending').toLowerCase(),
+        idempotent: true,
+      };
+    }
+
+    await blockDuplicatePaymentOrThrow({
+      tenantId,
+      amount,
+      method,
+      idempotencyKey,
+    });
+
+    const paymentRef = db.collection('payments').doc();
+    const transactionRef = db.collection('transactions').doc(idempotencyKey);
+    const baseAmount = amount;
+    const paidAmount = method === 'manual' ? amount : 0;
+    const remainingAmount = Math.max(0, baseAmount - paidAmount);
+    const status = resolvePaymentStatusFromAmounts({ paidAmount, remainingAmount });
+
+    try {
+      await db.runTransaction(async (txn) => {
+        const existingTx = await txn.get(transactionRef);
+        if (existingTx.exists) {
+          throw new functions.https.HttpsError('already-exists', 'duplicate-payment');
+        }
+
+        txn.set(paymentRef, {
+          paymentId: paymentRef.id,
+          tenantId,
+          ownerId,
+          propertyId,
+          amount,
+          baseAmount,
+          paidAmount,
+          remainingAmount,
+          status,
+          method,
+          currency: 'INR',
+          transactionId: idempotencyKey,
+          idempotencyKey,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        txn.set(transactionRef, {
+          transactionId: idempotencyKey,
+          paymentId: paymentRef.id,
+          tenantId,
+          ownerId,
+          propertyId,
+          amount,
+          status: method === 'manual' ? 'success' : 'initiated',
+          gateway: method,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      });
+    } catch (error) {
+      if (error instanceof functions.https.HttpsError) {
+        if (error.message === 'duplicate-payment') {
+          const existing = await findPaymentByIdempotencyKey(idempotencyKey);
+          if (existing) {
+            const existingData = existing.data() || {};
+            logPaymentEvent('info', 'IDEMPOTENCY_HIT', {
+              userId: uid,
+              tenantId,
+              ownerId,
+              paymentId: existing.id,
+              idempotencyKey,
+              amount,
+              method,
+              status: String(existingData.status || 'pending').toLowerCase(),
+            });
+            await logPaymentIntegrityEvent('IDEMPOTENCY_HIT', {
+              paymentId: existing.id,
+              tenantId,
+              ownerId,
+              amount,
+              method,
+              idempotencyKey,
+              timestamp: Date.now(),
+            });
+            return {
+              paymentId: existing.id,
+              status: String(existingData.status || 'pending').toLowerCase(),
+              idempotent: true,
+            };
+          }
+        }
+        throw error;
+      }
+      throw new functions.https.HttpsError('internal', 'internal-error');
+    }
+
+    createdPaymentId = paymentRef.id;
+
+    await logPaymentIntegrityEvent('PAYMENT_CREATED', {
+      paymentId: paymentRef.id,
+      tenantId,
+      ownerId,
+      amount,
+      method,
+      idempotencyKey,
+      timestamp: Date.now(),
+    });
+
+    await verifyPaymentAfterWriteOrThrow({
+      paymentRef,
+      tenantId,
+      ownerId,
+      method,
+      idempotencyKey,
+      amount,
+    });
+
+    logPaymentEvent('info', 'PAYMENT_SUCCESS', {
+      userId: uid,
+      tenantId,
+      ownerId,
+      paymentId: paymentRef.id,
+      idempotencyKey,
+      amount,
+      method,
+      status,
+    });
+
+    return {
+      paymentId: paymentRef.id,
+      status,
+      idempotent: false,
+    };
+  } catch (error) {
+    const errorCode = String(error?.code || 'internal');
+    const errorMessage = error?.message || String(error);
+    logPaymentEvent('error', 'PAYMENT_FAILURE', {
+      userId: uid,
+      tenantId,
+      ownerId,
+      paymentId: createdPaymentId,
+      idempotencyKey,
+      amount,
+      method,
+      status: 'failed',
+      errorCode,
+      errorMessage,
+    });
+    throw error;
+  }
+});
+
+exports.updatePaymentStatus = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  assertEmailVerifiedOrThrow(context);
+
+  const uid = context.auth.uid;
+  const paymentId = String(data?.paymentId || '').trim();
+  const requestedStatus = String(data?.newStatus || '').trim().toLowerCase();
+  const installmentAmount = normalizeIntegerAmount(data?.installmentAmount);
+  const installmentMethod = String(data?.installmentMethod || 'manual').trim().toLowerCase();
+  const installmentNotes = String(data?.installmentNotes || '').trim();
+
+  if (!paymentId || !['paid', 'partial', 'unpaid'].includes(requestedStatus)) {
+    throw new functions.https.HttpsError('invalid-argument', 'invalid-status');
+  }
+
+  await rateLimitOrThrow({
+    uid,
+    action: 'payment_update_status',
+    meta: { status: requestedStatus },
+  });
+
+  const paymentRef = db.collection('payments').doc(paymentId);
+  const paymentDoc = await paymentRef.get();
+  if (!paymentDoc.exists) {
+    throw new functions.https.HttpsError('not-found', 'payment-not-found');
+  }
+
+  const paymentData = paymentDoc.data() || {};
+  const ownerId = String(paymentData.ownerId || '').trim();
+  if (uid !== ownerId) {
+    throw new functions.https.HttpsError('permission-denied', 'unauthorized');
+  }
+
+  const currentStatus = String(paymentData.status || '').trim().toLowerCase();
+  const allowedTransitions = {
+    pending: ['partial'],
+    partial: ['paid'],
+  };
+  const allowedNext = allowedTransitions[currentStatus] || [];
+  if (!allowedNext.includes(requestedStatus)) {
+    throw new functions.https.HttpsError('failed-precondition', 'invalid-status-transition');
+  }
+
+  const baseAmount = normalizeIntegerAmount(paymentData.baseAmount || paymentData.amount);
+  let paidAmount = normalizeIntegerAmount(paymentData.paidAmount);
+  const installments = Array.isArray(paymentData.installments)
+    ? [...paymentData.installments]
+    : [];
+
+  if (requestedStatus === 'partial') {
+    if (installmentAmount <= 0) {
+      throw new functions.https.HttpsError('invalid-argument', 'invalid-amount');
+    }
+    const remainingBefore = Math.max(0, baseAmount - paidAmount);
+    if (installmentAmount > remainingBefore) {
+      throw new functions.https.HttpsError('failed-precondition', 'invalid-installment');
+    }
+
+    paidAmount += installmentAmount;
+    installments.push({
+      amount: installmentAmount,
+      date: FieldValue.serverTimestamp(),
+      method: installmentMethod || 'manual',
+      notes: installmentNotes || null,
+    });
+  } else if (requestedStatus === 'paid') {
+    const delta = Math.max(0, baseAmount - paidAmount);
+    paidAmount = baseAmount;
+    installments.push({
+      amount: delta,
+      date: FieldValue.serverTimestamp(),
+      method: installmentMethod || 'manual',
+      notes: installmentNotes || 'status updated to paid',
+    });
+  } else {
+    paidAmount = 0;
+    installments.length = 0;
+  }
+
+  const safePaid = Math.max(0, Math.min(baseAmount, paidAmount));
+  const remainingAmount = Math.max(0, baseAmount - safePaid);
+  const resolvedStatus = resolvePaymentStatusFromAmounts({
+    paidAmount: safePaid,
+    remainingAmount,
+  });
+
+  await paymentRef.update({
+    paidAmount: safePaid,
+    remainingAmount,
+    status: resolvedStatus,
+    installments,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  await verifyPaymentAfterWriteOrThrow({
+    paymentRef,
+    tenantId: String(paymentData.tenantId || '').trim(),
+    ownerId,
+    method: String(paymentData.method || '').trim().toLowerCase() || 'manual',
+    idempotencyKey: String(paymentData.idempotencyKey || '').trim(),
+    amount: baseAmount,
+  });
+
+  return {
+    paymentId,
+    status: resolvedStatus,
+    paidAmount: safePaid,
+    remainingAmount,
+  };
+});
+
 exports.quotePayment = functions.https.onCall(async (data, context) => {
   assertCallableAuth(context);
+  assertEmailVerifiedOrThrow(context);
   await assertTenantAccessOrThrow(context.auth.uid);
+
+  await assertPaymentsEnabledOrThrow({ gateway: data?.gateway });
+
+  await rateLimitOrThrow({
+    uid: context.auth.uid,
+    action: 'payment_quote',
+    limit: 10,
+  });
 
   const leaseId = String(data?.leaseId || '').trim();
   const gateway = String(data?.gateway || 'razorpay').toLowerCase();
@@ -1691,125 +2715,191 @@ exports.quotePayment = functions.https.onCall(async (data, context) => {
 
 exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   assertCallableAuth(context);
+  assertEmailVerifiedOrThrow(context);
   await assertTenantAccessOrThrow(context.auth.uid);
 
-  const leaseId = data.leaseId;
+  const leaseId = String(data?.leaseId || '').trim();
   const month = Number(data.month);
   const year = Number(data.year);
   const gateway = (data.gateway || 'cashfree').toLowerCase();
-  const idempotencyKey = data.idempotencyKey;
+  const idempotencyKey = String(data?.idempotencyKey || '').trim();
 
-  if (!leaseId || !month || !year || !idempotencyKey) {
-    throw new functions.https.HttpsError(
-      'invalid-argument',
-      'leaseId, month, year and idempotencyKey are required',
-    );
-  }
+  let paymentId = null;
+  let ownerId = null;
+  let rentAmount = null;
 
-  const leaseDoc = await db.collection('leases').doc(leaseId).get();
-  if (!leaseDoc.exists) {
-    throw new functions.https.HttpsError('not-found', 'Lease not found');
-  }
+  try {
+    await assertPaymentsEnabledOrThrow({ gateway });
 
-  const lease = leaseDoc.data();
-  if (lease.tenantId && lease.tenantId !== context.auth.uid) {
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'Lease does not belong to tenant',
-    );
-  }
+    await rateLimitOrThrow({
+      uid: context.auth.uid,
+      action: 'payment_intent',
+      meta: { gateway },
+    });
 
-  if (lease.status && lease.status !== 'active') {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Lease is not active',
-    );
-  }
-
-  const paymentId = `${leaseId}_${year}_${String(month).padStart(2, '0')}`;
-  const paymentRef = db.collection('payments').doc(paymentId);
-  const transactionRef = db.collection('transactions').doc(idempotencyKey);
-  const currency = String(lease.currency || 'INR').trim() || 'INR';
-
-  const baseAmount = Number(lease.rentAmount || 0);
-  const lateFeePercentage = Number(lease.lateFeePercentage || 0);
-  const dueDate = toDate(lease.dueDate) || new Date();
-  const now = new Date();
-  const isOverdue = now > dueDate;
-  const lateFeeAmount = isOverdue
-    ? Math.round(baseAmount * (lateFeePercentage / 100))
-    : 0;
-  const rentAmount = baseAmount + lateFeeAmount;
-
-  if (!Number.isInteger(rentAmount) || rentAmount <= 0) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Calculated rent amount is invalid',
-    );
-  }
-
-  const feeConfig = await loadPaymentFeeConfig(gateway);
-  const feeBreakdown = calculateFeeBreakdownInPaise({
-    rentAmountInRupees: rentAmount,
-    gatewayPercent: feeConfig.gatewayPercent,
-    gstPercent: feeConfig.gstPercent,
-    gatewayCostPercent: feeConfig.gatewayCostPercent,
-  });
-
-  if (feeBreakdown.convenienceFeeInPaise < feeBreakdown.estimatedGatewayCostInPaise) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Configured fee is below gateway cost. Refusing payment intent to prevent platform loss.',
-    );
-  }
-
-  const totalAmount = feeBreakdown.totalPayableInPaise / 100;
-
-  const existingPayment = await paymentRef.get();
-  if (existingPayment.exists) {
-    const currentStatus = existingPayment.get('status');
-    if (currentStatus === 'paid' || currentStatus === 'success') {
+    if (!leaseId || !month || !year || !idempotencyKey) {
       throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Payment already completed for this period',
+        'invalid-argument',
+        'leaseId, month, year and idempotencyKey are required',
       );
     }
-  }
 
-  const existingTransaction = await transactionRef.get();
-  if (existingTransaction.exists) {
-    const payment = await paymentRef.get();
-    const storedTotalPayableInPaise = Number(payment.get('totalPayableInPaise') || 0);
-    const storedRentAmountInPaise = Number(payment.get('rentAmountInPaise') || 0);
-    const storedFeeInPaise = Number(payment.get('convenienceFeeInPaise') || 0);
-    return {
+    const leaseDoc = await db.collection('leases').doc(leaseId).get();
+    if (!leaseDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Lease not found');
+    }
+
+    const lease = leaseDoc.data();
+    if (lease.tenantId && lease.tenantId !== context.auth.uid) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Lease does not belong to tenant',
+      );
+    }
+
+    if (lease.status && lease.status !== 'active') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Lease is not active',
+      );
+    }
+
+    paymentId = `${leaseId}_${year}_${String(month).padStart(2, '0')}`;
+    const paymentRef = db.collection('payments').doc(paymentId);
+    const transactionRef = db.collection('transactions').doc(idempotencyKey);
+    const currency = String(lease.currency || 'INR').trim() || 'INR';
+
+    const baseAmount = Number(lease.rentAmount || 0);
+    const lateFeePercentage = Number(lease.lateFeePercentage || 0);
+    const dueDate = toDate(lease.dueDate) || new Date();
+    const now = new Date();
+    const isOverdue = now > dueDate;
+    const lateFeeAmount = isOverdue
+      ? Math.round(baseAmount * (lateFeePercentage / 100))
+      : 0;
+    rentAmount = baseAmount + lateFeeAmount;
+
+    ownerId = String(lease.ownerId || '').trim();
+
+    if (!Number.isInteger(rentAmount) || rentAmount <= 0) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Calculated rent amount is invalid',
+      );
+    }
+
+    logPaymentEvent('info', 'PAYMENT_CREATE_ATTEMPT', {
+      userId: context.auth.uid,
+      tenantId: lease.tenantId || context.auth.uid,
+      ownerId,
       paymentId,
-      gateway,
-      amount: gateway === 'razorpay'
-        ? (storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise)
-        : ((storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise) / 100),
-      rentAmountInPaise: storedRentAmountInPaise || feeBreakdown.rentAmountInPaise,
-      convenienceFeeInPaise: storedFeeInPaise || feeBreakdown.convenienceFeeInPaise,
-      totalPayableInPaise: storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise,
-      estimatedGatewayCostInPaise: Number(
-        payment.get('estimatedGatewayCostInPaise') || feeBreakdown.estimatedGatewayCostInPaise,
-      ),
-      gatewayPercent: Number(payment.get('gatewayPercent') || feeConfig.gatewayPercent),
-      gstPercent: Number(payment.get('gstPercent') || feeConfig.gstPercent),
-      currency: payment.get('currency') || currency,
       idempotencyKey,
-      orderId: payment.get('razorpayOrderId') || null,
-      clientSecret: payment.get('stripeClientSecret') || null,
-      keyId: payment.get('razorpayKeyId') || null,
-      paymentSessionId: payment.get('cashfreeTokenData') || payment.get('cashfreePaymentSessionId') || null,
-    };
-  }
+      amount: rentAmount,
+      method: gateway,
+      status: 'initiated',
+      extra: { leaseId },
+    });
 
-  await db.runTransaction(async (t) => {
-    const paymentSnap = await t.get(paymentRef);
-    if (paymentSnap.exists) {
-      const status = paymentSnap.get('status');
-      if (status === 'paid' || status === 'success') {
+    await logPaymentIntegrityEvent('PAYMENT_ATTEMPT', {
+      tenantId: lease.tenantId || context.auth.uid,
+      ownerId: lease.ownerId || '',
+      propertyId: lease.propertyId || '',
+      amount: rentAmount,
+      method: gateway,
+      idempotencyKey,
+      leaseId,
+      timestamp: Date.now(),
+    });
+
+    const existingByIdempotency = await findPaymentByIdempotencyKey(idempotencyKey);
+    if (existingByIdempotency) {
+      const existingData = existingByIdempotency.data() || {};
+      const existingTenantId = String(existingData.tenantId || '').trim();
+      const existingLeaseId = String(existingData.leaseId || '').trim();
+      const existingMethod = String(existingData.method || existingData.gateway || '').trim().toLowerCase();
+      const existingBaseAmount = normalizeIntegerAmount(existingData.baseAmount || existingData.amount || existingData.rentAmount);
+
+      if (
+        existingTenantId !== String(lease.tenantId || context.auth.uid).trim() ||
+        existingLeaseId !== leaseId ||
+        existingMethod !== gateway ||
+        existingBaseAmount !== rentAmount
+      ) {
+        throw new functions.https.HttpsError('failed-precondition', 'idempotency-conflict');
+      }
+
+      logPaymentEvent('info', 'IDEMPOTENCY_HIT', {
+        userId: context.auth.uid,
+        tenantId: existingTenantId,
+        ownerId: String(existingData.ownerId || lease.ownerId || '').trim(),
+        paymentId: existingByIdempotency.id,
+        idempotencyKey,
+        amount: existingBaseAmount,
+        method: gateway,
+        status: String(existingData.status || 'pending').toLowerCase(),
+        extra: { leaseId },
+      });
+
+      await logPaymentIntegrityEvent('IDEMPOTENCY_HIT', {
+        paymentId: existingByIdempotency.id,
+        tenantId: existingTenantId,
+        ownerId: String(existingData.ownerId || lease.ownerId || '').trim(),
+        amount: existingBaseAmount,
+        method: gateway,
+        idempotencyKey,
+        leaseId,
+        timestamp: Date.now(),
+      });
+
+      return {
+        paymentId: String(existingData.paymentId || existingByIdempotency.id).trim(),
+        gateway,
+        amount: gateway === 'razorpay'
+          ? Number(existingData.totalPayableInPaise || existingData.amountInPaise || 0)
+          : (Number(existingData.totalPayableInPaise || existingData.amountInPaise || 0) / 100),
+        rentAmountInPaise: Number(existingData.rentAmountInPaise || 0),
+        convenienceFeeInPaise: Number(existingData.convenienceFeeInPaise || 0),
+        totalPayableInPaise: Number(existingData.totalPayableInPaise || 0),
+        estimatedGatewayCostInPaise: Number(existingData.estimatedGatewayCostInPaise || 0),
+        gatewayPercent: Number(existingData.gatewayPercent || 0),
+        gstPercent: Number(existingData.gstPercent || 0),
+        currency: String(existingData.currency || 'INR'),
+        idempotencyKey,
+        orderId: existingData.razorpayOrderId || null,
+        clientSecret: existingData.stripeClientSecret || null,
+        keyId: existingData.razorpayKeyId || null,
+        paymentSessionId: existingData.cashfreeTokenData || existingData.cashfreePaymentSessionId || null,
+      };
+    }
+
+    await blockDuplicatePaymentOrThrow({
+      tenantId: String(lease.tenantId || context.auth.uid).trim(),
+      amount: rentAmount,
+      method: gateway,
+      idempotencyKey,
+    });
+
+    const feeConfig = await loadPaymentFeeConfig(gateway);
+    const feeBreakdown = calculateFeeBreakdownInPaise({
+      rentAmountInRupees: rentAmount,
+      gatewayPercent: feeConfig.gatewayPercent,
+      gstPercent: feeConfig.gstPercent,
+      gatewayCostPercent: feeConfig.gatewayCostPercent,
+    });
+
+    if (feeBreakdown.convenienceFeeInPaise < feeBreakdown.estimatedGatewayCostInPaise) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Configured fee is below gateway cost. Refusing payment intent to prevent platform loss.',
+      );
+    }
+
+    const totalAmount = feeBreakdown.totalPayableInPaise / 100;
+
+    const existingPayment = await paymentRef.get();
+    if (existingPayment.exists) {
+      const currentStatus = existingPayment.get('status');
+      if (currentStatus === 'paid' || currentStatus === 'success') {
         throw new functions.https.HttpsError(
           'failed-precondition',
           'Payment already completed for this period',
@@ -1817,62 +2907,157 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       }
     }
 
-    t.set(
-      paymentRef,
-      {
+    const existingTransaction = await transactionRef.get();
+    if (existingTransaction.exists) {
+      const payment = await paymentRef.get();
+      logPaymentEvent('info', 'IDEMPOTENCY_HIT', {
+        userId: context.auth.uid,
+        tenantId: lease.tenantId || context.auth.uid,
+        ownerId: lease.ownerId || '',
+        paymentId,
+        idempotencyKey,
+        amount: rentAmount,
+        method: gateway,
+        status: String(payment.get('status') || 'pending').toLowerCase(),
+        extra: { leaseId },
+      });
+      await logPaymentIntegrityEvent('IDEMPOTENCY_HIT', {
+        paymentId,
+        tenantId: lease.tenantId || context.auth.uid,
+        ownerId: lease.ownerId || '',
+        amount: rentAmount,
+        method: gateway,
+        idempotencyKey,
+        leaseId,
+        timestamp: Date.now(),
+      });
+      const storedTotalPayableInPaise = Number(payment.get('totalPayableInPaise') || 0);
+      const storedRentAmountInPaise = Number(payment.get('rentAmountInPaise') || 0);
+      const storedFeeInPaise = Number(payment.get('convenienceFeeInPaise') || 0);
+      return {
+        paymentId,
+        gateway,
+        amount: gateway === 'razorpay'
+          ? (storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise)
+          : ((storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise) / 100),
+        rentAmountInPaise: storedRentAmountInPaise || feeBreakdown.rentAmountInPaise,
+        convenienceFeeInPaise: storedFeeInPaise || feeBreakdown.convenienceFeeInPaise,
+        totalPayableInPaise: storedTotalPayableInPaise || feeBreakdown.totalPayableInPaise,
+        estimatedGatewayCostInPaise: Number(
+          payment.get('estimatedGatewayCostInPaise') || feeBreakdown.estimatedGatewayCostInPaise,
+        ),
+        gatewayPercent: Number(payment.get('gatewayPercent') || feeConfig.gatewayPercent),
+        gstPercent: Number(payment.get('gstPercent') || feeConfig.gstPercent),
+        currency: payment.get('currency') || currency,
+        idempotencyKey,
+        orderId: payment.get('razorpayOrderId') || null,
+        clientSecret: payment.get('stripeClientSecret') || null,
+        keyId: payment.get('razorpayKeyId') || null,
+        paymentSessionId: payment.get('cashfreeTokenData') || payment.get('cashfreePaymentSessionId') || null,
+      };
+    }
+
+    await db.runTransaction(async (t) => {
+      const paymentSnap = await t.get(paymentRef);
+      if (paymentSnap.exists) {
+        const status = paymentSnap.get('status');
+        if (status === 'paid' || status === 'success') {
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            'Payment already completed for this period',
+          );
+        }
+      }
+
+      const txSnap = await t.get(transactionRef);
+      if (txSnap.exists) {
+        throw new functions.https.HttpsError('already-exists', 'duplicate-payment');
+      }
+
+      t.set(
+        paymentRef,
+        {
+          paymentId,
+          leaseId,
+          tenantId: lease.tenantId || context.auth.uid,
+          ownerId: lease.ownerId || '',
+          propertyId: lease.propertyId || '',
+          month,
+          year,
+          baseAmount,
+          lateFeeAmount,
+          rentAmount,
+          rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+          convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+          totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+          estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
+          gatewayPercent: feeConfig.gatewayPercent,
+          gatewayCostPercent: feeConfig.gatewayCostPercent,
+          gstPercent: feeConfig.gstPercent,
+          totalAmount,
+          status: 'pending',
+          method: gateway,
+          gateway,
+          currency,
+          transactionId: idempotencyKey,
+          idempotencyKey,
+          updatedAt: FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      t.set(transactionRef, {
+        transactionId: idempotencyKey,
         paymentId,
         leaseId,
         tenantId: lease.tenantId || context.auth.uid,
         ownerId: lease.ownerId || '',
-        propertyId: lease.propertyId || '',
-        month,
-        year,
-        baseAmount,
-        lateFeeAmount,
-        rentAmount,
+        amount: totalAmount,
         rentAmountInPaise: feeBreakdown.rentAmountInPaise,
         convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
         totalPayableInPaise: feeBreakdown.totalPayableInPaise,
         estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
-        gatewayPercent: feeConfig.gatewayPercent,
-        gatewayCostPercent: feeConfig.gatewayCostPercent,
-        gstPercent: feeConfig.gstPercent,
-        totalAmount,
-        status: 'pending',
+        currency: lease.currency || 'INR',
+        status: 'initiated',
         gateway,
-        currency,
-        transactionId: idempotencyKey,
-        idempotencyKey,
-        updatedAt: FieldValue.serverTimestamp(),
         createdAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+      });
+    });
 
-    t.set(transactionRef, {
-      transactionId: idempotencyKey,
+    await logPaymentIntegrityEvent('PAYMENT_CREATED', {
       paymentId,
-      leaseId,
       tenantId: lease.tenantId || context.auth.uid,
       ownerId: lease.ownerId || '',
-      amount: totalAmount,
-      rentAmountInPaise: feeBreakdown.rentAmountInPaise,
-      convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
-      totalPayableInPaise: feeBreakdown.totalPayableInPaise,
-      estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
-      currency: lease.currency || 'INR',
-      status: 'initiated',
-      gateway,
-      createdAt: FieldValue.serverTimestamp(),
+      propertyId: lease.propertyId || '',
+      amount: rentAmount,
+      method: gateway,
+      idempotencyKey,
+      leaseId,
+      timestamp: Date.now(),
     });
-  });
 
-  if (gateway === 'razorpay') {
-    const { keyId, keySecret } = getRazorpayConfig();
+    await verifyPaymentAfterWriteOrThrow({
+      paymentRef,
+      tenantId: String(lease.tenantId || context.auth.uid).trim(),
+      ownerId: String(lease.ownerId || '').trim(),
+      method: gateway,
+      idempotencyKey,
+      amount: rentAmount,
+    });
+
+    if (gateway === 'razorpay') {
+    const { keyId, keySecret, mode, keyPrefixMismatch } = getRazorpayConfig();
+    if (keyPrefixMismatch) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        `Razorpay mode-key mismatch: mode=${mode}`,
+      );
+    }
     if (!keyId || !keySecret) {
       throw new functions.https.HttpsError(
         'failed-precondition',
-        'Razorpay keys not configured',
+        `Razorpay keys not configured for mode=${mode}`,
       );
     }
 
@@ -2037,149 +3222,214 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     };
   }
 
-  throw new functions.https.HttpsError(
-    'invalid-argument',
-    'Unsupported payment gateway',
-  );
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Unsupported payment gateway',
+    );
+  } catch (error) {
+    const errorCode = String(error?.code || 'internal');
+    const errorMessage = error?.message || String(error);
+    logPaymentEvent('error', 'PAYMENT_FAILURE', {
+      userId: context.auth.uid,
+      tenantId: null,
+      ownerId,
+      paymentId,
+      idempotencyKey,
+      amount: rentAmount,
+      method: gateway,
+      status: 'failed',
+      errorCode,
+      errorMessage,
+      extra: { leaseId },
+    });
+    throw error;
+  }
 });
 
 exports.verifyPayment = functions.https.onCall(async (data, context) => {
   assertCallableAuth(context);
+  assertEmailVerifiedOrThrow(context);
   await assertTenantAccessOrThrow(context.auth.uid);
 
   const paymentId = data.paymentId;
   const gateway = (data.gateway || '').toLowerCase();
   const payload = data.payload || {};
 
-  if (!paymentId || !gateway) {
-    throw new functions.https.HttpsError(
-      'invalid-argument',
-      'paymentId and gateway are required',
-    );
-  }
+  let tenantId = null;
+  let ownerId = null;
+  let amount = null;
+  let idempotencyKey = null;
 
-  const paymentRef = db.collection('payments').doc(paymentId);
-  const paymentSnap = await paymentRef.get();
-  if (!paymentSnap.exists) {
-    throw new functions.https.HttpsError('not-found', 'Payment not found');
-  }
-
-  const payment = paymentSnap.data();
-  const callerUid = context.auth.uid;
-  const ownsPayment = payment.tenantId === callerUid || payment.ownerId === callerUid;
-  if (!ownsPayment) {
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'Payment does not belong to current user',
-    );
-  }
-
-  const transactionId = payment.transactionId || payload.transactionId;
-  if (!transactionId) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Transaction not found for payment',
-    );
-  }
-
-  const transactionRef = db.collection('transactions').doc(transactionId);
-  const transactionSnap = await transactionRef.get();
-  if (transactionSnap.exists && transactionSnap.get('status') === 'success') {
-    return { ok: true };
-  }
-
-  if (gateway === 'razorpay') {
-    const { keySecret } = getRazorpayConfig();
-    if (!keySecret) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Razorpay secret not configured',
-      );
-    }
-
-    const razorpayOrderId = payload.orderId;
-    const razorpayPaymentId = payload.paymentId;
-    const razorpaySignature = payload.signature;
-
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+  try {
+    await rateLimitOrThrow({
+      uid: context.auth.uid,
+      action: 'payment_verify',
+      meta: { gateway },
+    });
+    if (!paymentId || !gateway) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Missing Razorpay verification data',
+        'paymentId and gateway are required',
       );
     }
 
-    const expected = crypto
-      .createHmac('sha256', keySecret)
-      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-      .digest('hex');
+    const paymentRef = db.collection('payments').doc(paymentId);
+    const paymentSnap = await paymentRef.get();
+    if (!paymentSnap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Payment not found');
+    }
 
-    if (!safeEqualDigest(expected, razorpaySignature, 'hex')) {
+    const payment = paymentSnap.data();
+    tenantId = String(payment.tenantId || '').trim();
+    ownerId = String(payment.ownerId || '').trim();
+    amount = normalizeIntegerAmount(payment.baseAmount || payment.rentAmount || payment.amount);
+    idempotencyKey = String(payment.idempotencyKey || payment.transactionId || '').trim();
+
+    const callerUid = context.auth.uid;
+    const ownsPayment = payment.tenantId === callerUid || payment.ownerId === callerUid;
+    if (!ownsPayment) {
       throw new functions.https.HttpsError(
         'permission-denied',
-        'Invalid Razorpay signature',
+        'Payment does not belong to current user',
       );
     }
 
-    const finalized = await db.runTransaction(async (t) => {
-      const txSnap = await t.get(transactionRef);
-      if (txSnap.exists && txSnap.get('status') === 'success') return false;
-
-      const rentAmountInPaise = Number(payment.rentAmountInPaise || (Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100));
-      const convenienceFeeInPaise = Number(payment.convenienceFeeInPaise || 0);
-      const totalPayableInPaise = Number(payment.totalPayableInPaise || payment.amountInPaise || (rentAmountInPaise + convenienceFeeInPaise));
-      const estimatedGatewayCostInPaise = Number(payment.estimatedGatewayCostInPaise || convenienceFeeInPaise);
-
-      t.set(
-        paymentRef,
-        {
-          status: 'paid',
-          method: 'online',
-          transactionId: transactionId,
-          razorpayOrderId,
-          paidAmount: Math.trunc(rentAmountInPaise / 100),
-          paidRentAmountInPaise: rentAmountInPaise,
-          paidConvenienceFeeInPaise: convenienceFeeInPaise,
-          collectedAmountInPaise: totalPayableInPaise,
-          paidAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
+    const transactionId = payment.transactionId || payload.transactionId;
+    if (!transactionId) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Transaction not found for payment',
       );
+    }
 
-      t.set(
-        transactionRef,
-        {
-          status: 'success',
-          amount: totalPayableInPaise / 100,
-          rentAmountInPaise,
-          convenienceFeeInPaise,
-          totalPayableInPaise,
-          estimatedGatewayCostInPaise,
-          gatewayResponse: {
-            razorpayPaymentId,
-            razorpayOrderId,
-          },
-          verificationSignature: razorpaySignature,
-          completedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
-
-      return true;
-    });
-
-    if (finalized) {
-      await incrementFeeAnalytics({
-        gateway: 'razorpay',
-        rentAmountInPaise: Number(payment.rentAmountInPaise || (Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100)),
-        convenienceFeeInPaise: Number(payment.convenienceFeeInPaise || 0),
-        totalPayableInPaise: Number(payment.totalPayableInPaise || payment.amountInPaise || ((Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100) + Number(payment.convenienceFeeInPaise || 0))),
-        estimatedGatewayCostInPaise: Number(payment.estimatedGatewayCostInPaise || payment.convenienceFeeInPaise || 0),
+    const transactionRef = db.collection('transactions').doc(transactionId);
+    const transactionSnap = await transactionRef.get();
+    if (transactionSnap.exists && transactionSnap.get('status') === 'success') {
+      logPaymentEvent('info', 'PAYMENT_SUCCESS', {
+        userId: context.auth.uid,
+        tenantId,
+        ownerId,
+        paymentId,
+        idempotencyKey,
+        amount,
+        method: gateway,
+        status: 'paid',
       });
+      return { ok: true };
     }
 
-    return { ok: true };
-  }
+    if (gateway === 'razorpay') {
+      const { keySecret, mode } = getRazorpayConfig();
+      if (!keySecret) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          `Razorpay secret not configured for mode=${mode}`,
+        );
+      }
+
+      const razorpayOrderId = payload.orderId;
+      const razorpayPaymentId = payload.paymentId;
+      const razorpaySignature = payload.signature;
+
+      if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Missing Razorpay verification data',
+        );
+      }
+
+      const expected = crypto
+        .createHmac('sha256', keySecret)
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest('hex');
+
+      if (!safeEqualDigest(expected, razorpaySignature, 'hex')) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Invalid Razorpay signature',
+        );
+      }
+
+      const finalized = await db.runTransaction(async (t) => {
+        const txSnap = await t.get(transactionRef);
+        if (txSnap.exists && txSnap.get('status') === 'success') return false;
+
+        const rentAmountInPaise = Number(payment.rentAmountInPaise || (Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100));
+        const convenienceFeeInPaise = Number(payment.convenienceFeeInPaise || 0);
+        const totalPayableInPaise = Number(payment.totalPayableInPaise || payment.amountInPaise || (rentAmountInPaise + convenienceFeeInPaise));
+        const estimatedGatewayCostInPaise = Number(payment.estimatedGatewayCostInPaise || convenienceFeeInPaise);
+
+        t.set(
+          paymentRef,
+          {
+            status: 'paid',
+            method: 'razorpay',
+            transactionId: transactionId,
+            razorpayOrderId,
+            paidAmount: Math.trunc(rentAmountInPaise / 100),
+            paidRentAmountInPaise: rentAmountInPaise,
+            paidConvenienceFeeInPaise: convenienceFeeInPaise,
+            collectedAmountInPaise: totalPayableInPaise,
+            paidAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+
+        t.set(
+          transactionRef,
+          {
+            status: 'success',
+            amount: totalPayableInPaise / 100,
+            rentAmountInPaise,
+            convenienceFeeInPaise,
+            totalPayableInPaise,
+            estimatedGatewayCostInPaise,
+            gatewayResponse: {
+              razorpayPaymentId,
+              razorpayOrderId,
+            },
+            verificationSignature: razorpaySignature,
+            completedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+
+        return true;
+      });
+
+      if (finalized) {
+        await incrementFeeAnalytics({
+          gateway: 'razorpay',
+          rentAmountInPaise: Number(payment.rentAmountInPaise || (Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100)),
+          convenienceFeeInPaise: Number(payment.convenienceFeeInPaise || 0),
+          totalPayableInPaise: Number(payment.totalPayableInPaise || payment.amountInPaise || ((Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100) + Number(payment.convenienceFeeInPaise || 0))),
+          estimatedGatewayCostInPaise: Number(payment.estimatedGatewayCostInPaise || payment.convenienceFeeInPaise || 0),
+        });
+
+        await verifyPaymentAfterWriteOrThrow({
+          paymentRef,
+          tenantId: String(payment.tenantId || '').trim(),
+          ownerId: String(payment.ownerId || '').trim(),
+          method: 'razorpay',
+          idempotencyKey: String(payment.idempotencyKey || payment.transactionId || '').trim(),
+          amount: normalizeIntegerAmount(payment.baseAmount || payment.rentAmount || payment.amount),
+        });
+      }
+
+      logPaymentEvent('info', 'PAYMENT_SUCCESS', {
+        userId: context.auth.uid,
+        tenantId,
+        ownerId,
+        paymentId,
+        idempotencyKey,
+        amount,
+        method: gateway,
+        status: 'paid',
+      });
+
+      return { ok: true };
+    }
 
   if (gateway === 'stripe') {
     throw new functions.https.HttpsError(
@@ -2243,7 +3493,7 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
     await db.collection('payments').doc(paymentId).set(
       {
         status: 'paid',
-        method: 'online',
+        method: 'cashfree',
         transactionId: cfTransactionId,
         cashfreeOrderId,
         paidAmount: Math.trunc(rentAmountInPaise / 100),
@@ -2280,13 +3530,284 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
       estimatedGatewayCostInPaise,
     });
 
+    await verifyPaymentAfterWriteOrThrow({
+      paymentRef: db.collection('payments').doc(paymentId),
+      tenantId: String(paymentDoc.get('tenantId') || '').trim(),
+      ownerId: String(paymentDoc.get('ownerId') || '').trim(),
+      method: 'cashfree',
+      idempotencyKey: String(paymentDoc.get('idempotencyKey') || paymentDoc.get('transactionId') || '').trim(),
+      amount: normalizeIntegerAmount(paymentDoc.get('baseAmount') || paymentDoc.get('rentAmount') || paymentDoc.get('amount')),
+    });
+
+    logPaymentEvent('info', 'PAYMENT_SUCCESS', {
+      userId: context.auth.uid,
+      tenantId,
+      ownerId,
+      paymentId,
+      idempotencyKey,
+      amount,
+      method: gateway,
+      status: 'paid',
+    });
+
     return { success: true };
   }
 
-  throw new functions.https.HttpsError(
-    'invalid-argument',
-    'Unsupported payment gateway',
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Unsupported payment gateway',
+    );
+  } catch (error) {
+    const errorCode = String(error?.code || 'internal');
+    const errorMessage = error?.message || String(error);
+    logPaymentEvent('error', 'PAYMENT_FAILURE', {
+      userId: context.auth.uid,
+      tenantId,
+      ownerId,
+      paymentId,
+      idempotencyKey,
+      amount,
+      method: gateway,
+      status: 'failed',
+      errorCode,
+      errorMessage,
+    });
+    throw error;
+  }
+});
+
+// ==========================================================
+// ADMIN DISASTER CONTROL + RECOVERY
+// ==========================================================
+
+exports.togglePayments = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  await assertAdminAccessOrThrow(context.auth.uid);
+
+  const enabled = data?.enabled;
+  const reason = String(data?.reason || '').trim();
+  if (typeof enabled !== 'boolean') {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'enabled must be a boolean',
+    );
+  }
+
+  const ref = db.collection('appConfig').doc('global');
+  const current = await ref.get();
+  const previousValue = current.exists ? current.data() : null;
+
+  await ref.set(
+    {
+      paymentsEnabled: enabled,
+      lastUpdatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
   );
+
+  await logAdminAudit({
+    action: 'toggle_payments',
+    adminId: context.auth.uid,
+    targetId: 'appConfig/global',
+    oldValue: previousValue,
+    newValue: { paymentsEnabled: enabled },
+    reason: reason || null,
+  });
+
+  return { ok: true, paymentsEnabled: enabled };
+});
+
+exports.deletePayment = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  await assertAdminAccessOrThrow(context.auth.uid);
+
+  const paymentId = String(data?.paymentId || '').trim();
+  const reason = String(data?.reason || '').trim();
+  if (!paymentId || !reason) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'paymentId and reason are required',
+    );
+  }
+
+  const paymentRef = db.collection('payments').doc(paymentId);
+  const paymentSnap = await paymentRef.get();
+  if (!paymentSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Payment not found');
+  }
+
+  const payment = paymentSnap.data() || {};
+
+  await paymentRef.set(
+    {
+      status: 'deleted',
+      isDeleted: true,
+      deletedAt: FieldValue.serverTimestamp(),
+      deletedBy: context.auth.uid,
+      deleteReason: reason,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  const transactionId = String(payment.transactionId || '').trim();
+  if (transactionId) {
+    await db.collection('transactions').doc(transactionId).set(
+      {
+        status: 'void',
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  }
+
+  await logAdminAudit({
+    action: 'delete_payment',
+    adminId: context.auth.uid,
+    targetId: paymentId,
+    oldValue: payment,
+    newValue: {
+      status: 'deleted',
+      isDeleted: true,
+      deletedBy: context.auth.uid,
+    },
+    reason,
+  });
+
+  return { ok: true };
+});
+
+exports.correctPayment = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  await assertAdminAccessOrThrow(context.auth.uid);
+
+  const paymentId = String(data?.paymentId || '').trim();
+  const updates = data?.updates || {};
+  const reason = String(data?.reason || '').trim();
+  if (!paymentId || !reason || typeof updates !== 'object') {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'paymentId, updates, and reason are required',
+    );
+  }
+
+  const paymentRef = db.collection('payments').doc(paymentId);
+  let oldValue = null;
+  let newValue = null;
+
+  await db.runTransaction(async (txn) => {
+    const snap = await txn.get(paymentRef);
+    if (!snap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Payment not found');
+    }
+
+    const payment = snap.data() || {};
+    oldValue = payment;
+
+    const baseAmount = normalizeIntegerAmount(
+      payment.baseAmount || payment.rentAmount || payment.amount,
+    );
+    const paidAmountRaw = updates.paidAmount ?? payment.paidAmount ?? 0;
+    const remainingAmountRaw = updates.remainingAmount ?? (baseAmount - paidAmountRaw);
+    const paidAmount = normalizeIntegerAmount(paidAmountRaw);
+    const remainingAmount = normalizeIntegerAmount(remainingAmountRaw);
+
+    if (paidAmount < 0 || remainingAmount < 0 || (paidAmount + remainingAmount) !== baseAmount) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Invalid payment correction values',
+      );
+    }
+
+    const status = updates.status
+      ? String(updates.status).trim().toLowerCase()
+      : resolvePaymentStatusFromAmounts({ paidAmount, remainingAmount });
+
+    newValue = {
+      paidAmount,
+      remainingAmount,
+      status,
+      correctedBy: context.auth.uid,
+      correctionReason: reason,
+      correctedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    txn.set(paymentRef, newValue, { merge: true });
+  });
+
+  await logAdminAudit({
+    action: 'correct_payment',
+    adminId: context.auth.uid,
+    targetId: paymentId,
+    oldValue,
+    newValue,
+    reason,
+  });
+
+  return { ok: true };
+});
+
+exports.recalculateTenantBalance = functions.https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  await assertAdminAccessOrThrow(context.auth.uid);
+
+  const tenantId = String(data?.tenantId || '').trim();
+  if (!tenantId) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'tenantId is required',
+    );
+  }
+
+  const paymentsSnap = await db
+    .collection('payments')
+    .where('tenantId', '==', tenantId)
+    .get();
+
+  let totalPaid = 0;
+  let totalRemaining = 0;
+  let lastPaymentAt = null;
+
+  paymentsSnap.forEach((doc) => {
+    const payment = doc.data() || {};
+    if (payment.isDeleted === true || String(payment.status || '').toLowerCase() === 'deleted') {
+      return;
+    }
+
+    const baseAmount = normalizeIntegerAmount(payment.baseAmount || payment.rentAmount || payment.amount);
+    const paidAmount = normalizeIntegerAmount(payment.paidAmount || 0);
+    const remainingAmount = normalizeIntegerAmount(payment.remainingAmount || Math.max(0, baseAmount - paidAmount));
+
+    const paid = paidAmount > 0 ? paidAmount : (String(payment.status || '').toLowerCase() === 'paid' ? baseAmount : 0);
+    totalPaid += paid;
+    totalRemaining += Math.max(0, remainingAmount);
+
+    const paidAt = toDate(payment.paidAt) || toDate(payment.updatedAt) || toDate(payment.createdAt);
+    if (paidAt && (!lastPaymentAt || paidAt > lastPaymentAt)) {
+      lastPaymentAt = paidAt;
+    }
+  });
+
+  await db.collection('tenants').doc(tenantId).set(
+    {
+      totalPaidAmount: totalPaid,
+      totalRemainingAmount: totalRemaining,
+      balanceUpdatedAt: FieldValue.serverTimestamp(),
+      lastPaymentAt: lastPaymentAt ? Timestamp.fromDate(lastPaymentAt) : null,
+    },
+    { merge: true },
+  );
+
+  await logAdminAudit({
+    action: 'recalculate_tenant_balance',
+    adminId: context.auth.uid,
+    targetId: tenantId,
+    newValue: { totalPaid, totalRemaining },
+    reason: 'recalculate',
+  });
+
+  return { ok: true, totalPaid, totalRemaining };
 });
 
 // ==========================================================
@@ -2344,6 +3865,8 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
   const ownerId = context.auth.uid;
   await assertOwnerAccessOrThrow(ownerId);
 
+  await assertPaymentsEnabledOrThrow({ gateway: 'razorpay' });
+
   const tenantId = String(data?.tenantId || '').trim();
   const propertyId = String(data?.propertyId || '').trim();
   const idempotencyKey = String(data?.idempotencyKey || '').trim();
@@ -2363,6 +3886,17 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
       'Amount exceeds allowed maximum',
     );
   }
+
+  await logPaymentIntegrityEvent('PAYMENT_ATTEMPT', {
+    tenantId,
+    propertyId,
+    actorUid: ownerId,
+    ownerId,
+    amount,
+    method: 'razorpay',
+    idempotencyKey,
+    timestamp: Date.now(),
+  });
 
   const feeConfig = await loadPaymentFeeConfig('razorpay');
   const feeBreakdown = calculateFeeBreakdownInPaise({
@@ -2398,15 +3932,95 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
   const tenantData = tenantDoc.data() || {};
   const propertyData = propertyDoc.data() || {};
 
-  if (String(propertyData.ownerId || '') !== ownerId) {
-    throw new functions.https.HttpsError('permission-denied', 'Property does not belong to owner');
+  const policy = resolveTenantOwnerLinkPolicy({
+    tenantData,
+    propertyData,
+    propertyId,
+    actorUid: ownerId,
+    enforceOwnerActor: true,
+  });
+
+  if (policy.needsTenantBackfill) {
+    assertTenantBackfillProofOrThrow({
+      tenantData,
+      providedToken: data?.tenantLinkToken,
+    });
+
+    await tenantRef.set(
+      {
+        ownerId,
+        propertyId,
+        linkProvenAt: FieldValue.serverTimestamp(),
+        ownerAssignmentTokenHash: FieldValue.delete(),
+        tenantLinkTokenHash: FieldValue.delete(),
+        ownerAssignmentToken: FieldValue.delete(),
+        tenantLinkToken: FieldValue.delete(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
   }
-  if (String(tenantData.ownerId || '') !== ownerId) {
-    throw new functions.https.HttpsError('permission-denied', 'Tenant does not belong to owner');
+
+  const existingByIdempotency = await findPaymentByIdempotencyKey(idempotencyKey);
+  if (existingByIdempotency) {
+    const existingData = existingByIdempotency.data() || {};
+    const existingTenantId = String(existingData.tenantId || '').trim();
+    const existingOwnerId = String(existingData.ownerId || '').trim();
+    const existingPropertyId = String(existingData.propertyId || '').trim();
+    const existingMethod = String(existingData.method || '').trim().toLowerCase();
+    const existingAmount = normalizeIntegerAmount(existingData.baseAmount || existingData.amount);
+
+    if (
+      existingTenantId !== tenantId ||
+      existingOwnerId !== ownerId ||
+      existingPropertyId !== propertyId ||
+      existingMethod !== 'razorpay' ||
+      existingAmount !== amount
+    ) {
+      throw new functions.https.HttpsError('failed-precondition', 'idempotency-conflict');
+    }
+
+    await logPaymentIntegrityEvent('IDEMPOTENCY_HIT', {
+      paymentId: existingByIdempotency.id,
+      tenantId,
+      ownerId,
+      propertyId,
+      amount,
+      method: 'razorpay',
+      idempotencyKey,
+      timestamp: Date.now(),
+    });
+
+    return {
+      paymentId: String(existingData.paymentId || existingByIdempotency.id).trim(),
+      gateway: 'razorpay',
+      amountInPaise: Number(
+        existingData.amountInPaise
+          || existingData.totalPayableInPaise
+          || feeBreakdown.totalPayableInPaise,
+      ),
+      rentAmountInPaise: Number(
+        existingData.rentAmountInPaise || feeBreakdown.rentAmountInPaise,
+      ),
+      convenienceFeeInPaise: Number(
+        existingData.convenienceFeeInPaise || feeBreakdown.convenienceFeeInPaise,
+      ),
+      totalPayableInPaise: Number(
+        existingData.totalPayableInPaise || feeBreakdown.totalPayableInPaise,
+      ),
+      currency: String(existingData.currency || currency),
+      idempotencyKey,
+      orderId: existingData.razorpayOrderId || null,
+      keyId: existingData.razorpayKeyId || null,
+    };
   }
-  if (String(tenantData.propertyId || '') !== propertyId) {
-    throw new functions.https.HttpsError('failed-precondition', 'Tenant is not assigned to this property');
-  }
+
+  await blockDuplicatePaymentOrThrow({
+    tenantId,
+    amount,
+    method: 'razorpay',
+    idempotencyKey,
+  });
 
   const existingTransaction = await transactionRef.get();
   if (existingTransaction.exists) {
@@ -2414,6 +4028,16 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
     if (existingPaymentId) {
       const existingPayment = await db.collection('payments').doc(existingPaymentId).get();
       if (existingPayment.exists) {
+        await logPaymentIntegrityEvent('IDEMPOTENCY_HIT', {
+          paymentId: existingPaymentId,
+          tenantId,
+          ownerId,
+          propertyId,
+          amount,
+          method: 'razorpay',
+          idempotencyKey,
+          timestamp: Date.now(),
+        });
         return {
           paymentId: existingPaymentId,
           gateway: 'razorpay',
@@ -2468,7 +4092,7 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
       gatewayCostPercent: feeConfig.gatewayCostPercent,
       gstPercent: feeConfig.gstPercent,
       status: 'pending',
-      method: 'Razorpay',
+      method: 'razorpay',
       currency,
       transactionId: idempotencyKey,
       idempotencyKey,
@@ -2495,9 +4119,38 @@ exports.createOwnerRazorpayPaymentIntent = functions.https.onCall(async (data, c
     }, { merge: true });
   });
 
-  const { keyId, keySecret } = getRazorpayConfig();
+  await logPaymentIntegrityEvent('PAYMENT_CREATED', {
+    paymentId,
+    tenantId,
+    ownerId,
+    propertyId,
+    amount,
+    method: 'razorpay',
+    idempotencyKey,
+    timestamp: Date.now(),
+  });
+
+  await verifyPaymentAfterWriteOrThrow({
+    paymentRef,
+    tenantId,
+    ownerId,
+    method: 'razorpay',
+    idempotencyKey,
+    amount,
+  });
+
+  const { keyId, keySecret, mode, keyPrefixMismatch } = getRazorpayConfig();
+  if (keyPrefixMismatch) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `Razorpay mode-key mismatch: mode=${mode}`,
+    );
+  }
   if (!keyId || !keySecret) {
-    throw new functions.https.HttpsError('failed-precondition', 'Razorpay keys not configured');
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `Razorpay keys not configured for mode=${mode}`,
+    );
   }
 
   const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
@@ -2585,9 +4238,18 @@ exports.verifyOwnerRazorpayPayment = functions.https.onCall(async (data, context
     throw new functions.https.HttpsError('failed-precondition', 'Order mismatch for payment');
   }
 
-  const { keyId, keySecret } = getRazorpayConfig();
+  const { keyId, keySecret, mode, keyPrefixMismatch } = getRazorpayConfig();
+  if (keyPrefixMismatch) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `Razorpay mode-key mismatch: mode=${mode}`,
+    );
+  }
   if (!keyId || !keySecret) {
-    throw new functions.https.HttpsError('failed-precondition', 'Razorpay secret not configured');
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `Razorpay secret not configured for mode=${mode}`,
+    );
   }
 
   const expected = crypto
@@ -2655,7 +4317,7 @@ exports.verifyOwnerRazorpayPayment = functions.https.onCall(async (data, context
 
     txn.set(paymentRef, {
       status: 'paid',
-      method: 'Razorpay',
+      method: 'razorpay',
       paidAmount: Number(payment.amount || 0),
       remainingAmount: 0,
       collectedAmountInPaise: totalPayableInPaise,
@@ -2710,6 +4372,15 @@ exports.verifyOwnerRazorpayPayment = functions.https.onCall(async (data, context
       estimatedGatewayCostInPaise: Number(
         payment.estimatedGatewayCostInPaise || payment.convenienceFeeInPaise || 0,
       ),
+    });
+
+    await verifyPaymentAfterWriteOrThrow({
+      paymentRef,
+      tenantId: String(payment.tenantId || '').trim(),
+      ownerId,
+      method: 'razorpay',
+      idempotencyKey: String(payment.idempotencyKey || payment.transactionId || '').trim(),
+      amount: normalizeIntegerAmount(payment.baseAmount || payment.amount),
     });
   }
 
@@ -3263,11 +4934,17 @@ exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
   assertCallableAuth(context);
   await assertTenantAccessOrThrow(context.auth.uid);
 
-  const { keyId, keySecret } = getRazorpayConfig();
+  const { keyId, keySecret, mode, keyPrefixMismatch } = getRazorpayConfig();
+  if (keyPrefixMismatch) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `Razorpay mode-key mismatch: mode=${mode}`,
+    );
+  }
   if (!keyId || !keySecret) {
     throw new functions.https.HttpsError(
       'failed-precondition',
-      'Razorpay keys not configured',
+      `Razorpay keys not configured for mode=${mode}`,
     );
   }
 
@@ -3364,11 +5041,11 @@ exports.confirmRazorpayPayment = functions.https.onCall(
     assertCallableAuth(context);
     await assertTenantAccessOrThrow(context.auth.uid);
 
-    const { keySecret } = getRazorpayConfig();
+    const { keySecret, mode } = getRazorpayConfig();
     if (!keySecret) {
       throw new functions.https.HttpsError(
         'failed-precondition',
-        'Razorpay secret not configured',
+        `Razorpay secret not configured for mode=${mode}`,
       );
     }
 

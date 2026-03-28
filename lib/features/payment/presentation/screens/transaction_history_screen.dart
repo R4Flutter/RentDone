@@ -46,6 +46,44 @@ class TransactionHistoryScreen extends ConsumerStatefulWidget {
 
 class _TransactionHistoryScreenState
     extends ConsumerState<TransactionHistoryScreen> {
+  String _normalizePropertyName(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  Future<String?> _resolveOwnerPropertyIdByName({
+    required String ownerId,
+    required String propertyName,
+  }) async {
+    final target = _normalizePropertyName(propertyName);
+    if (target.isEmpty) {
+      return null;
+    }
+
+    final exactMatch = await FirebaseFirestore.instance
+        .collection('properties')
+        .where('ownerId', isEqualTo: ownerId)
+        .where('name', isEqualTo: propertyName.trim())
+        .limit(1)
+        .get();
+    if (exactMatch.docs.isNotEmpty) {
+      return exactMatch.docs.first.id;
+    }
+
+    final allOwnerProperties = await FirebaseFirestore.instance
+        .collection('properties')
+        .where('ownerId', isEqualTo: ownerId)
+        .get();
+
+    for (final doc in allOwnerProperties.docs) {
+      final name = (doc.data()['name'] as String? ?? '').trim();
+      if (_normalizePropertyName(name) == target) {
+        return doc.id;
+      }
+    }
+
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -372,11 +410,46 @@ class _TransactionHistoryScreenState
       }
 
       final tenantData = tenantDoc.data() ?? <String, dynamic>{};
-      final propertyId = (tenantData['propertyId'] as String? ?? '').trim();
+      final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
+      final tenantPropertyName =
+          (tenantData['propertyName'] as String? ?? '').trim();
+
+      var propertyId = (tenantData['propertyId'] as String? ?? '').trim();
+
+      if (propertyId.isEmpty && ownerId.isNotEmpty) {
+        final preferredName = tenantPropertyName;
+
+        if (preferredName.isNotEmpty) {
+          final resolved = await _resolveOwnerPropertyIdByName(
+            ownerId: ownerId,
+            propertyName: preferredName,
+          );
+          if (resolved != null && resolved.isNotEmpty) {
+            propertyId = resolved;
+          }
+        }
+
+        if (propertyId.isEmpty) {
+          final ownerProperties = await FirebaseFirestore.instance
+              .collection('properties')
+              .where('ownerId', isEqualTo: ownerId)
+              .limit(2)
+              .get();
+          if (ownerProperties.docs.length == 1) {
+            propertyId = ownerProperties.docs.first.id;
+          }
+        }
+      }
+
       if (propertyId.isEmpty) {
+        final linkedToOwner = ownerId.isNotEmpty;
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Property linkage missing for this tenant.'),
+          SnackBar(
+            content: Text(
+              linkedToOwner
+                  ? 'Owner property match not found. Ensure tenant property name matches owner property name.'
+                  : 'Tenant is not linked to an owner property yet. Owner must assign this tenant first.',
+            ),
           ),
         );
         return;
@@ -2406,10 +2479,25 @@ class _TenantPaymentHeroState extends ConsumerState<_TenantPaymentHero>
             'Payment failed. No money deducted. Try again.';
         return _TrustFlowResult(isSuccess: false, message: msg);
       }
-    } catch (_) {
-      return const _TrustFlowResult(
+    } on PaymentFailure catch (failure) {
+      final cleaned = failure.message.trim();
+      return _TrustFlowResult(
         isSuccess: false,
-        message: 'Payment failed. No money deducted. Try again.',
+        message: cleaned.isEmpty
+            ? 'Payment failed. No money deducted. Try again.'
+            : cleaned,
+      );
+    } catch (error) {
+      final raw = error.toString().replaceFirst('Exception: ', '').trim();
+      final payState = ref.read(paymentDashboardProvider).asData?.value;
+      final fallback = payState?.message?.trim() ?? '';
+      return _TrustFlowResult(
+        isSuccess: false,
+        message: raw.isNotEmpty
+            ? raw
+            : (fallback.isNotEmpty
+                  ? fallback
+                  : 'Payment failed. No money deducted. Try again.'),
       );
     } finally {
       if (mounted) setState(() => _isPayingRazorpay = false);

@@ -79,7 +79,10 @@ final calculateLateFeeUseCaseProvider = Provider<CalculateLateFee>((ref) {
 });
 
 final razorpayServiceProvider = Provider<RazorpayService>((ref) {
-  const key = String.fromEnvironment('RAZORPAY_KEY', defaultValue: '');
+  const key = String.fromEnvironment(
+    'RAZORPAY_KEY',
+    defaultValue: 'rzp_test_SWZErkO7aPAnNO',
+  );
   final service = RazorpayService(razorpayKey: key);
   ref.onDispose(service.dispose);
   return service;

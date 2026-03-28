@@ -15,11 +15,19 @@ service cloud.firestore {
     }
 
     function currentRole() {
-      return userDoc(currentUid()).data.role;
+      return request.auth.token.role;
     }
 
     function isOwner() {
       return isAuthenticated() && currentRole() == 'owner';
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && (
+          request.auth.token.admin == true
+          || currentRole() == 'admin'
+        );
     }
 
     function isOwnerOrLegacySelf(ownerId) {
@@ -36,6 +44,16 @@ service cloud.firestore {
       return isAuthenticated() && currentRole() == 'tenant';
     }
 
+    function isVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function tenantPropertyId(uid) {
+      return exists(/databases/$(database)/documents/tenants/$(uid))
+        ? get(/databases/$(database)/documents/tenants/$(uid)).data.propertyId
+        : null;
+    }
+
     function roleIsValid(role) {
       return role in ['owner', 'tenant'];
     }
@@ -43,7 +61,7 @@ service cloud.firestore {
     function userRoleUnchanged() {
       return (('role' in resource.data) && request.resource.data.role == resource.data.role)
         || (!('role' in resource.data)
-          && roleIsValid(request.resource.data.role));
+          && request.resource.data.role == 'tenant');
     }
 
     function userUidUnchanged() {
@@ -213,7 +231,7 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && userId == currentUid()
         && request.resource.data.uid == currentUid()
-        && roleIsValid(request.resource.data.role)
+        && request.resource.data.role == 'tenant'
         && notificationsShapeIsValid(request.resource.data);
 
       allow update: if isAuthenticated()
@@ -286,16 +304,19 @@ service cloud.firestore {
 
     match /properties/{propertyId} {
       allow read: if (isOwner() && resource.data.ownerId == currentUid())
-        || (isTenant() && resource.data.isPublished == true);
+        || (isTenant() && tenantPropertyId(currentUid()) == propertyId);
 
       allow create: if isOwner()
+        && isVerified()
         && request.resource.data.ownerId == currentUid();
 
       allow update: if isOwner()
+        && isVerified()
         && resource.data.ownerId == currentUid()
         && request.resource.data.ownerId == resource.data.ownerId;
 
       allow delete: if isOwner()
+        && isVerified()
         && resource.data.ownerId == currentUid();
     }
 
@@ -311,13 +332,15 @@ service cloud.firestore {
 
       allow create: if (
           isOwner()
+          && isVerified()
           && request.resource.data.ownerId == currentUid()
           && ownerOwnsProperty(request.resource.data.propertyId)
         )
-        || tenantCanSelfCreateProfile(tenantId);
+        || (tenantCanSelfCreateProfile(tenantId) && isVerified());
 
       allow update: if (
           isOwner()
+          && isVerified()
           && resource.data.ownerId == currentUid()
           && request.resource.data.ownerId == resource.data.ownerId
           && ownerOwnsProperty(request.resource.data.propertyId)
@@ -326,12 +349,13 @@ service cloud.firestore {
         )
         || (
           tenantOwnsDocByIdOrEmail(tenantId, resource.data)
+          && isVerified()
           && request.resource.data.ownerId == resource.data.ownerId
           && request.resource.data.email == resource.data.email
           && request.resource.data.authUid == resource.data.authUid
         );
 
-      allow delete: if isOwner() && (
+      allow delete: if isOwner() && isVerified() && (
         resource.data.ownerId == currentUid()
         || (
           ('propertyId' in resource.data)
@@ -344,23 +368,9 @@ service cloud.firestore {
       allow read: if ownerCanAccessTenantByParent(tenantId)
         || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
 
-      allow create: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
-        && paymentId.matches('^[0-9]{4}-[0-9]{2}$')
-        && request.resource.data.paymentMonth == paymentId
-        && request.resource.data.amount is int
-        && request.resource.data.amount > 0
-        && request.resource.data.paymentMethod in ['UPI', 'Cash', 'Bank Transfer']
-        && request.resource.data.status == 'paid';
-
-      allow update: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
-        && resource.data.paymentMonth == request.resource.data.paymentMonth
-        && request.resource.data.paymentMonth == paymentId
-        && request.resource.data.amount is int
-        && request.resource.data.amount > 0
-        && request.resource.data.paymentMethod in ['UPI', 'Cash', 'Bank Transfer']
-        && request.resource.data.status == 'paid';
-
-      allow delete: if false;
+      // Legacy tenant subcollection payment writes are disabled.
+      // Payments must be written by Cloud Functions (Admin SDK).
+      allow create, update, delete: if false;
     }
 
     match /tenants/{tenantId}/room_details/{docId} {
@@ -443,37 +453,23 @@ service cloud.firestore {
       allow read: if (isOwner() && resource.data.ownerId == currentUid())
         || (isTenant() && resource.data.tenantId == currentUid());
 
-      allow create: if (
-          isOwner()
-          && request.resource.data.ownerId == currentUid()
-          && request.resource.data.propertyId is string
-          && request.resource.data.tenantId is string
-          && ownerOwnsProperty(request.resource.data.propertyId)
-          && exists(/databases/$(database)/documents/tenants/$(request.resource.data.tenantId))
-          && get(/databases/$(database)/documents/tenants/$(request.resource.data.tenantId)).data.ownerId == currentUid()
-          && get(/databases/$(database)/documents/tenants/$(request.resource.data.tenantId)).data.propertyId == request.resource.data.propertyId
-          && paymentFieldsLookValid(request.resource.data)
-        )
-        || (
-          isTenant()
-          && request.resource.data.tenantId == currentUid()
-          && request.resource.data.propertyId is string
-          && request.resource.data.ownerId is string
-          && exists(/databases/$(database)/documents/tenants/$(currentUid()))
-          && get(/databases/$(database)/documents/tenants/$(currentUid())).data.ownerId == request.resource.data.ownerId
-          && get(/databases/$(database)/documents/tenants/$(currentUid())).data.propertyId == request.resource.data.propertyId
-          && paymentFieldsLookValid(request.resource.data)
-        );
+      // Payment writes are server-only via Cloud Functions (Admin SDK bypasses rules).
+      allow create, update, delete: if false;
+    }
 
-      allow update: if isOwner()
-        && resource.data.ownerId == currentUid()
-        && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.tenantId == resource.data.tenantId
-        && request.resource.data.propertyId == resource.data.propertyId
-        && paymentFieldsLookValid(request.resource.data)
-        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+    match /appConfig/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
 
-      allow delete: if false;
+    match /admin_audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isAdmin() && adminId == currentUid();
+      allow write: if false;
     }
 
     match /user_images/{imageId} {

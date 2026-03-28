@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rentdone/core/trust/tenant_trust_score.dart';
 import 'package:rentdone/core/exceptions/security_exceptions.dart';
+import 'package:rentdone/core/logging/payment_event_logger.dart';
 import '../models/payment_dto.dart';
 
 /// Firestore service for payment/transaction data operations
@@ -55,6 +56,7 @@ class PaymentFirestoreService {
 
   /// Record a payment
   Future<void> recordPayment(PaymentDTO paymentDTO) async {
+    final logger = PaymentEventLogger.instance;
     try {
       final paymentsRef = _firestore.collection('payments');
       final paymentRef = paymentDTO.id.trim().isEmpty
@@ -79,6 +81,18 @@ class PaymentFirestoreService {
       final tenantRef = _firestore
           .collection('tenants')
           .doc(savedPayment.tenantId);
+
+      await logger.logEvent(
+        event: 'PAYMENT_CREATE_ATTEMPT',
+        userId: _auth.currentUser?.uid,
+        tenantId: paymentDTO.tenantId,
+        ownerId: paymentDTO.ownerId,
+        paymentId: paymentRef.id,
+        idempotencyKey: paymentDTO.referenceId,
+        amount: paymentDTO.amount,
+        method: paymentDTO.paymentMethod,
+        status: 'initiated',
+      );
 
       await _firestore.runTransaction((txn) async {
         final tenantDoc = await txn.get(tenantRef);
@@ -156,7 +170,34 @@ class PaymentFirestoreService {
           'ownerId': savedPayment.ownerId,
         });
       });
+
+      await logger.logEvent(
+        event: 'PAYMENT_SUCCESS',
+        userId: _auth.currentUser?.uid,
+        tenantId: paymentDTO.tenantId,
+        ownerId: paymentDTO.ownerId,
+        paymentId: savedPayment.id,
+        idempotencyKey: paymentDTO.referenceId,
+        amount: paymentDTO.amount,
+        method: paymentDTO.paymentMethod,
+        status: savedPayment.status,
+      );
     } catch (e) {
+      await logger.logError(
+        event: 'PAYMENT_FAILURE',
+        userId: _auth.currentUser?.uid,
+        tenantId: paymentDTO.tenantId,
+        ownerId: paymentDTO.ownerId,
+        paymentId: paymentDTO.id.isEmpty ? null : paymentDTO.id,
+        idempotencyKey: paymentDTO.referenceId,
+        amount: paymentDTO.amount,
+        method: paymentDTO.paymentMethod,
+        status: 'failed',
+        errorCode: 'record_payment_failed',
+        errorMessage: e.toString(),
+        error: e,
+        stackTrace: StackTrace.current,
+      );
       rethrow;
     }
   }
@@ -210,14 +251,45 @@ class PaymentFirestoreService {
   }) async {
     try {
       final offset = (page - 1) * limit;
-      final docs = await _firestore
-          .collection('payments')
-          .where('tenantId', isEqualTo: tenantId)
-          .orderBy('createdAt', descending: true)
-          .limit(limit + offset)
-          .get();
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+      try {
+        final result = await _firestore
+            .collection('payments')
+            .where('tenantId', isEqualTo: tenantId)
+            .orderBy('createdAt', descending: true)
+            .limit(limit + offset)
+            .get();
+        docs = result.docs;
+      } on FirebaseException catch (error) {
+        if (error.code != 'failed-precondition') rethrow;
 
-      final paginatedDocs = docs.docs.skip(offset).take(limit).toList();
+        // Fallback while composite index is provisioning.
+        final fallback = await _firestore
+            .collection('payments')
+            .where('tenantId', isEqualTo: tenantId)
+            .limit((limit + offset) * 8)
+            .get();
+
+        final sorted = [...fallback.docs]
+          ..sort((a, b) {
+            final aCreated = (a.data()['createdAt'] as Timestamp?)?.toDate();
+            final bCreated = (b.data()['createdAt'] as Timestamp?)?.toDate();
+
+            if (aCreated == null && bCreated == null) {
+              return b.id.compareTo(a.id);
+            }
+            if (aCreated == null) return 1;
+            if (bCreated == null) return -1;
+
+            final byDate = bCreated.compareTo(aCreated);
+            if (byDate != 0) return byDate;
+            return b.id.compareTo(a.id);
+          });
+
+        docs = sorted.take(limit + offset).toList();
+      }
+
+      final paginatedDocs = docs.skip(offset).take(limit).toList();
       return paginatedDocs
           .map((doc) => PaymentDTO.fromMap(doc.data()))
           .toList();

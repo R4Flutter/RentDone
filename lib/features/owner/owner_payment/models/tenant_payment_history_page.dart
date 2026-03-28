@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rentdone/features/owner/owner_payment/models/tenant_payment_record.dart';
 
 class TenantPaymentHistoryPage {
@@ -9,5 +10,5 @@ class TenantPaymentHistoryPage {
 
   final List<TenantPaymentRecord> items;
   final bool hasMore;
-  final DateTime? nextCursor;
+  final DocumentSnapshot<Map<String, dynamic>>? nextCursor;
 }

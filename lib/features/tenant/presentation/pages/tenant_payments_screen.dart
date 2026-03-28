@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/payment/data/gateways/tenant_razorpay_gateway_adapter.dart';
+import 'package:rentdone/features/payment/domain/entities/payment_failure.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/presentation/providers/payment_dashboard_provider.dart';
 import 'package:rentdone/features/payment/presentation/providers/payment_di.dart';
@@ -171,13 +172,24 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
           'Payment failed. Please try again.';
 
       messenger.showSnackBar(SnackBar(content: Text(message)));
-    } catch (_) {
+    } on PaymentFailure catch (failure) {
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Payment failed. Please try again.')),
-      );
+      final message = failure.message.trim().isEmpty
+          ? 'Payment failed. Please try again.'
+          : failure.message.trim();
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final raw = error.toString().replaceFirst('Exception: ', '').trim();
+      final message = raw.isEmpty
+          ? (ref.read(paymentDashboardProvider).asData?.value.message ??
+                'Payment failed. Please try again.')
+          : raw;
+      messenger.showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
         setState(() => _isPaying = false);
@@ -364,7 +376,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
           ),
         ),
       ),
-      error: (_, __) => _PageScaffold(
+      error: (_, _) => _PageScaffold(
         child: Center(
           child: Text(
             'Unable to load payments',
@@ -505,6 +517,10 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                     _BreakdownRow(
                       label: 'Gateway Fee (2%)',
                       value: _formatRupees(_feeAmount),
+                    ),
+                     _BreakdownRow(
+                      label: 'GST ',
+                      value: _formatRupees(_feeAmount *0.18),
                     ),
                     Divider(color: OwnerDashboardColors.border(context)),
                     _BreakdownRow(

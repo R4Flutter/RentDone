@@ -21,7 +21,8 @@ class FirebaseTenantStorageService {
   final FirebaseFirestore _firestore;
 
   static const int _maxSourceFileSizeBytes = 12 * 1024 * 1024;
-  static const int _targetCompressedBytes = 1024 * 1024;
+  static const int _targetImageCompressedBytes = 200 * 1024;
+  static const int _targetPdfUploadBytes = 500 * 1024;
   static const int _maxUploadBytes = 2 * 1024 * 1024;
   static const Set<String> _imageExtensions = {'jpg', 'jpeg', 'png', 'webp'};
 
@@ -241,6 +242,15 @@ class FirebaseTenantStorageService {
     }
 
     final uploadBytes = await uploadFile.length();
+    if (_imageExtensions.contains(extension) &&
+        uploadBytes > _targetImageCompressedBytes) {
+      throw Exception(
+        'Image could not be compressed to 200KB. Please choose a clearer or smaller image.',
+      );
+    }
+    if (extension == 'pdf' && uploadBytes > _targetPdfUploadBytes) {
+      throw Exception('PDF must be 500KB or below. Please upload a smaller PDF.');
+    }
     if (uploadBytes > _maxUploadBytes) {
       throw Exception(
         'Compressed file exceeds 2MB. Please upload a clearer or smaller file.',
@@ -352,7 +362,7 @@ class FirebaseTenantStorageService {
 
       current = File(compressed.path);
       final size = await current.length();
-      if (size <= _targetCompressedBytes) {
+      if (size <= _targetImageCompressedBytes) {
         return current;
       }
 

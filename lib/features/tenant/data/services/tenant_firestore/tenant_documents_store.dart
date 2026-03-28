@@ -67,17 +67,16 @@ class TenantDocumentsStore {
       tx.set(docRef, {
         'fileUrl': fileUrl,
         'originalUrl': fileUrl,
-        'thumbnailUrl': thumbnailUrl,
+        'thumbnailUrl': ?thumbnailUrl,
         'fileType': fileType,
         'publicId': publicId,
         'storagePath': storagePath,
-        'thumbnailStoragePath': thumbnailStoragePath,
+        'thumbnailStoragePath': ?thumbnailStoragePath,
         'uploadedAt': FieldValue.serverTimestamp(),
         'description': description,
         'category': category,
         'fileSizeBytes': fileSizeBytes,
-        if (thumbnailSizeBytes != null)
-          'thumbnailSizeBytes': thumbnailSizeBytes,
+        'thumbnailSizeBytes': ?thumbnailSizeBytes,
         'status': 'active',
       });
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_payment/data/services/owner_razorpay_payment_service.dart';
 import 'package:rentdone/features/owner/owner_payment/data/services/razorpay_service.dart';
+import 'package:rentdone/features/owner/owner_payment/domain/exceptions/payment_exceptions.dart';
 import 'package:rentdone/features/owner/owner_payment/models/payment_state.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/payment_processing_overlay.dart';
 import 'package:rentdone/shared/widgets/back_handler.dart';
@@ -43,13 +45,68 @@ class _RazorpayCheckoutScreenState
 
   StreamSubscription<PaymentState>? _paymentStateSubscription;
   StreamSubscription<PaymentResponse>? _paymentResponseSubscription;
+  StreamSubscription<PaymentGatewayException>? _paymentErrorSubscription;
   bool _didHandleSuccess = false;
   bool _didNavigateFailure = false;
   OwnerRazorpayPaymentIntent? _activeIntent;
   OwnerPaymentQuote? _paymentQuote;
   bool _isQuoteLoading = true;
   String? _quoteError;
+  String? _verificationFailureMessage;
+  String? _lastVisibleErrorMessage;
   late final String _idempotencyKey;
+
+  String _friendlyFunctionsError(FirebaseFunctionsException e) {
+    final code = e.code.toLowerCase();
+    final message = (e.message ?? '').trim();
+    final normalized = message.toLowerCase();
+
+    if (code == 'unavailable') {
+      return 'Payment backend unavailable. If testing locally, start Firebase emulators and run app with USE_FUNCTIONS_EMULATOR=true.';
+    }
+    if (code == 'not-found') {
+      return 'Payment service not found. Deploy Cloud Functions or switch to emulator mode.';
+    }
+    if (code == 'resource-exhausted') {
+      return 'Too many payment attempts. Please wait a minute and try again.';
+    }
+    if (code == 'unauthenticated') {
+      return 'Session expired. Please login again and retry payment.';
+    }
+    if (code == 'permission-denied') {
+      return 'You do not have permission for this payment.';
+    }
+    if (code == 'failed-precondition') {
+      if (normalized.contains('email-not-verified')) {
+        return 'Verify your email first, then retry payment.';
+      }
+      if (normalized.contains('maintenance-mode')) {
+        return 'Payments are temporarily paused for maintenance.';
+      }
+      if (normalized.contains('payments-disabled')) {
+        return 'Payments are currently disabled by admin settings.';
+      }
+      if (normalized.contains('razorpay-disabled')) {
+        return 'Razorpay is currently disabled by admin settings.';
+      }
+      if (normalized.contains('razorpay mode-key mismatch')) {
+        return 'Razorpay backend is in wrong mode-key combination. Switch backend to test mode with test keys.';
+      }
+      if (normalized.contains('keys not configured for mode') ||
+          normalized.contains('secret not configured for mode')) {
+        return 'Razorpay backend keys for current mode are missing. Configure test mode keys and redeploy functions.';
+      }
+      if (normalized.contains('tenant-link') ||
+          normalized.contains('invalid-owner') ||
+          normalized.contains('property-name-mismatch')) {
+        return 'Tenant-property link is invalid. Reassign tenant to the correct property and retry.';
+      }
+    }
+
+    return message.isEmpty
+        ? 'Unable to start payment right now. Please try again.'
+        : message;
+  }
 
   @override
   void initState() {
@@ -64,6 +121,7 @@ class _RazorpayCheckoutScreenState
   void dispose() {
     _paymentStateSubscription?.cancel();
     _paymentResponseSubscription?.cancel();
+    _paymentErrorSubscription?.cancel();
     super.dispose();
   }
 
@@ -86,11 +144,6 @@ class _RazorpayCheckoutScreenState
         case PaymentState.success:
           break;
         case PaymentState.failed:
-          if (mounted) {
-            _navigateToFailure(
-              'Payment could not be processed. Please try again.',
-            );
-          }
           break;
         case PaymentState.cancelled:
           if (mounted) {
@@ -112,6 +165,19 @@ class _RazorpayCheckoutScreenState
         }
       },
     );
+
+    _paymentErrorSubscription?.cancel();
+    _paymentErrorSubscription = razorpayService.paymentErrorStream.listen((
+      error,
+    ) {
+      if (!mounted) return;
+      final message = error.message.trim();
+      _navigateToFailure(
+        message.isEmpty
+            ? 'Payment could not be processed. Please try again.'
+            : message,
+      );
+    });
   }
 
   Future<void> _loadPaymentQuote() async {
@@ -130,6 +196,12 @@ class _RazorpayCheckoutScreenState
       if (!mounted) return;
       setState(() {
         _paymentQuote = quote;
+        _isQuoteLoading = false;
+      });
+    } on FirebaseFunctionsException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _quoteError = _friendlyFunctionsError(e);
         _isQuoteLoading = false;
       });
     } catch (_) {
@@ -162,7 +234,10 @@ class _RazorpayCheckoutScreenState
     if (saved) {
       _handlePaymentSuccess();
     } else {
-      _navigateToFailure('Payment completed but we could not update records.');
+      _navigateToFailure(
+        _verificationFailureMessage ??
+            'Payment completed but we could not update records.',
+      );
     }
   }
 
@@ -182,10 +257,13 @@ class _RazorpayCheckoutScreenState
   }
 
   void _navigateToFailure(String errorMessage) {
+    _lastVisibleErrorMessage = errorMessage.trim().isEmpty
+        ? 'Payment failed. Please try again.'
+        : errorMessage.trim();
     if (_didNavigateFailure) return;
     _didNavigateFailure = true;
     context.go(
-      '/owner/payments/failure?amount=${widget.amount}&tenantName=${Uri.encodeComponent(widget.tenantName)}&propertyName=${Uri.encodeComponent(widget.propertyName)}&error=${Uri.encodeComponent(errorMessage)}',
+      '/owner/payments/failure?amount=${widget.amount}&tenantName=${Uri.encodeComponent(widget.tenantName)}&propertyName=${Uri.encodeComponent(widget.propertyName)}&error=${Uri.encodeComponent(_lastVisibleErrorMessage!)}',
     );
   }
 
@@ -213,9 +291,16 @@ class _RazorpayCheckoutScreenState
       );
 
       debugPrint('✅ Payment verified and finalized via backend');
+      _verificationFailureMessage = null;
       return true;
+    } on FirebaseFunctionsException catch (e) {
+      _verificationFailureMessage = _friendlyFunctionsError(e);
+      debugPrint('❌ Verification error: ${e.code} ${e.message}');
+      return false;
     } catch (e) {
       debugPrint('❌ Error verifying payment: $e');
+      _verificationFailureMessage =
+          'Payment was successful, but verification failed. Please contact support with your transaction ID.';
       return false;
     }
   }
@@ -364,7 +449,8 @@ class _RazorpayCheckoutScreenState
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Payment failed. Please try again.',
+                            _lastVisibleErrorMessage ??
+                                'Payment failed. Please try again.',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: AppTheme.errorRed,
@@ -636,6 +722,7 @@ class _RazorpayCheckoutScreenState
 
     late final OwnerRazorpayPaymentIntent intent;
     try {
+      _verificationFailureMessage = null;
       intent = await paymentGatewayService.createPaymentIntent(
         tenantId: widget.tenantId,
         propertyId: widget.propertyId,
@@ -655,9 +742,18 @@ class _RazorpayCheckoutScreenState
           );
         });
       }
+    } on FirebaseFunctionsException catch (e) {
+      if (!mounted) return;
+      _navigateToFailure(_friendlyFunctionsError(e));
+      return;
     } catch (e) {
       if (!mounted) return;
-      _navigateToFailure('Unable to start payment. Please try again.');
+      final message = e.toString().replaceFirst('Exception: ', '').trim();
+      _navigateToFailure(
+        message.isEmpty
+            ? 'Unable to start payment right now. Please try again.'
+            : message,
+      );
       return;
     }
 
@@ -682,11 +778,21 @@ class _RazorpayCheckoutScreenState
       },
     );
 
-    await paymentNotifier.initiatePayment(
+    final initiated = await paymentNotifier.initiatePayment(
       paymentRequest: paymentRequest,
       tenantId: widget.tenantId,
       propertyId: widget.propertyId,
     );
+
+    if (!initiated && mounted) {
+      final service = ref.read(razorpayServiceProvider);
+      final message = service.lastPaymentError?.message.trim() ?? '';
+      _navigateToFailure(
+        message.isEmpty
+            ? 'Unable to start payment right now. Please try again.'
+            : message,
+      );
+    }
   }
 }
 

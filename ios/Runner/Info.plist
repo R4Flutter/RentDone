@@ -49,5 +49,7 @@
 	<string>We use your location to set accurate owner location for property discovery on maps.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We use your location to set accurate owner location for property discovery on maps.</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-5463912491137261~7897724434</string>
 </dict>
 </plist>

@@ -86,6 +86,61 @@ firebase deploy --only firestore:rules,firestore:indexes
 firebase deploy --only functions
 ```
 
+## Razorpay Setup (App + Backend)
+
+This project is preconfigured with Razorpay test Key ID fallback:
+
+- `rzp_test_SWZErkO7aPAnNO`
+
+For secure deployments, always set backend secrets and optional app override.
+
+### 1) Configure Cloud Functions runtime config
+
+```bash
+firebase functions:config:set razorpay.key_id="rzp_test_SWZErkO7aPAnNO" razorpay.key_secret="<YOUR_RAZORPAY_KEY_SECRET>" razorpay.webhook_secret="<YOUR_RAZORPAY_WEBHOOK_SECRET>"
+```
+
+### 2) Deploy functions
+
+```bash
+firebase deploy --only functions
+```
+
+### 3) Run Flutter app with explicit key (recommended)
+
+```bash
+flutter run --dart-define=RAZORPAY_KEY=rzp_test_SWZErkO7aPAnNO
+```
+
+### 4) Razorpay Dashboard webhook
+
+- URL: `https://<YOUR_REGION>-<YOUR_PROJECT>.cloudfunctions.net/razorpayWebhook`
+- Secret: use the same value as `razorpay.webhook_secret`
+
+### 5) Production switch checklist
+
+- Replace test Key ID with live Key ID.
+- Replace key secret and webhook secret with live values.
+- Keep secrets only in Firebase config / environment, never hardcode secrets in app.
+
+## Local Emulator Mode (No Blaze Required)
+
+Real mode code remains unchanged by default. Emulator mode is opt-in via dart-defines.
+
+### 1) Start Firebase emulators
+
+```bash
+firebase emulators:start --only functions,firestore,auth
+```
+
+### 2) Run Flutter app in Functions emulator mode
+
+```bash
+flutter run --dart-define=USE_FUNCTIONS_EMULATOR=true --dart-define=FUNCTIONS_EMULATOR_HOST=127.0.0.1 --dart-define=FUNCTIONS_EMULATOR_PORT=5001 --dart-define=RAZORPAY_KEY=rzp_test_SWZErkO7aPAnNO
+```
+
+For Android Emulator, use `FUNCTIONS_EMULATOR_HOST=10.0.2.2`.
+
 ### Recommended release checklist
 
 - Enable Email/Password and Google provider in Firebase Auth.

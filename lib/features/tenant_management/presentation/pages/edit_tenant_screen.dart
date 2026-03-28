@@ -116,7 +116,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
     try {
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
       );
 
       if (result != null && result.files.single.path != null) {
@@ -317,6 +317,15 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
     if (lower.contains('permission-denied') ||
         lower.contains('permission denied')) {
       return 'Upload permission denied. Sign in again and verify Storage rules.';
+    }
+    if (lower.contains('image could not be compressed to 200kb')) {
+      return 'Image must be 200KB or smaller after compression. Use a lower-resolution image and retry.';
+    }
+    if (lower.contains('pdf must be 500kb or below')) {
+      return 'PDF must be 500KB or below. Please reduce PDF size and retry.';
+    }
+    if (message.startsWith('Exception: ')) {
+      return message.replaceFirst('Exception: ', '');
     }
     return message;
   }

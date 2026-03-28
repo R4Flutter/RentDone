@@ -17,7 +17,8 @@ class FirebaseDocumentStorageService {
   String get bucket => _storage.bucket;
 
   static const _maxSourceFileSizeBytes = 12 * 1024 * 1024;
-  static const _targetCompressedBytes = 1024 * 1024;
+  static const _targetImageCompressedBytes = 200 * 1024;
+  static const _targetPdfUploadBytes = 500 * 1024;
   static const _maxUploadBytes = 2 * 1024 * 1024;
   static const _allowedExtensions = {'jpg', 'jpeg', 'png', 'pdf', 'webp'};
 
@@ -136,6 +137,16 @@ class FirebaseDocumentStorageService {
     }
 
     final uploadBytes = await uploadFile.length();
+    if (_isImage(extension) && uploadBytes > _targetImageCompressedBytes) {
+      throw const StorageUploadException(
+        'Image could not be compressed to 200KB. Please choose a clearer or smaller image.',
+      );
+    }
+    if (extension == 'pdf' && uploadBytes > _targetPdfUploadBytes) {
+      throw const StorageUploadException(
+        'PDF must be 500KB or below. Please upload a smaller PDF.',
+      );
+    }
     if (uploadBytes > _maxUploadBytes) {
       throw const StorageUploadException(
         'Compressed file exceeds 2MB. Please upload a clearer or smaller file.',
@@ -255,7 +266,7 @@ class FirebaseDocumentStorageService {
 
       current = File(compressed.path);
       final size = await current.length();
-      if (size <= _targetCompressedBytes) {
+      if (size <= _targetImageCompressedBytes) {
         return current;
       }
 

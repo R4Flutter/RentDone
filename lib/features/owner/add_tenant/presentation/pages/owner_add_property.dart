@@ -567,6 +567,13 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
+          const SizedBox(height: 6),
+          Text(
+            "Limits: image uploads auto-compress to 200KB max, PDFs must be 500KB or below.",
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
           if (uploadState.status == DocumentUploadStatus.loading) ...[
             const SizedBox(height: 16),
             LinearProgressIndicator(value: uploadState.progress),
@@ -915,7 +922,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowMultiple: false,
-      allowedExtensions: const ['jpg', 'jpeg', 'png', 'pdf'],
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
     );
 
     if (result == null || result.files.isEmpty) return;

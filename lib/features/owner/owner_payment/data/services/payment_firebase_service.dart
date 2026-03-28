@@ -4,6 +4,8 @@ import 'package:rentdone/core/trust/tenant_trust_score.dart';
 import 'package:rentdone/features/owner/owner_payment/data/models/payment_dto.dart';
 
 class PaymentFirebaseService {
+  static const int _paymentsStreamLimit = 50;
+
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
@@ -21,6 +23,7 @@ class PaymentFirebaseService {
         .collection('payments')
         .where('ownerId', isEqualTo: ownerId)
         .orderBy('dueDate', descending: true)
+        .limit(_paymentsStreamLimit)
         .snapshots()
         .map((snapshot) {
           return snapshot.docs.map((doc) {

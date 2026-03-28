@@ -262,13 +262,13 @@ class FirebaseDocumentStorageService {
         'userId': userId,
         'imageUrl': downloadUrl,
         'uploadedAt': FieldValue.serverTimestamp(),
-        'thumbnailUrl': thumbUrl,
         'storagePath': storagePath,
-        'thumbnailStoragePath': thumbPath,
+        'thumbnailUrl': ?thumbUrl,
+        'thumbnailStoragePath': ?thumbPath,
         'tenantId': tenantId,
         'fileName': fileName,
         'fileSizeBytes': uploadBytes,
-        if (thumbBytes != null) 'thumbnailSizeBytes': thumbBytes,
+        'thumbnailSizeBytes': ?thumbBytes,
       });
 
       onProgress?.call(1.0);

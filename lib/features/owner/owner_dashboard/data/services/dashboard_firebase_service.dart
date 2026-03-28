@@ -7,6 +7,9 @@ import 'package:rentdone/features/owner/owner_dashboard/data/models/dashboard_te
 import 'package:rentdone/features/owner/owner_dashboard/data/models/message_model.dart';
 
 class DashboardFirebaseService {
+  static const int _dashboardPropertiesLimit = 50;
+  static const int _dashboardPaymentsLimit = 50;
+
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
@@ -38,6 +41,8 @@ class DashboardFirebaseService {
     return _firestore
         .collection('properties')
         .where('ownerId', isEqualTo: ownerId)
+      .orderBy('createdAt', descending: true)
+      .limit(_dashboardPropertiesLimit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
@@ -82,6 +87,8 @@ class DashboardFirebaseService {
     return _firestore
         .collection('payments')
         .where('ownerId', isEqualTo: ownerId)
+      .orderBy('createdAt', descending: true)
+      .limit(_dashboardPaymentsLimit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
@@ -124,10 +131,16 @@ class DashboardFirebaseService {
     }
 
     return _firestore
-        .collection('tenants')
-        .where('ownerId', isEqualTo: ownerId)
+        .collection('owners_summary')
+        .doc(ownerId)
         .snapshots()
-        .map((snapshot) => snapshot.size)
+        .map((snapshot) {
+          final data = snapshot.data();
+          if (data == null) return 0;
+          return (data['tenantCount'] as num?)?.toInt() ??
+              (data['totalTenants'] as num?)?.toInt() ??
+              0;
+        })
         .handleError((error) {
           debugPrint('Error in watchTenantCount stream: $error');
           return 0;
@@ -165,6 +178,7 @@ class DashboardFirebaseService {
     return _firestore
         .collection('tenants')
         .where('ownerId', isEqualTo: ownerId)
+        .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
         .map(

@@ -5,12 +5,18 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:rentdone/core/ads/admob_config.dart';
+import 'package:rentdone/core/ads/rewarded_ad_service.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/presentation/providers/transaction_history_provider.dart';
 import 'package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
+import 'package:rentdone/features/tenant/presentation/widgets/credit_card_offer_widget.dart';
+import 'package:rentdone/features/tenant/presentation/widgets/native_ad_widget.dart';
 
 class TenantDashboardScreen extends ConsumerStatefulWidget {
   const TenantDashboardScreen({super.key});
@@ -23,6 +29,7 @@ class TenantDashboardScreen extends ConsumerStatefulWidget {
 class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
     with TickerProviderStateMixin {
   late final AnimationController _heroController;
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   @override
   void initState() {
@@ -38,6 +45,137 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
             .loadInitial(actor: TransactionActor.tenant),
       );
     });
+    unawaited(RewardedAdService.instance.preload());
+  }
+
+  Future<void> _logAdEvent(String name, {String? placement}) async {
+    try {
+      await _analytics.logEvent(
+        name: name,
+        parameters: <String, Object>{
+          'screen': 'tenant_dashboard',
+          if (placement != null) 'placement': placement,
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _openCreditCardOffer() async {
+    await _logAdEvent('credit_offer_click', placement: 'below_active_dues');
+
+    if (!AdMobConfig.isAffiliateEnabled) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Offer is currently unavailable. Please try again later.'),
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri.tryParse(AdMobConfig.affiliateCreditCardUrl);
+    if (uri == null) return;
+
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open offer at this moment.')),
+      );
+    }
+  }
+
+  Future<void> _handlePayNowWithRewards() async {
+    if (!mounted) return;
+    final rootContext = this.context;
+
+    await _logAdEvent('pay_now_cta_opened', placement: 'active_dues_card');
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Save on your payment',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Use credit card or watch an ad to unlock up to Rs 10 promo on checkout.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.credit_card_rounded),
+                  title: const Text('Apply Credit Card'),
+                  subtitle: const Text('Open trusted fintech partner offer'),
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    await _openCreditCardOffer();
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.ondemand_video_rounded),
+                  title: const Text('Watch Ad'),
+                  subtitle: const Text('Unlock reward promo and continue'),
+                  onTap: () async {
+                    Navigator.of(context).pop();
+                    await _logAdEvent(
+                      'rewarded_ad_requested',
+                      placement: 'pay_now_modal',
+                    );
+                    final rewarded = await RewardedAdService.instance
+                        .showRewardedAd(
+                      onRewardEarned: () async {
+                        await _logAdEvent(
+                          'rewarded_ad_earned',
+                          placement: 'pay_now_modal',
+                        );
+                      },
+                    );
+
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(rootContext).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          rewarded
+                              ? 'Reward unlocked. Complete payment to claim eligible promo.'
+                              : 'No ad available right now. Continuing to payment.',
+                        ),
+                      ),
+                    );
+                    GoRouter.of(rootContext).push('/tenant/payments');
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.arrow_forward_ios_rounded),
+                  title: const Text('Skip'),
+                  subtitle: const Text('Continue to payment directly'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    GoRouter.of(rootContext).push('/tenant/payments');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -175,20 +313,26 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                                 .read(transactionHistoryProvider.notifier)
                                 .loadInitial(actor: TransactionActor.tenant),
                           );
-                          context.push('/tenant/payments');
+                          unawaited(_handlePayNowWithRewards());
                         },
                       ),
                       loading: () => _ActiveDuesCard(
                         dueAmount: summary.dueAmount,
                         isAmountRefreshing: true,
-                        onPayNow: () => context.push('/tenant/payments'),
+                        onPayNow: () => unawaited(_handlePayNowWithRewards()),
                       ),
                       error: (_, _) => _ActiveDuesCard(
                         dueAmount: summary.dueAmount,
                         isAmountRefreshing: false,
-                        onPayNow: () => context.push('/tenant/payments'),
+                        onPayNow: () => unawaited(_handlePayNowWithRewards()),
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    CreditCardOfferWidget(
+                      onApplyNow: () => unawaited(_openCreditCardOffer()),
+                    ),
+                    const SizedBox(height: 10),
+                    const NativeAdWidget(),
                     const SizedBox(height: 20),
                     _FinancialMetricsRow(summary: summary),
                     const SizedBox(height: 28),
@@ -380,8 +524,6 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final textPrimary = OwnerDashboardColors.textPrimary(context);
     final textSecondary = OwnerDashboardColors.textSecondary(context);
-    final elevated = OwnerDashboardColors.elevatedBackground(context);
-    final border = OwnerDashboardColors.border(context);
 
     return Row(
       children: [

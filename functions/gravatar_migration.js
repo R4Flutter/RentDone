@@ -20,12 +20,53 @@ function getGravatarUrl(email, size = 400) {
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=identicon`;
 }
 
+async function assertAdminHttpRequest(req) {
+  if (req.method !== 'POST') {
+    const err = new Error('Method not allowed');
+    err.status = 405;
+    throw err;
+  }
+
+  const authHeader = String(req.get('Authorization') || '').trim();
+  if (!authHeader.toLowerCase().startsWith('bearer ')) {
+    const err = new Error('Missing Bearer token');
+    err.status = 401;
+    throw err;
+  }
+
+  const idToken = authHeader.slice(7).trim();
+  if (!idToken) {
+    const err = new Error('Missing ID token');
+    err.status = 401;
+    throw err;
+  }
+
+  const decoded = await admin.auth().verifyIdToken(idToken, true);
+  if (decoded?.admin === true) {
+    return decoded;
+  }
+
+  const uid = String(decoded?.uid || '').trim();
+  if (uid) {
+    const adminDoc = await admin.firestore().collection('admins').doc(uid).get();
+    if (adminDoc.exists && adminDoc.get('active') !== false) {
+      return decoded;
+    }
+  }
+
+  const err = new Error('Admin access required');
+  err.status = 403;
+  throw err;
+}
+
 /**
  * Cloud Function to migrate all users to have Gravatar URLs
  * Run once: https://YOUR_PROJECT.cloudfunctions.net/migrateUsersToGravatar
  */
 exports.migrateUsersToGravatar = functions.https.onRequest(async (req, res) => {
   try {
+    await assertAdminHttpRequest(req);
+
     const db = admin.firestore();
     const usersRef = db.collection('users');
     const snapshot = await usersRef.get();
@@ -71,7 +112,8 @@ exports.migrateUsersToGravatar = functions.https.onRequest(async (req, res) => {
     });
   } catch (error) {
     console.error('Migration error:', error);
-    res.status(500).json({
+    const statusCode = Number(error?.status || 500);
+    res.status(statusCode).json({
       success: false,
       error: error.message,
     });

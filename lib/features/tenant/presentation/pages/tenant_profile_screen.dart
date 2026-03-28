@@ -345,8 +345,9 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
         const SnackBar(content: Text('Could not update notification setting.')),
       );
     } finally {
-      if (!mounted) return;
-      setState(() => _isSavingNotificationPreference = false);
+      if (mounted) {
+        setState(() => _isSavingNotificationPreference = false);
+      }
     }
   }
 

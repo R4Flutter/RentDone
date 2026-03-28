@@ -49,7 +49,7 @@ final tenantCityPropertiesProvider = StreamProvider<List<Property>>((ref) {
   final cityCenter = centerAsync.when<LatLng?>(
     data: (value) => value,
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
   );
   return service.watchPublishedPropertiesForCity(
     city: city,

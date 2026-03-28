@@ -7,7 +7,7 @@ export 'package:rentdone/features/owner/owner_payment/di/payment_di.dart'
         markPaymentPaidCashUseCaseProvider,
         markPaymentPaidOnlineUseCaseProvider;
 
-final paymentsProvider = StreamProvider<List<Payment>>((ref) {
+final paymentsProvider = StreamProvider.autoDispose<List<Payment>>((ref) {
   final watchPayments = ref.watch(watchPaymentsUseCaseProvider);
   return watchPayments();
 });
