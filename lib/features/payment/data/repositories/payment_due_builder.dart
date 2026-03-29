@@ -20,20 +20,40 @@ class PaymentDueBuilder {
       if (lease == null) return null;
 
       final now = DateTime.now();
-      final payment = await _payment.getPaymentForLeaseMonth(
+      final openPayment = await _payment.getOldestOpenPaymentForLease(
         leaseId: lease['id'],
-        month: now.month,
-        year: now.year,
       );
+
+      final payment =
+          openPayment ??
+          await _payment.getPaymentForLeaseMonth(
+            leaseId: lease['id'],
+            month: now.month,
+            year: now.year,
+          );
 
       final rentAmount = (lease['rentAmount'] as num?)?.toInt() ?? 0;
       final lateFeePercentage =
           (lease['lateFeePercentage'] as num?)?.toDouble() ?? 0.0;
-      final dueDate = DateTimeConverter.toDate(lease['dueDate']) ?? now;
+
+      final leaseDueDay = _resolveLeaseDueDay(lease);
+      final fallbackDueDate = DateTime(now.year, now.month, leaseDueDay, 9);
+      final cycleDueDate = _resolveDueDateForPayment(
+        payment: payment,
+        fallback: fallbackDueDate,
+      );
+
+      final dueDate = cycleDueDate;
       final isOverdue = now.isAfter(dueDate);
-      final lateFeeAmount = isOverdue
-          ? (rentAmount * lateFeePercentage / 100).round()
-          : 0;
+      final paymentLateFee = (payment?['lateFeeAmount'] as num?)?.toInt() ?? 0;
+      final lateFeeAmount = paymentLateFee > 0
+          ? paymentLateFee
+          : (isOverdue ? (rentAmount * lateFeePercentage / 100).round() : 0);
+
+      final paymentRentAmount = (payment?['rentAmount'] as num?)?.toInt() ?? 0;
+      final effectiveRentAmount = paymentRentAmount > 0
+          ? paymentRentAmount
+          : rentAmount;
 
       final paymentId = payment?['id']?.toString();
       Map<String, dynamic>? lastTx;
@@ -49,10 +69,10 @@ class PaymentDueBuilder {
         propertyId: lease['propertyId'] ?? '',
         propertyName: lease['propertyName'] ?? 'Property',
         ownerName: lease['ownerName'] ?? 'Owner',
-        monthlyRent: rentAmount,
+        monthlyRent: effectiveRentAmount,
         dueDate: dueDate,
         lateFeeAmount: lateFeeAmount,
-        totalPayable: rentAmount + lateFeeAmount,
+        totalPayable: effectiveRentAmount + lateFeeAmount,
         daysRemaining: dueDate
             .difference(DateTime(now.year, now.month, now.day))
             .inDays,
@@ -65,5 +85,45 @@ class PaymentDueBuilder {
     } catch (error) {
       throw const ServerFailure('Failed to load due payment');
     }
+  }
+
+  int _resolveLeaseDueDay(Map<String, dynamic> lease) {
+    final rentDueDay = (lease['rentDueDay'] as num?)?.toInt();
+    if (rentDueDay != null && rentDueDay >= 1 && rentDueDay <= 31) {
+      return rentDueDay;
+    }
+
+    final leaseDueDate = DateTimeConverter.toDate(lease['dueDate']);
+    if (leaseDueDate != null) {
+      return leaseDueDate.day;
+    }
+
+    return 1;
+  }
+
+  DateTime _resolveDueDateForPayment({
+    required Map<String, dynamic>? payment,
+    required DateTime fallback,
+  }) {
+    final paymentDueDate = DateTimeConverter.toDate(payment?['dueDate']);
+    if (paymentDueDate != null) {
+      return DateTime(
+        paymentDueDate.year,
+        paymentDueDate.month,
+        paymentDueDate.day,
+        9,
+      );
+    }
+
+    final year = (payment?['year'] as num?)?.toInt();
+    final month = (payment?['month'] as num?)?.toInt();
+    if (year != null && month != null && month >= 1 && month <= 12) {
+      final day = fallback.day;
+      final lastDay = DateTime(year, month + 1, 0).day;
+      final safeDay = day.clamp(1, lastDay);
+      return DateTime(year, month, safeDay, 9);
+    }
+
+    return fallback;
   }
 }

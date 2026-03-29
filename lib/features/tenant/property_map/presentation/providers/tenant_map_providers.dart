@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
@@ -56,3 +60,115 @@ final tenantCityPropertiesProvider = StreamProvider<List<Property>>((ref) {
     cityCenter: cityCenter,
   );
 });
+
+class OwnerMapCardData {
+  final String name;
+  final String phoneNumber;
+  final String locationAddress;
+
+  const OwnerMapCardData({
+    required this.name,
+    required this.phoneNumber,
+    required this.locationAddress,
+  });
+}
+
+final ownerMapCardProvider = FutureProvider.autoDispose
+    .family<OwnerMapCardData?, String>((ref, ownerId) async {
+      final trimmedOwnerId = ownerId.trim();
+      if (trimmedOwnerId.isEmpty) return null;
+
+      final firestore = ref.watch(firestoreProvider);
+      final usersData = await _readDocDataWithRetry(
+        firestore: firestore,
+        collection: 'users',
+        docId: trimmedOwnerId,
+      );
+      final ownersData = await _readDocDataWithRetry(
+        firestore: firestore,
+        collection: 'owners',
+        docId: trimmedOwnerId,
+      );
+
+      final name = _pickFirstText([
+        ownersData?['ownerName'],
+        ownersData?['fullName'],
+        ownersData?['name'],
+        usersData?['ownerName'],
+        usersData?['fullName'],
+        usersData?['name'],
+      ]);
+      final phone = _pickFirstText([
+        ownersData?['phoneNumber'],
+        ownersData?['phone'],
+        usersData?['phoneNumber'],
+        usersData?['phone'],
+      ]);
+      final location = _pickFirstText([
+        usersData?['locationAddress'],
+        ownersData?['locationAddress'],
+        ownersData?['address'],
+      ]);
+
+      if (name.isEmpty && phone.isEmpty && location.isEmpty) {
+        return null;
+      }
+
+      return OwnerMapCardData(
+        name: name,
+        phoneNumber: phone,
+        locationAddress: location,
+      );
+    });
+
+Future<Map<String, dynamic>?> _readDocDataWithRetry({
+  required FirebaseFirestore firestore,
+  required String collection,
+  required String docId,
+}) async {
+  const maxAttempts = 3;
+  const delays = <Duration>[
+    Duration(milliseconds: 160),
+    Duration(milliseconds: 420),
+  ];
+
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      final snapshot = await firestore
+          .collection(collection)
+          .doc(docId)
+          .get()
+          .timeout(const Duration(seconds: 4));
+      return snapshot.data();
+    } on FirebaseException catch (error, stackTrace) {
+      developer.log(
+        'Firestore read failed for $collection/$docId on attempt $attempt.',
+        name: 'tenant_map.owner_profile',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    } on TimeoutException catch (error, stackTrace) {
+      developer.log(
+        'Firestore read timeout for $collection/$docId on attempt $attempt.',
+        name: 'tenant_map.owner_profile',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    if (attempt < maxAttempts) {
+      await Future<void>.delayed(delays[attempt - 1]);
+    }
+  }
+
+  return null;
+}
+
+String _pickFirstText(List<Object?> values) {
+  for (final value in values) {
+    if (value == null) continue;
+    final text = value.toString().trim();
+    if (text.isNotEmpty) return text;
+  }
+  return '';
+}

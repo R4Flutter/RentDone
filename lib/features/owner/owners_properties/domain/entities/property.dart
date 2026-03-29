@@ -32,6 +32,7 @@ class Room {
 
 class Property {
   final String id;
+  final String ownerId;
   final String name;
   final String address;
   final int totalRooms;
@@ -44,6 +45,7 @@ class Property {
 
   const Property({
     required this.id,
+    this.ownerId = '',
     required this.name,
     required this.address,
     required this.totalRooms,
@@ -59,6 +61,7 @@ class Property {
 
   Property copyWith({
     String? id,
+    String? ownerId,
     String? name,
     String? address,
     int? totalRooms,
@@ -70,6 +73,7 @@ class Property {
   }) {
     return Property(
       id: id ?? this.id,
+      ownerId: ownerId ?? this.ownerId,
       name: name ?? this.name,
       address: address ?? this.address,
       totalRooms: totalRooms ?? this.totalRooms,

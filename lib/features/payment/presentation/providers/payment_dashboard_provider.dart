@@ -40,6 +40,15 @@ class PaymentDashboardState {
 }
 
 class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
+  String _buildAttemptScopedIdempotencyKey({
+    required String uid,
+    required PaymentDue due,
+    required String gateway,
+  }) {
+    final attemptEpoch = DateTime.now().millisecondsSinceEpoch;
+    return 'tenant_${uid}_${due.leaseId}_${due.dueDate.year}_${due.dueDate.month}_${gateway.toLowerCase()}_$attemptEpoch';
+  }
+
   @override
   Future<PaymentDashboardState> build() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -83,19 +92,45 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
     required String tenantPhone,
   }) async {
     final current = state.value ?? PaymentDashboardState.initial();
-    final due = current.due;
-    if (due == null) return null;
+    var due = current.due;
+
+    // Recover gracefully when dashboard state is stale or still hydrating.
+    if (due == null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        due = await ref
+            .read(getCurrentDueUseCaseProvider)
+            .call(tenantId: user.uid);
+      }
+    }
+
+    if (due == null) {
+      const dueUnavailableMessage =
+          'Current due is still loading. Please refresh and try again.';
+      state = AsyncValue.data(
+        current.copyWith(
+          flowStatus: PaymentFlowStatus.failure,
+          message: dueUnavailableMessage,
+        ),
+      );
+      return null;
+    }
+    final effectiveDue = due;
 
     final logger = PaymentEventLogger.instance;
     // Always revalidate payment toggles at charge time to avoid stale cache
     // blocking valid payments after backend config updates.
     final appConfig = await AppConfigService().getConfig(forceRefresh: true);
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    final idempotencyKey =
-        'tenant_${FirebaseAuth.instance.currentUser!.uid}_${due.leaseId}_${due.dueDate.year}_${due.dueDate.month}_${gateway.toLowerCase()}';
-    final payableAmount = due.totalPayable > 0
-        ? due.totalPayable
-        : (due.monthlyRent + due.lateFeeAmount);
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final idempotencyKey = _buildAttemptScopedIdempotencyKey(
+      uid: uid,
+      due: effectiveDue,
+      gateway: gateway,
+    );
+    final payableAmount = effectiveDue.totalPayable > 0
+        ? effectiveDue.totalPayable
+        : (effectiveDue.monthlyRent + effectiveDue.lateFeeAmount);
 
     if (!appConfig.paymentsEnabled || appConfig.maintenanceMode) {
       final blockCode = appConfig.maintenanceMode
@@ -107,9 +142,9 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
       await logger.logError(
         event: 'PAYMENT_FAILURE',
         userId: userId,
-        tenantId: due.tenantId,
-        ownerId: due.ownerId,
-        paymentId: due.paymentId,
+        tenantId: effectiveDue.tenantId,
+        ownerId: effectiveDue.ownerId,
+        paymentId: effectiveDue.paymentId,
         idempotencyKey: idempotencyKey,
         amount: payableAmount,
         method: gateway,
@@ -131,9 +166,9 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
       await logger.logError(
         event: 'PAYMENT_FAILURE',
         userId: userId,
-        tenantId: due.tenantId,
-        ownerId: due.ownerId,
-        paymentId: due.paymentId,
+        tenantId: effectiveDue.tenantId,
+        ownerId: effectiveDue.ownerId,
+        paymentId: effectiveDue.paymentId,
         idempotencyKey: idempotencyKey,
         amount: payableAmount,
         method: gateway,
@@ -154,9 +189,9 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
       await logger.logEvent(
         event: 'PAYMENT_RETRY',
         userId: userId,
-        tenantId: due.tenantId,
-        ownerId: due.ownerId,
-        paymentId: due.paymentId,
+        tenantId: effectiveDue.tenantId,
+        ownerId: effectiveDue.ownerId,
+        paymentId: effectiveDue.paymentId,
         idempotencyKey: idempotencyKey,
         amount: payableAmount,
         method: gateway,
@@ -167,9 +202,9 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
     await logger.logEvent(
       event: 'PAYMENT_START',
       userId: userId,
-      tenantId: due.tenantId,
-      ownerId: due.ownerId,
-      paymentId: due.paymentId,
+      tenantId: effectiveDue.tenantId,
+      ownerId: effectiveDue.ownerId,
+      paymentId: effectiveDue.paymentId,
       idempotencyKey: idempotencyKey,
       amount: payableAmount,
       method: gateway,
@@ -186,13 +221,15 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
     PaymentIntent? createdIntent;
 
     final result = await AsyncValue.guard(() async {
-      final intent = await ref.read(createPaymentIntentUseCaseProvider).call(
-        leaseId: due.leaseId,
-        month: due.dueDate.month,
-        year: due.dueDate.year,
-        gateway: gateway,
-        idempotencyKey: idempotencyKey,
-      );
+      final intent = await ref
+          .read(createPaymentIntentUseCaseProvider)
+          .call(
+            leaseId: effectiveDue.leaseId,
+            month: effectiveDue.dueDate.month,
+            year: effectiveDue.dueDate.year,
+            gateway: gateway,
+            idempotencyKey: idempotencyKey,
+          );
       createdIntent = intent;
 
       if (gateway == 'razorpay' &&
@@ -200,17 +237,10 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
         throw const ServerFailure('Payment gateway not configured');
       }
 
-      if (gateway == 'cashfree' &&
-          (intent.paymentSessionId == null ||
-              intent.keyId == null ||
-              intent.orderId == null)) {
-        throw const ServerFailure('Cashfree payment session not available');
-      }
-
       final gatewayPayableAmount = gateway == 'razorpay'
           ? (intent.totalPayableInPaise > 0
-            ? intent.totalPayableInPaise
-            : intent.amount)
+                ? intent.totalPayableInPaise
+                : intent.amount)
           : intent.amount;
 
       final gatewayResult = await paymentGateway.initializePayment(
@@ -255,8 +285,8 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
       await logger.logEvent(
         event: 'PAYMENT_SUCCESS',
         userId: userId,
-        tenantId: due.tenantId,
-        ownerId: due.ownerId,
+        tenantId: effectiveDue.tenantId,
+        ownerId: effectiveDue.ownerId,
         paymentId: intent.paymentId,
         idempotencyKey: intent.idempotencyKey,
         amount: payableAmount,
@@ -271,22 +301,20 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
     if (result.hasError) {
       final failure = result.error;
       final message = failure is PaymentFailure
-        ? failure.message
-        : (() {
-          final raw = failure
-              ?.toString()
-              .replaceFirst('Exception: ', '')
-              .trim() ??
-            '';
-          return raw.isEmpty ? 'Payment failed. Please try again.' : raw;
-        })();
+          ? failure.message
+          : (() {
+              final raw =
+                  failure?.toString().replaceFirst('Exception: ', '').trim() ??
+                  '';
+              return raw.isEmpty ? 'Payment failed. Please try again.' : raw;
+            })();
       final errorCode = failure is PaymentFailure ? failure.code : 'unknown';
       await logger.logError(
         event: 'PAYMENT_FAILURE',
         userId: userId,
-        tenantId: due.tenantId,
-        ownerId: due.ownerId,
-        paymentId: createdIntent?.paymentId ?? due.paymentId,
+        tenantId: effectiveDue.tenantId,
+        ownerId: effectiveDue.ownerId,
+        paymentId: createdIntent?.paymentId ?? effectiveDue.paymentId,
         idempotencyKey: createdIntent?.idempotencyKey ?? idempotencyKey,
         amount: payableAmount,
         method: gateway,

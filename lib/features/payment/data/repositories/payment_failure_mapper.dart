@@ -37,6 +37,10 @@ class PaymentFailureMapper {
           message.contains('property-name-mismatch')) {
         return 'Tenant-property link is invalid. Ask owner to reassign tenant to the correct property.';
       }
+      if (message.contains('duplicate-payment') ||
+          message.contains('already-exists')) {
+        return 'A previous payment attempt is still being processed. Wait 20-30 seconds and try again.';
+      }
       if (message.contains('razorpay secret not configured') ||
           message.contains('razorpay keys not configured')) {
         return 'Payment gateway is not configured on backend. Contact support.';

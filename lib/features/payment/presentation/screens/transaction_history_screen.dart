@@ -411,8 +411,8 @@ class _TransactionHistoryScreenState
 
       final tenantData = tenantDoc.data() ?? <String, dynamic>{};
       final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
-      final tenantPropertyName =
-          (tenantData['propertyName'] as String? ?? '').trim();
+      final tenantPropertyName = (tenantData['propertyName'] as String? ?? '')
+          .trim();
 
       var propertyId = (tenantData['propertyId'] as String? ?? '').trim();
 
@@ -4216,8 +4216,6 @@ IconData _transactionLeadingIcon(TransactionRecord transaction) {
       return Icons.qr_code_rounded;
     case 'razorpay':
       return Icons.credit_card_rounded;
-    case 'cashfree':
-      return Icons.account_balance_wallet_outlined;
     default:
       return transaction.status.toLowerCase() == 'failed'
           ? Icons.error_outline_rounded
@@ -4236,8 +4234,6 @@ String _gatewayLabel(String gateway) {
       return 'Razorpay';
     case 'upi':
       return 'UPI';
-    case 'cashfree':
-      return 'Cashfree';
     default:
       return gateway.isEmpty ? 'Payment' : gateway.toUpperCase();
   }

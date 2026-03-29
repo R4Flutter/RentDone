@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/property_dto.dart';
@@ -26,6 +29,7 @@ class TenantPropertyFirebaseService {
     return query.snapshots().asyncMap((snapshot) async {
       final byId = <String, Property>{};
       final ownerLocationCache = <String, (double, double)?>{};
+      final ownerValidityCache = <String, bool>{};
 
       for (final doc in snapshot.docs) {
         final data = doc.data();
@@ -59,15 +63,32 @@ class TenantPropertyFirebaseService {
         final dto = PropertyDto.fromMap(data);
         final entity = dto.toEntity();
 
-        final isCityTextMatch = _cityMatches(normalizedSearchCity, entity.city);
-        final isNearCityCenter = _isNearCityCenter(
+        // Show only RentDone owners on tenant map.
+        final ownerId = entity.ownerId.trim();
+        if (ownerId.isEmpty) {
+          continue;
+        }
+        final isKnownOwner = ownerValidityCache.containsKey(ownerId)
+            ? ownerValidityCache[ownerId]!
+            : await _isRentDoneOwner(ownerId);
+        ownerValidityCache[ownerId] = isKnownOwner;
+        if (!isKnownOwner) {
+          continue;
+        }
+
+        // Strict city filter to avoid cross-city leakage (e.g. Mumbai showing Goa).
+        if (!_cityMatchesStrict(normalizedSearchCity, entity.city)) {
+          continue;
+        }
+
+        // Ensure returned coordinates are still around selected city area.
+        final isWithinSelectedArea = _isNearCityCenter(
           cityCenter: cityCenter,
           propertyLat: entity.lat,
           propertyLng: entity.lng,
+          radiusMeters: 65000,
         );
-
-        // Include by either city text match OR coordinate proximity to searched city.
-        if (!isCityTextMatch && !isNearCityCenter) {
+        if (cityCenter != null && !isWithinSelectedArea) {
           continue;
         }
 
@@ -83,22 +104,10 @@ class TenantPropertyFirebaseService {
     });
   }
 
-  bool _cityMatches(String normalizedSearchCity, String propertyCityRaw) {
+  bool _cityMatchesStrict(String normalizedSearchCity, String propertyCityRaw) {
     final propertyCity = _normalizeText(propertyCityRaw);
     if (propertyCity.isEmpty || normalizedSearchCity.isEmpty) return false;
-
-    if (propertyCity == normalizedSearchCity) return true;
-    if (propertyCity.contains(normalizedSearchCity)) return true;
-    if (normalizedSearchCity.contains(propertyCity)) return true;
-
-    final searchTokens = normalizedSearchCity
-        .split(' ')
-        .where((t) => t.isNotEmpty);
-    final propertyTokens = propertyCity
-        .split(' ')
-        .where((t) => t.isNotEmpty)
-        .toSet();
-    return searchTokens.any(propertyTokens.contains);
+    return propertyCity == normalizedSearchCity;
   }
 
   String _normalizeText(String value) {
@@ -125,27 +134,96 @@ class TenantPropertyFirebaseService {
   }
 
   Future<(double, double)?> _readOwnerCoordinates(String ownerId) async {
-    final snapshot = await firestore.collection('users').doc(ownerId).get();
-    final data = snapshot.data();
-    if (data == null) return null;
+    const maxAttempts = 3;
+    const retryDelays = <Duration>[
+      Duration(milliseconds: 180),
+      Duration(milliseconds: 520),
+    ];
 
-    final geoPoint = data['location'] is GeoPoint
-        ? data['location'] as GeoPoint
-        : null;
-    final ownerLat = _toDouble(data['locationLatitude']) ?? geoPoint?.latitude;
-    final ownerLng =
-        _toDouble(data['locationLongitude']) ?? geoPoint?.longitude;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final snapshot = await firestore
+            .collection('users')
+            .doc(ownerId)
+            .get()
+            .timeout(const Duration(seconds: 4));
+        final data = snapshot.data();
+        if (data == null) return null;
 
-    if (_isValidCoordinates(ownerLat, ownerLng)) {
-      return (ownerLat!, ownerLng!);
+        final geoPoint = data['location'] is GeoPoint
+            ? data['location'] as GeoPoint
+            : null;
+        final ownerLat =
+            _toDouble(data['locationLatitude']) ?? geoPoint?.latitude;
+        final ownerLng =
+            _toDouble(data['locationLongitude']) ?? geoPoint?.longitude;
+
+        if (_isValidCoordinates(ownerLat, ownerLng)) {
+          return (ownerLat!, ownerLng!);
+        }
+        return null;
+      } on FirebaseException catch (error, stackTrace) {
+        developer.log(
+          'Owner location lookup failed for owner=$ownerId on attempt $attempt.',
+          name: 'tenant_map.location_lookup',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      } on TimeoutException catch (error, stackTrace) {
+        developer.log(
+          'Owner location lookup timeout for owner=$ownerId on attempt $attempt.',
+          name: 'tenant_map.location_lookup',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+
+      if (attempt < maxAttempts) {
+        await Future<void>.delayed(retryDelays[attempt - 1]);
+      }
     }
+
     return null;
+  }
+
+  Future<bool> _isRentDoneOwner(String ownerId) async {
+    const maxAttempts = 2;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final ownerSnapshot = await firestore
+            .collection('owners')
+            .doc(ownerId)
+            .get()
+            .timeout(const Duration(seconds: 3));
+        return ownerSnapshot.exists;
+      } on FirebaseException catch (error, stackTrace) {
+        developer.log(
+          'Owner validation failed for owner=$ownerId on attempt $attempt.',
+          name: 'tenant_map.owner_validation',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      } on TimeoutException catch (error, stackTrace) {
+        developer.log(
+          'Owner validation timeout for owner=$ownerId on attempt $attempt.',
+          name: 'tenant_map.owner_validation',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+
+      if (attempt < maxAttempts) {
+        await Future<void>.delayed(const Duration(milliseconds: 240));
+      }
+    }
+    return false;
   }
 
   bool _isNearCityCenter({
     required LatLng? cityCenter,
     required double propertyLat,
     required double propertyLng,
+    int radiusMeters = 45000,
   }) {
     if (cityCenter == null) return false;
     if (!_isValidCoordinates(propertyLat, propertyLng)) return false;
@@ -157,7 +235,6 @@ class TenantPropertyFirebaseService {
       LatLng(propertyLat, propertyLng),
     );
 
-    // 45km captures city + nearby localities and reduces strict text dependency.
-    return meters <= 45000;
+    return meters <= radiusMeters;
   }
 }

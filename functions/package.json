@@ -2,7 +2,7 @@
   "name": "rentdone-functions",
   "description": "Cloud Functions for RentDone",
   "engines": {
-    "node": "18"
+    "node": "20"
   },
   "main": "index.js",
   "scripts": {

@@ -58,6 +58,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
 
   int get _enteredAmount => int.tryParse(_amountController.text.trim()) ?? 0;
   int get _feeAmount => (_enteredAmount * 0.02).round();
+  int get _gstOnFeeAmount => (_feeAmount * 0.18).round();
   int get _totalPayable => _enteredAmount + _feeAmount;
 
   String _formatRupees(int amount) => '\u20B9${_currency.format(amount)}';
@@ -120,6 +121,23 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     setState(() => _isPaying = true);
 
     final messenger = ScaffoldMessenger.of(context);
+
+    await ref.read(paymentDashboardProvider.notifier).refreshDue();
+    final due = ref.read(paymentDashboardProvider).asData?.value.due;
+    if (due == null) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Current due is still loading. Please refresh and try again.',
+            ),
+          ),
+        );
+        setState(() => _isPaying = false);
+      }
+      return;
+    }
+
     messenger.showSnackBar(
       const SnackBar(content: Text('Processing payment...')),
     );
@@ -518,9 +536,9 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                       label: 'Gateway Fee (2%)',
                       value: _formatRupees(_feeAmount),
                     ),
-                     _BreakdownRow(
-                      label: 'GST ',
-                      value: _formatRupees(_feeAmount *0.18),
+                    _BreakdownRow(
+                      label: 'GST (18% on fee)',
+                      value: _formatRupees(_gstOnFeeAmount),
                     ),
                     Divider(color: OwnerDashboardColors.border(context)),
                     _BreakdownRow(

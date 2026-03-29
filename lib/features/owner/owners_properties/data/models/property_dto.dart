@@ -3,6 +3,7 @@ import 'package:rentdone/features/owner/owners_properties/domain/entities/proper
 
 class PropertyDto {
   final String id;
+  final String ownerId;
   final String name;
   final String address;
   final int totalRooms;
@@ -18,6 +19,7 @@ class PropertyDto {
 
   const PropertyDto({
     required this.id,
+    this.ownerId = '',
     required this.name,
     required this.address,
     required this.totalRooms,
@@ -32,9 +34,9 @@ class PropertyDto {
     final roomsRaw = map['rooms'];
     final roomList = roomsRaw is List
         ? roomsRaw
-            .whereType<Map>()
-            .map((room) => RoomDto.fromMap(Map<String, dynamic>.from(room)))
-            .toList()
+              .whereType<Map>()
+              .map((room) => RoomDto.fromMap(Map<String, dynamic>.from(room)))
+              .toList()
         : <RoomDto>[];
 
     final parsedTotalRooms = _toInt(map['totalRooms']);
@@ -44,6 +46,7 @@ class PropertyDto {
 
     return PropertyDto(
       id: (map['id'] ?? '').toString(),
+      ownerId: (map['ownerId'] ?? '').toString(),
       name: (map['name'] ?? '').toString(),
       address: (map['address'] ?? '').toString(),
       totalRooms: effectiveTotalRooms,
@@ -60,6 +63,7 @@ class PropertyDto {
   factory PropertyDto.fromEntity(Property property) {
     return PropertyDto(
       id: property.id,
+      ownerId: property.ownerId,
       name: property.name,
       address: property.address,
       totalRooms: property.totalRooms,
@@ -74,6 +78,7 @@ class PropertyDto {
   Property toEntity() {
     return Property(
       id: id,
+      ownerId: ownerId,
       name: name,
       address: address,
       totalRooms: totalRooms,
@@ -88,6 +93,7 @@ class PropertyDto {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'ownerId': ownerId,
       'name': name,
       'address': address,
       'totalRooms': totalRooms,

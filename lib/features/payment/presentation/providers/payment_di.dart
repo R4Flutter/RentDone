@@ -4,7 +4,6 @@ import 'package:rentdone/features/payment/data/datasources/lease_firestore_datas
 import 'package:rentdone/features/payment/data/datasources/payment_firestore_datasource.dart';
 import 'package:rentdone/features/payment/data/datasources/payment_functions_datasource.dart';
 import 'package:rentdone/features/payment/data/datasources/transaction_firestore_datasource.dart';
-import 'package:rentdone/features/payment/data/gateways/cashfree_service.dart';
 import 'package:rentdone/features/payment/data/gateways/stripe_service.dart';
 import 'package:rentdone/features/payment/data/repositories/payment_repository_impl.dart';
 import 'package:rentdone/features/payment/domain/repositories/payment_repository.dart';
@@ -45,10 +44,6 @@ final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
 
 final stripeGatewayProvider = Provider<StripeService>((ref) {
   return StripeService();
-});
-
-final cashfreeGatewayProvider = Provider<CashfreeService>((ref) {
-  return CashfreeService();
 });
 
 final getCurrentDueUseCaseProvider = Provider<GetCurrentDue>((ref) {

@@ -223,7 +223,10 @@ service cloud.firestore {
     // ===== FIRESTORE RULES =====
 
     match /users/{userId} {
-      allow read: if isAuthenticated() && userId == currentUid();
+      allow read: if isAuthenticated() && (
+        userId == currentUid()
+        || (isTenant() && ('role' in resource.data) && resource.data.role == 'owner')
+      );
 
       allow list: if isAuthenticated() &&
         request.query.limit <= 1;
@@ -304,7 +307,10 @@ service cloud.firestore {
 
     match /properties/{propertyId} {
       allow read: if (isOwner() && resource.data.ownerId == currentUid())
-        || (isTenant() && tenantPropertyId(currentUid()) == propertyId);
+        || (isTenant() && (
+          tenantPropertyId(currentUid()) == propertyId
+          || (('isPublished' in resource.data) && resource.data.isPublished == true)
+        ));
 
       allow create: if isOwner()
         && isVerified()

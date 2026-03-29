@@ -1,4 +1,4 @@
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 
@@ -461,16 +461,6 @@ function getStripeConfig() {
   };
 }
 
-function getCashfreeConfig() {
-  const cfg = functions.config().cashfree || {};
-  return {
-    appId: cfg.app_id || process.env.CASHFREE_APP_ID || '',
-    secretKey: cfg.secret_key || process.env.CASHFREE_SECRET_KEY || '',
-    webhookSecret: cfg.webhook_secret || process.env.CASHFREE_WEBHOOK_SECRET || '',
-    isSandbox: (cfg.env || process.env.CASHFREE_ENV || 'production') === 'sandbox',
-  };
-}
-
 function parsePercent(value, fallback) {
   const num = Number(value);
   if (!Number.isFinite(num) || num < 0) {
@@ -502,11 +492,9 @@ function defaultPaymentFeeConfig() {
     defaultGatewayCostPercent,
     gatewayPercents: {
       razorpay: parsePercent(cfg.razorpay_percent, defaultGatewayPercent),
-      cashfree: parsePercent(cfg.cashfree_percent, defaultGatewayPercent),
     },
     gatewayCostPercents: {
       razorpay: parsePercent(cfg.razorpay_cost_percent, defaultGatewayCostPercent),
-      cashfree: parsePercent(cfg.cashfree_cost_percent, defaultGatewayCostPercent),
     },
   };
 }
@@ -2626,6 +2614,12 @@ exports.quotePayment = functions.https.onCall(async (data, context) => {
 
   const leaseId = String(data?.leaseId || '').trim();
   const gateway = String(data?.gateway || 'razorpay').toLowerCase();
+  if (gateway === 'cashfree') {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Cashfree has been removed from this project. Use Razorpay.',
+    );
+  }
   const enteredRentAmountInRupees = Number(data?.enteredRentAmountInRupees || 0);
 
   if (!leaseId) {
@@ -2721,7 +2715,7 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   const leaseId = String(data?.leaseId || '').trim();
   const month = Number(data.month);
   const year = Number(data.year);
-  const gateway = (data.gateway || 'cashfree').toLowerCase();
+  const gateway = (data.gateway || 'razorpay').toLowerCase();
   const idempotencyKey = String(data?.idempotencyKey || '').trim();
 
   let paymentId = null;
@@ -2737,10 +2731,10 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       meta: { gateway },
     });
 
-    if (!leaseId || !month || !year || !idempotencyKey) {
+    if (!leaseId || !idempotencyKey) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'leaseId, month, year and idempotencyKey are required',
+        'leaseId and idempotencyKey are required',
       );
     }
 
@@ -2764,15 +2758,74 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
       );
     }
 
-    paymentId = `${leaseId}_${year}_${String(month).padStart(2, '0')}`;
+    const now = new Date();
+    const requestedMonth = Number.isFinite(month) && month >= 1 && month <= 12
+      ? Math.trunc(month)
+      : (now.getMonth() + 1);
+    const requestedYear = Number.isFinite(year) && year >= 2000 && year <= 9999
+      ? Math.trunc(year)
+      : now.getFullYear();
+
+    const openPaymentSnapshot = await db
+      .collection('payments')
+      .where('leaseId', '==', leaseId)
+      .limit(120)
+      .get();
+
+    const openPayments = openPaymentSnapshot.docs.filter((doc) => {
+      const status = String(doc.get('status') || '').trim().toLowerCase();
+      return status !== 'paid' && status !== 'success';
+    });
+
+    openPayments.sort((a, b) => {
+      const aDue = toDate(a.get('dueDate'));
+      const bDue = toDate(b.get('dueDate'));
+      if (aDue && bDue) return aDue.getTime() - bDue.getTime();
+
+      const aYear = Number(a.get('year') || 0);
+      const bYear = Number(b.get('year') || 0);
+      if (aYear !== bYear) return aYear - bYear;
+
+      const aMonth = Number(a.get('month') || 0);
+      const bMonth = Number(b.get('month') || 0);
+      if (aMonth !== bMonth) return aMonth - bMonth;
+
+      return String(a.id).localeCompare(String(b.id));
+    });
+
+    let targetMonth = requestedMonth;
+    let targetYear = requestedYear;
+    let targetPaymentDoc = null;
+
+    if (openPayments.length > 0) {
+      targetPaymentDoc = openPayments[0];
+      const openData = targetPaymentDoc.data() || {};
+      const openMonth = Number(openData.month || 0);
+      const openYear = Number(openData.year || 0);
+      if (openMonth >= 1 && openMonth <= 12) {
+        targetMonth = openMonth;
+      }
+      if (openYear >= 2000 && openYear <= 9999) {
+        targetYear = openYear;
+      }
+      paymentId = targetPaymentDoc.id;
+    } else {
+      paymentId = `${leaseId}_${targetYear}_${String(targetMonth).padStart(2, '0')}`;
+    }
+
     const paymentRef = db.collection('payments').doc(paymentId);
     const transactionRef = db.collection('transactions').doc(idempotencyKey);
     const currency = String(lease.currency || 'INR').trim() || 'INR';
 
     const baseAmount = Number(lease.rentAmount || 0);
     const lateFeePercentage = Number(lease.lateFeePercentage || 0);
-    const dueDate = toDate(lease.dueDate) || new Date();
-    const now = new Date();
+    const leaseDueDate = toDate(lease.dueDate);
+    const leaseDueDay = Number(lease.rentDueDay || (leaseDueDate ? leaseDueDate.getDate() : 1) || 1);
+    const resolvedCycleDueDate = dueDateFor(targetYear, targetMonth, leaseDueDay);
+    const openPaymentDueDate = targetPaymentDoc
+      ? toDate(targetPaymentDoc.get('dueDate'))
+      : null;
+    const dueDate = openPaymentDueDate || resolvedCycleDueDate;
     const isOverdue = now > dueDate;
     const lateFeeAmount = isOverdue
       ? Math.round(baseAmount * (lateFeePercentage / 100))
@@ -2868,7 +2921,6 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
         orderId: existingData.razorpayOrderId || null,
         clientSecret: existingData.stripeClientSecret || null,
         keyId: existingData.razorpayKeyId || null,
-        paymentSessionId: existingData.cashfreeTokenData || existingData.cashfreePaymentSessionId || null,
       };
     }
 
@@ -2953,7 +3005,6 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
         orderId: payment.get('razorpayOrderId') || null,
         clientSecret: payment.get('stripeClientSecret') || null,
         keyId: payment.get('razorpayKeyId') || null,
-        paymentSessionId: payment.get('cashfreeTokenData') || payment.get('cashfreePaymentSessionId') || null,
       };
     }
 
@@ -2982,8 +3033,9 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
           tenantId: lease.tenantId || context.auth.uid,
           ownerId: lease.ownerId || '',
           propertyId: lease.propertyId || '',
-          month,
-          year,
+          month: targetMonth,
+          year: targetYear,
+          dueDate,
           baseAmount,
           lateFeeAmount,
           rentAmount,
@@ -3047,180 +3099,94 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     });
 
     if (gateway === 'razorpay') {
-    const { keyId, keySecret, mode, keyPrefixMismatch } = getRazorpayConfig();
-    if (keyPrefixMismatch) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        `Razorpay mode-key mismatch: mode=${mode}`,
-      );
-    }
-    if (!keyId || !keySecret) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        `Razorpay keys not configured for mode=${mode}`,
-      );
-    }
+      const { keyId, keySecret, mode, keyPrefixMismatch } = getRazorpayConfig();
+      if (keyPrefixMismatch) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          `Razorpay mode-key mismatch: mode=${mode}`,
+        );
+      }
+      if (!keyId || !keySecret) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          `Razorpay keys not configured for mode=${mode}`,
+        );
+      }
 
-    const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-    const amountInPaise = feeBreakdown.totalPayableInPaise;
-    const receipt = paymentId;
+      const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+      const amountInPaise = feeBreakdown.totalPayableInPaise;
+      const receipt = paymentId;
 
-    const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${auth}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: amountInPaise,
-        currency,
-        receipt,
-        notes: { paymentId },
-      }),
-    });
-
-    if (!orderRes.ok) {
-      const text = await orderRes.text();
-      throw new functions.https.HttpsError(
-        'internal',
-        `Razorpay order failed: ${text}`,
-      );
-    }
-
-    const order = await orderRes.json();
-    await paymentRef.set(
-      {
-        razorpayOrderId: order.id,
-        razorpayKeyId: keyId,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
-
-    return {
-      paymentId,
-      gateway: 'razorpay',
-      amount: order.amount,
-      rentAmountInPaise: feeBreakdown.rentAmountInPaise,
-      convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
-      totalPayableInPaise: feeBreakdown.totalPayableInPaise,
-      estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
-      gatewayPercent: feeConfig.gatewayPercent,
-      gstPercent: feeConfig.gstPercent,
-      currency: order.currency,
-      idempotencyKey,
-      orderId: order.id,
-      keyId,
-    };
-  }
-
-  if (gateway === 'stripe') {
-    const { secretKey } = getStripeConfig();
-    if (!secretKey) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Stripe keys not configured',
-      );
-    }
-
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Stripe intent creation not configured',
-    );
-  }
-
-  if (gateway === 'cashfree') {
-    const { appId, secretKey, isSandbox } = getCashfreeConfig();
-    if (!appId || !secretKey) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Cashfree not configured',
-      );
-    }
-
-    // Cashfree SDK v2 uses cftoken API
-    const cashfreeBaseUrl = isSandbox
-      ? 'https://test.cashfree.com'
-      : 'https://api.cashfree.com';
-
-    const cashfreeOrderId = `cf_${paymentId}`;
-    const orderAmountInRupees = (feeBreakdown.totalPayableInPaise / 100).toFixed(2);
-
-    const tokenResponse = await fetch(`${cashfreeBaseUrl}/api/v2/cftoken/order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-client-id': appId,
-        'x-client-secret': secretKey,
-      },
-      body: JSON.stringify({
-        orderId: cashfreeOrderId,
-        orderAmount: orderAmountInRupees,
-        orderCurrency: currency,
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      const errText = await tokenResponse.text();
-      throw new functions.https.HttpsError(
-        'internal',
-        `Cashfree token creation failed: ${errText}`,
-      );
-    }
-
-    const tokenData = await tokenResponse.json();
-    if (tokenData.status !== 'OK') {
-      throw new functions.https.HttpsError(
-        'internal',
-        `Cashfree token error: ${tokenData.message || 'Unknown error'}`,
-      );
-    }
-    const cftoken = tokenData.cftoken;
-
-    await db.runTransaction(async (txn) => {
-      txn.set(
-        paymentRef,
-        {
-          cashfreeOrderId: cashfreeOrderId,
-          cashfreeTokenData: cftoken,
+      const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amountInPaise,
           currency,
-          totalAmount,
-          rentAmount,
-          rentAmountInPaise: feeBreakdown.rentAmountInPaise,
-          convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
-          totalPayableInPaise: feeBreakdown.totalPayableInPaise,
-          estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
-          gatewayPercent: feeConfig.gatewayPercent,
-          gatewayCostPercent: feeConfig.gatewayCostPercent,
-          gstPercent: feeConfig.gstPercent,
+          receipt,
+          notes: { paymentId },
+        }),
+      });
+
+      if (!orderRes.ok) {
+        const text = await orderRes.text();
+        throw new functions.https.HttpsError(
+          'internal',
+          `Razorpay order failed: ${text}`,
+        );
+      }
+
+      const order = await orderRes.json();
+      await paymentRef.set(
+        {
+          razorpayOrderId: order.id,
+          razorpayKeyId: keyId,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
       );
-      txn.set(transactionRef, {
-        paymentId,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-    });
 
-    return {
-      paymentId,
-      gateway: 'cashfree',
-      amount: totalAmount,
-      rentAmountInPaise: feeBreakdown.rentAmountInPaise,
-      convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
-      totalPayableInPaise: feeBreakdown.totalPayableInPaise,
-      estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
-      gatewayPercent: feeConfig.gatewayPercent,
-      gstPercent: feeConfig.gstPercent,
-      currency,
-      idempotencyKey,
-      orderId: cashfreeOrderId,
-      paymentSessionId: cftoken,
-      keyId: appId,
-      clientSecret: null,
-    };
-  }
+      return {
+        paymentId,
+        gateway: 'razorpay',
+        amount: order.amount,
+        rentAmountInPaise: feeBreakdown.rentAmountInPaise,
+        convenienceFeeInPaise: feeBreakdown.convenienceFeeInPaise,
+        totalPayableInPaise: feeBreakdown.totalPayableInPaise,
+        estimatedGatewayCostInPaise: feeBreakdown.estimatedGatewayCostInPaise,
+        gatewayPercent: feeConfig.gatewayPercent,
+        gstPercent: feeConfig.gstPercent,
+        currency: order.currency,
+        idempotencyKey,
+        orderId: order.id,
+        keyId,
+      };
+    }
+
+    if (gateway === 'stripe') {
+      const { secretKey } = getStripeConfig();
+      if (!secretKey) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'Stripe keys not configured',
+        );
+      }
+
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Stripe intent creation not configured',
+      );
+    }
+
+    if (gateway === 'cashfree') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Cashfree has been removed from this project. Use Razorpay.',
+      );
+    }
 
     throw new functions.https.HttpsError(
       'invalid-argument',
@@ -3431,127 +3397,19 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
       return { ok: true };
     }
 
-  if (gateway === 'stripe') {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Stripe verification not configured',
-    );
-  }
-
-  if (gateway === 'cashfree') {
-    const paymentDoc = await db.collection('payments').doc(paymentId).get();
-    if (!paymentDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Payment record not found');
-    }
-
-    const cashfreeOrderId = paymentDoc.get('cashfreeOrderId');
-    if (!cashfreeOrderId) {
+    if (gateway === 'stripe') {
       throw new functions.https.HttpsError(
         'failed-precondition',
-        'Cashfree order ID not found for this payment',
+        'Stripe verification not configured',
       );
     }
 
-    const { appId, secretKey, isSandbox } = getCashfreeConfig();
-    if (!appId || !secretKey) {
-      throw new functions.https.HttpsError('failed-precondition', 'Cashfree not configured');
-    }
-
-    const cashfreeBaseUrl = isSandbox
-      ? 'https://test.cashfree.com'
-      : 'https://api.cashfree.com';
-
-    const orderRes = await fetch(`${cashfreeBaseUrl}/api/v2/orders/${cashfreeOrderId}`, {
-      method: 'GET',
-      headers: {
-        'x-client-id': appId,
-        'x-client-secret': secretKey,
-      },
-    });
-
-    if (!orderRes.ok) {
-      const errText = await orderRes.text();
-      throw new functions.https.HttpsError('internal', `Cashfree order fetch failed: ${errText}`);
-    }
-
-    const orderData = await orderRes.json();
-    if (orderData.orderStatus !== 'PAID') {
+    if (gateway === 'cashfree') {
       throw new functions.https.HttpsError(
         'failed-precondition',
-        `Payment not completed. Status: ${orderData.orderStatus}`,
+        'Cashfree has been removed from this project. Use Razorpay.',
       );
     }
-
-    const cfTransactionId = orderData.referenceId?.toString() || cashfreeOrderId;
-
-    const now = FieldValue.serverTimestamp();
-    const rentAmountInPaise = Number(paymentDoc.get('rentAmountInPaise') || (Number(paymentDoc.get('rentAmount') || paymentDoc.get('baseAmount') || paymentDoc.get('amount') || 0) * 100));
-    const convenienceFeeInPaise = Number(paymentDoc.get('convenienceFeeInPaise') || 0);
-    const totalPayableInPaise = Number(paymentDoc.get('totalPayableInPaise') || (rentAmountInPaise + convenienceFeeInPaise));
-    const estimatedGatewayCostInPaise = Number(paymentDoc.get('estimatedGatewayCostInPaise') || convenienceFeeInPaise);
-
-    await db.collection('payments').doc(paymentId).set(
-      {
-        status: 'paid',
-        method: 'cashfree',
-        transactionId: cfTransactionId,
-        cashfreeOrderId,
-        paidAmount: Math.trunc(rentAmountInPaise / 100),
-        paidRentAmountInPaise: rentAmountInPaise,
-        paidConvenienceFeeInPaise: convenienceFeeInPaise,
-        collectedAmountInPaise: totalPayableInPaise,
-        paidAt: now,
-        updatedAt: now,
-      },
-      { merge: true },
-    );
-
-    await db.collection('transactions').add({
-      paymentId,
-      gateway: 'cashfree',
-      status: 'success',
-      transactionId: cfTransactionId,
-      cashfreeOrderId,
-      amount: totalPayableInPaise / 100,
-      rentAmountInPaise,
-      convenienceFeeInPaise,
-      totalPayableInPaise,
-      estimatedGatewayCostInPaise,
-      currency: paymentDoc.get('currency') || 'INR',
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await incrementFeeAnalytics({
-      gateway: 'cashfree',
-      rentAmountInPaise,
-      convenienceFeeInPaise,
-      totalPayableInPaise,
-      estimatedGatewayCostInPaise,
-    });
-
-    await verifyPaymentAfterWriteOrThrow({
-      paymentRef: db.collection('payments').doc(paymentId),
-      tenantId: String(paymentDoc.get('tenantId') || '').trim(),
-      ownerId: String(paymentDoc.get('ownerId') || '').trim(),
-      method: 'cashfree',
-      idempotencyKey: String(paymentDoc.get('idempotencyKey') || paymentDoc.get('transactionId') || '').trim(),
-      amount: normalizeIntegerAmount(paymentDoc.get('baseAmount') || paymentDoc.get('rentAmount') || paymentDoc.get('amount')),
-    });
-
-    logPaymentEvent('info', 'PAYMENT_SUCCESS', {
-      userId: context.auth.uid,
-      tenantId,
-      ownerId,
-      paymentId,
-      idempotencyKey,
-      amount,
-      method: gateway,
-      status: 'paid',
-    });
-
-    return { success: true };
-  }
 
     throw new functions.https.HttpsError(
       'invalid-argument',
@@ -4392,7 +4250,7 @@ exports.verifyOwnerRazorpayPayment = functions.https.onCall(async (data, context
 });
 
 // ==========================================================
-// OWNER SUBSCRIPTION (CASHFREE)
+// OWNER SUBSCRIPTION
 // ==========================================================
 
 async function assertOwnerAccessOrThrow(ownerId) {
@@ -4496,8 +4354,8 @@ exports.getOwnerSubscriptionSnapshot = functions.https.onCall(async (data, conte
       : 0,
     subscriptionStartDate: toEpochMillisOrNull(finalData.subscriptionStartDate),
     subscriptionExpiry: toEpochMillisOrNull(finalData.subscriptionExpiry),
-    cashfreeOrderId: finalData.cashfreeOrderId || null,
-    cashfreeSubscriptionId: finalData.cashfreeSubscriptionId || null,
+    paymentOrderId: finalData.paymentOrderId || finalData.cashfreeOrderId || null,
+    paymentSubscriptionId: finalData.paymentSubscriptionId || finalData.cashfreeSubscriptionId || null,
   };
 });
 
@@ -4526,279 +4384,17 @@ exports.activateOwnerFreeSubscription = functions.https.onCall(async (data, cont
 });
 
 exports.createOwnerSubscriptionPaymentIntent = functions.https.onCall(async (data, context) => {
-  // Production-grade Cashfree payment intent creation
-  assertCallableAuth(context);
-
-  const ownerId = context.auth.uid;
-  await assertOwnerAccessOrThrow(ownerId);
-
-  const planCode = String(data?.planCode || '').trim().toLowerCase();
-  
-  // Plan configurations with Cashfree amounts in paise (amount * 100)
-  const plans = {
-    basic: { 
-      amountInPaise: 9900,  // ₹99
-      tenantLimit: 10,
-      displayName: 'Basic Plan'
-    },
-    pro: { 
-      amountInPaise: 49900,  // ₹499
-      tenantLimit: 50,
-      displayName: 'Pro Plan'
-    },
-  };
-
-  const plan = plans[planCode];
-  if (!plan) {
-    throw new functions.https.HttpsError(
-      'invalid-argument',
-      'Only paid plans (basic/pro) can create subscription payment intents',
-    );
-  }
-
-  const { appId, secretKey, isSandbox } = getCashfreeConfig();
-  if (!appId || !secretKey) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'Cashfree not configured. Set cashfree.app_id and cashfree.secret_key in Firebase config.',
-    );
-  }
-
-  try {
-    const currency = 'INR';
-    const paymentId = `sub_${ownerId}_${Date.now()}`;
-    const cashfreeOrderId = `order_${paymentId}`;
-    const cashfreeBaseUrl = isSandbox
-      ? 'https://test.cashfree.com'
-      : 'https://api.cashfree.com';
-
-    // Create Cashfree payment session token
-    const tokenResponse = await fetch(`${cashfreeBaseUrl}/api/v2/cftoken/order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-client-id': appId,
-        'x-client-secret': secretKey,
-      },
-      body: JSON.stringify({
-        orderId: cashfreeOrderId,
-        orderAmount: (plan.amountInPaise / 100).toFixed(2),
-        orderCurrency: currency,
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      const errText = await tokenResponse.text();
-      functions.logger.error('Cashfree token creation failed', { 
-        status: tokenResponse.status, 
-        error: errText 
-      });
-      throw new functions.https.HttpsError(
-        'internal',
-        `Cashfree token creation failed: ${errText}`,
-      );
-    }
-
-    const tokenData = await tokenResponse.json();
-    if (tokenData.status !== 'OK') {
-      throw new functions.https.HttpsError(
-        'internal',
-        `Cashfree error: ${tokenData.message || 'Unknown error'}`,
-      );
-    }
-
-    const paymentSessionId = tokenData.cftoken;
-
-    // Store payment intent in Firestore for tracking
-    await db.collection('subscriptionPayments').doc(paymentId).set({
-      paymentId,
-      ownerId,
-      planCode,
-      tenantLimit: plan.tenantLimit,
-      amountInPaise: plan.amountInPaise,
-      currency,
-      gateway: 'cashfree',
-      status: 'pending',
-      cashfreeOrderId,
-      cashfreePaymentSessionId: paymentSessionId,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-      expiresAt: Timestamp.fromDate(new Date(Date.now() + 15 * 60 * 1000)), // 15 min expiry
-    });
-
-    functions.logger.info('Payment intent created', { 
-      paymentId, 
-      ownerId, 
-      planCode 
-    });
-
-    return {
-      paymentId,
-      orderId: cashfreeOrderId,
-      paymentSessionId,
-      keyId: appId,
-      amountInPaise: plan.amountInPaise,
-      currency,
-      planCode,
-      tenantLimit: plan.tenantLimit,
-    };
-  } catch (error) {
-    functions.logger.error('Payment intent creation error', { 
-      error: error.message,
-      ownerId,
-      planCode
-    });
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    }
-    throw new functions.https.HttpsError('internal', error.message);
-  }
+  throw new functions.https.HttpsError(
+    'failed-precondition',
+    'Cashfree subscription flow has been removed from this project.',
+  );
 });
 
 exports.verifyOwnerSubscriptionPayment = functions.https.onCall(async (data, context) => {
-  // Production-grade Cashfree payment verification
-  assertCallableAuth(context);
-
-  const ownerId = context.auth.uid;
-  await assertOwnerAccessOrThrow(ownerId);
-
-  const paymentId = String(data?.paymentId || '').trim();
-  if (!paymentId) {
-    throw new functions.https.HttpsError('invalid-argument', 'paymentId is required');
-  }
-
-  try {
-    const paymentRef = db.collection('subscriptionPayments').doc(paymentId);
-    const paymentDoc = await paymentRef.get();
-    
-    if (!paymentDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Subscription payment not found');
-    }
-
-    const paymentData = paymentDoc.data();
-    if (paymentData.ownerId !== ownerId) {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Payment does not belong to current owner',
-      );
-    }
-
-    // Check if payment already processed
-    if (paymentData.status === 'verified' || paymentData.status === 'paid') {
-      functions.logger.info('Payment already verified', { paymentId, ownerId });
-      return { ok: true, status: 'already_verified' };
-    }
-
-    const cashfreeOrderId = paymentData.cashfreeOrderId;
-    if (!cashfreeOrderId) {
-      throw new functions.https.HttpsError('failed-precondition', 'Cashfree order ID not found');
-    }
-
-    const { appId, secretKey, isSandbox } = getCashfreeConfig();
-    if (!appId || !secretKey) {
-      throw new functions.https.HttpsError('failed-precondition', 'Cashfree not configured');
-    }
-
-    const cashfreeBaseUrl = isSandbox
-      ? 'https://test.cashfree.com'
-      : 'https://api.cashfree.com';
-
-    // Fetch order status from Cashfree
-    const orderRes = await fetch(
-      `${cashfreeBaseUrl}/api/v2/orders/${cashfreeOrderId}`,
-      {
-        method: 'GET',
-        headers: {
-          'x-client-id': appId,
-          'x-client-secret': secretKey,
-        },
-      }
-    );
-
-    if (!orderRes.ok) {
-      const errText = await orderRes.text();
-      functions.logger.error('Cashfree order fetch failed', { 
-        status: orderRes.status, 
-        error: errText 
-      });
-      throw new functions.https.HttpsError(
-        'internal',
-        `Cashfree order fetch failed: ${errText}`,
-      );
-    }
-
-    const orderData = await orderRes.json();
-    if (orderData.orderStatus !== 'PAID') {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        `Payment not completed. Status: ${orderData.orderStatus}`,
-      );
-    }
-
-    // Payment verified! Update Firestore with subscription
-    const planCode = String(paymentData.planCode || 'free');
-    const tenantLimit = Number(paymentData.tenantLimit || 2);
-    const now = new Date();
-    const expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-    const cfTransactionId = orderData.referenceId?.toString() || cashfreeOrderId;
-
-    // Use transaction to ensure consistency
-    await db.runTransaction(async (txn) => {
-      // Update payment record
-      txn.set(
-        paymentRef,
-        {
-          status: 'paid',
-          transactionId: cfTransactionId,
-          paidAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      // Update owner subscription
-      txn.set(
-        db.collection('owners').doc(ownerId),
-        {
-          ownerId,
-          subscriptionPlan: planCode,
-          tenantLimit,
-          paymentStatus: 'active',
-          subscriptionStartDate: FieldValue.serverTimestamp(),
-          subscriptionExpiry: Timestamp.fromDate(expiryDate),
-          cashfreeOrderId,
-          cashfreeSubscriptionId: cfTransactionId,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-    });
-
-    functions.logger.info('Payment verified and subscription activated', { 
-      paymentId, 
-      ownerId, 
-      planCode,
-      transactionId: cfTransactionId
-    });
-
-    return {
-      ok: true,
-      status: 'active',
-      subscriptionPlan: planCode,
-      tenantLimit,
-      paymentId,
-    };
-  } catch (error) {
-    functions.logger.error('Payment verification error', { 
-      error: error.message,
-      paymentId,
-      ownerId
-    });
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    }
-    throw new functions.https.HttpsError('internal', error.message);
-  }
+  throw new functions.https.HttpsError(
+    'failed-precondition',
+    'Cashfree subscription flow has been removed from this project.',
+  );
 });
 
 function trustStatusLabel(score) {
@@ -5415,155 +5011,3 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
   res.status(501).send('Stripe webhook not configured');
 });
 
-// ==========================================================
-// CASHFREE WEBHOOK
-// ==========================================================
-
-exports.cashfreeWebhook = functions.https.onRequest(async (req, res) => {
-  if (req.method !== 'POST') {
-    res.status(405).send('Method not allowed');
-    return;
-  }
-
-  const { webhookSecret } = getCashfreeConfig();
-  if (!webhookSecret) {
-    res.status(500).send('Cashfree webhook secret not configured');
-    return;
-  }
-
-  const signature = req.get('x-webhook-signature');
-  const timestamp = req.get('x-webhook-timestamp');
-  if (!signature || !timestamp) {
-    await recordSecuritySignal({
-      type: 'invalid_webhook_signature',
-      channel: 'cashfree',
-      ip: requestIpFromHeaders(req),
-      reason: 'missing_signature_headers',
-      statusCode: 401,
-    });
-    res.status(401).send('Missing signature headers');
-    return;
-  }
-
-  const timestampMs = Number(timestamp) * 1000;
-  if (!Number.isFinite(timestampMs)) {
-    await recordSecuritySignal({
-      type: 'invalid_webhook_signature',
-      channel: 'cashfree',
-      ip: requestIpFromHeaders(req),
-      reason: 'invalid_signature_timestamp',
-      statusCode: 401,
-    });
-    res.status(401).send('Invalid signature timestamp');
-    return;
-  }
-
-  const maxAgeMs = 5 * 60 * 1000;
-  if (Math.abs(Date.now() - timestampMs) > maxAgeMs) {
-    await recordSecuritySignal({
-      type: 'invalid_webhook_signature',
-      channel: 'cashfree',
-      ip: requestIpFromHeaders(req),
-      reason: 'expired_signature_timestamp',
-      statusCode: 401,
-    });
-    res.status(401).send('Expired webhook signature timestamp');
-    return;
-  }
-
-  // Cashfree HMAC-SHA256: base64(HMAC(timestamp + rawBody, secret))
-  const rawBody = req.rawBody?.toString('utf8') || JSON.stringify(req.body);
-  const expectedSig = crypto
-    .createHmac('sha256', webhookSecret)
-    .update(timestamp + rawBody)
-    .digest('base64');
-
-  if (!safeEqualDigest(expectedSig, signature, 'base64')) {
-    await recordSecuritySignal({
-      type: 'invalid_webhook_signature',
-      channel: 'cashfree',
-      ip: requestIpFromHeaders(req),
-      reason: 'invalid_signature',
-      statusCode: 401,
-    });
-    res.status(401).send('Invalid signature');
-    return;
-  }
-
-  const eventIdHeader = String(req.get('x-webhook-id') || '').trim();
-  const replayKey = eventIdHeader || `${timestamp}:${signature}:${rawBody}`;
-  const isFresh = await recordWebhookDelivery({
-    provider: 'cashfree',
-    uniqueKey: replayKey,
-    rawBody,
-  });
-  if (!isFresh) {
-    res.json({ received: true, duplicate: true });
-    return;
-  }
-
-  const event = req.body?.type;
-  const data = req.body?.data || {};
-
-  if (event === 'PAYMENT_SUCCESS_WEBHOOK') {
-    const order = data?.order || {};
-    const payment = data?.payment || {};
-    const cashfreeOrderId = order.order_id;
-    const cfTransactionId = payment.cf_payment_id?.toString() || cashfreeOrderId;
-
-    if (cashfreeOrderId) {
-      const snap = await db
-        .collection('payments')
-        .where('cashfreeOrderId', '==', cashfreeOrderId)
-        .limit(1)
-        .get();
-
-      if (!snap.empty) {
-        const paymentId = snap.docs[0].id;
-        const now = FieldValue.serverTimestamp();
-        await db.collection('payments').doc(paymentId).set(
-          {
-            status: 'paid',
-            method: 'online',
-            transactionId: cfTransactionId,
-            cashfreeOrderId,
-            paidAt: now,
-            updatedAt: now,
-          },
-          { merge: true },
-        );
-      }
-    }
-  } else if (event === 'PAYMENT_FAILED_WEBHOOK') {
-    const order = data?.order || {};
-    const payment = data?.payment || {};
-    const cashfreeOrderId = order.order_id;
-    const failureMsg = payment.payment_message || 'Payment failed';
-
-    if (cashfreeOrderId) {
-      const snap = await db
-        .collection('payments')
-        .where('cashfreeOrderId', '==', cashfreeOrderId)
-        .limit(1)
-        .get();
-
-      if (!snap.empty) {
-        const paymentId = snap.docs[0].id;
-        await db
-          .collection('messages')
-          .doc(`${paymentId}_cfailed`)
-          .set({
-            type: 'reminder',
-            title: 'Payment failed',
-            body: `Cashfree payment failed (${failureMsg}).`,
-            severity: 'warn',
-            paymentId,
-            createdAt: FieldValue.serverTimestamp(),
-            read: false,
-          });
-      }
-    }
-  }
-
-  res.json({ received: true });
-});

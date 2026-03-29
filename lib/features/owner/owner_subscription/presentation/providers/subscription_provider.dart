@@ -3,10 +3,10 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 
-/// Subscription plan configuration with Cashfree integration
+/// Subscription plan configuration
 class SubscriptionPlanConfig {
   final String code;
-  final String cashfreePlanId;
+  final String externalPlanId;
   final String title;
   final int monthlyPrice; // in INR
   final int tenantLimit;
@@ -14,7 +14,7 @@ class SubscriptionPlanConfig {
 
   const SubscriptionPlanConfig({
     required this.code,
-    required this.cashfreePlanId,
+    required this.externalPlanId,
     required this.title,
     required this.monthlyPrice,
     required this.tenantLimit,
@@ -24,7 +24,7 @@ class SubscriptionPlanConfig {
 
 const freePlanConfig = SubscriptionPlanConfig(
   code: 'free',
-  cashfreePlanId: '',
+  externalPlanId: '',
   title: 'Free',
   monthlyPrice: 0,
   tenantLimit: 2,
@@ -33,7 +33,7 @@ const freePlanConfig = SubscriptionPlanConfig(
 
 const basicPlanConfig = SubscriptionPlanConfig(
   code: 'basic',
-  cashfreePlanId: 'basic_monthly_10tenants',
+  externalPlanId: 'basic_monthly_10tenants',
   title: 'Basic',
   monthlyPrice: 99,
   tenantLimit: 10,
@@ -42,7 +42,7 @@ const basicPlanConfig = SubscriptionPlanConfig(
 
 const proPlanConfig = SubscriptionPlanConfig(
   code: 'pro',
-  cashfreePlanId: 'pro_monthly_50tenants',
+  externalPlanId: 'pro_monthly_50tenants',
   title: 'Pro',
   monthlyPrice: 499,
   tenantLimit: 50,
@@ -73,8 +73,8 @@ class OwnerSubscriptionData {
   final int currentTenantCount;
   final DateTime? subscriptionStartDate;
   final DateTime? subscriptionExpiry;
-  final String? cashfreeOrderId;
-  final String? cashfreeSubscriptionId;
+  final String? paymentOrderId;
+  final String? paymentSubscriptionId;
 
   const OwnerSubscriptionData({
     required this.ownerId,
@@ -85,8 +85,8 @@ class OwnerSubscriptionData {
     required this.currentTenantCount,
     required this.subscriptionStartDate,
     required this.subscriptionExpiry,
-    this.cashfreeOrderId,
-    this.cashfreeSubscriptionId,
+    this.paymentOrderId,
+    this.paymentSubscriptionId,
   });
 
   SubscriptionPlanConfig get planConfig => planConfigByCode(subscriptionPlan);
@@ -122,19 +122,23 @@ class OwnerSubscriptionData {
       currentTenantCount: (map['currentTenantCount'] as num?)?.toInt() ?? 0,
       subscriptionStartDate: parseDate(map['subscriptionStartDate']),
       subscriptionExpiry: parseDate(map['subscriptionExpiry']),
-      cashfreeOrderId: (map['cashfreeOrderId'] as String?),
-      cashfreeSubscriptionId: (map['cashfreeSubscriptionId'] as String?),
+      paymentOrderId:
+          (map['paymentOrderId'] as String?) ??
+          (map['cashfreeOrderId'] as String?),
+      paymentSubscriptionId:
+          (map['paymentSubscriptionId'] as String?) ??
+          (map['cashfreeSubscriptionId'] as String?),
     );
   }
 }
 
-/// Cashfree payment intent for initiating payment
+/// Payment intent for initiating owner subscription payment
 class OwnerSubscriptionPaymentIntent {
   final String paymentId;
   final String orderId;
   final String paymentSessionId;
   final String keyId;
-  final int amountInPaise; // for Cashfree integration (amount * 100)
+  final int amountInPaise;
   final String currency;
   final String planCode;
   final int tenantLimit;
@@ -273,7 +277,7 @@ class OwnerSubscriptionService {
     }, SetOptions(merge: true));
   }
 
-  /// Create Cashfree payment intent for subscription
+  /// Create payment intent for subscription
   Future<OwnerSubscriptionPaymentIntent> createSubscriptionPaymentIntent({
     required SubscriptionPlanConfig plan,
   }) async {
@@ -301,7 +305,7 @@ class OwnerSubscriptionService {
     }
   }
 
-  /// Verify subscription payment after Cashfree returns
+  /// Verify subscription payment
   Future<void> verifySubscriptionPayment({required String paymentId}) async {
     final callable = _functions.httpsCallable('verifyOwnerSubscriptionPayment');
 
