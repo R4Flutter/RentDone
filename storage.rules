@@ -1,0 +1,39 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAllowedContentType() {
+      return request.resource != null
+        && request.resource.contentType != null
+        && (
+          request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'application/pdf'
+        );
+    }
+
+    function fileSizeWithinLimit() {
+      return request.resource != null
+        && request.resource.size != null
+        && (
+          (request.resource.contentType.matches('image/.*') && request.resource.size <= 200 * 1024)
+          || (request.resource.contentType == 'application/pdf' && request.resource.size <= 500 * 1024)
+        );
+    }
+
+    // Users can only access files under their own folder.
+    match /images/users/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated()
+        && request.auth.uid == userId
+        && isAllowedContentType()
+        && fileSizeWithinLimit();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
