@@ -73,7 +73,7 @@ class RewardedAdService {
 
     _rewardedAd = null;
     ad.show(
-      onUserEarnedReward: (_, __) async {
+      onUserEarnedReward: (_, reward) async {
         rewarded = true;
         await onRewardEarned();
       },

@@ -1,0 +1,16 @@
+﻿Analyzing rentdone...                                           
+
+   info - The import of 'package:cloud_firestore/cloud_firestore.dart' is unnecessary because all of the used elements are also provided by the import of 'package:firebase_auth/firebase_auth.dart' - lib\core\errors\error_handler.dart:1:8 - unnecessary_import
+  error - The function 'StateNotifierProvider' isn't defined - lib\core\network\connectivity_provider.dart:29:5 - undefined_function
+  error - Classes can only extend other classes - lib\core\network\connectivity_provider.dart:34:36 - extends_non_class
+  error - Too many positional arguments: 0 expected, but 1 found - lib\core\network\connectivity_provider.dart:35:34 - extra_positional_arguments
+  error - Undefined name 'mounted' - lib\core\network\connectivity_provider.dart:45:11 - undefined_identifier
+  error - Undefined name 'state' - lib\core\network\connectivity_provider.dart:45:20 - undefined_identifier
+  error - Undefined name 'mounted' - lib\core\network\connectivity_provider.dart:52:13 - undefined_identifier
+  error - Undefined name 'state' - lib\core\network\connectivity_provider.dart:52:22 - undefined_identifier
+  error - Undefined name 'mounted' - lib\core\network\connectivity_provider.dart:58:10 - undefined_identifier
+  error - Undefined name 'state' - lib\core\network\connectivity_provider.dart:68:22 - undefined_identifier
+  error - Undefined name 'state' - lib\core\network\connectivity_provider.dart:69:7 - undefined_identifier
+warning - The method doesn't override an inherited method - lib\core\network\connectivity_provider.dart:78:8 - override_on_non_overriding_member
+  error - The method 'dispose' isn't defined in a superclass of 'ConnectivityNotifier' - lib\core\network\connectivity_provider.dart:80:11 - undefined_super_member
+

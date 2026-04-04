@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/core/network/offline_aware_banner.dart';
 import 'package:rentdone/core/notifications/push_notification_provider.dart';
 import 'package:rentdone/app/theme_mode_provider.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
@@ -82,7 +83,9 @@ class _RentDoneAppState extends ConsumerState<RentDoneApp> {
               1.0,
             ), // prevents font scaling bugs
           ),
-          child: child ?? const SizedBox.shrink(),
+          child: OfflineAwareBanner(
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
     );

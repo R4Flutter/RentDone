@@ -9,6 +9,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:rentdone/core/security/app_check_service.dart';
 
 import 'package:rentdone/app/app.dart';
 import 'package:rentdone/core/ads/admob_config.dart';
@@ -32,8 +33,18 @@ Future<void> main() async {
   // Initialize Firebase (single responsibility)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Activate Firebase App Check for production protection
+  await AppCheckService.activate();
+
   // Optional local Firebase emulator mode for Spark/testing environments.
   await _initializeFirebaseEmulatorsIfEnabled();
+
+  // Enable Firestore offline persistence for seamless offline-first UX.
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+  AppLogger.info('Firestore offline persistence enabled', tag: 'main');
 
   // Initialize Crashlytics for error tracking
   await _initializeCrashlytics();

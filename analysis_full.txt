@@ -1,0 +1,7 @@
+﻿Analyzing rentdone...                                           
+
+   info - Unnecessary use of multiple underscores - lib\core\ads\rewarded_ad_service.dart:76:31 - unnecessary_underscores
+   info - Unnecessary constructor invocation - lib\core\storage\document_cache_service.dart:144:24 - prefer_collection_literals
+   info - The parameter name 'sum' matches a visible type name - lib\features\tenant\payment_module\services\payment_service.dart:105:10 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\features\tenant\payment_module\services\payment_service.dart:302:43 - avoid_types_as_parameter_names
+
