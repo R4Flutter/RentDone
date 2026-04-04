@@ -94,7 +94,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
             Transform.translate(
               offset: const Offset(-3, 0),
               child: Text(
-                'RENTDONE',
+                'RentDone',
                 style: textTheme.displayMedium?.copyWith(
                   fontSize: 30,
                   fontWeight: FontWeight.w900,

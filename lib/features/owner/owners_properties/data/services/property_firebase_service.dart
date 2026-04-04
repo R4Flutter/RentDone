@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:rentdone/core/utils/city_key_normalizer.dart';
 import 'package:rentdone/core/trust/tenant_trust_score.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/property_dto.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/tenant_dto.dart';
@@ -59,6 +60,11 @@ class PropertyFirebaseService {
 
   Future<void> addProperty(PropertyDto property) async {
     final ownerId = _requireOwnerId();
+    final city = property.city.trim();
+    final cityKey = normalizeCityKey(city);
+    if (city.isEmpty || cityKey.isEmpty) {
+      throw StateError('Property city is required and must be valid.');
+    }
     final ownerCoordinates = await _readOwnerCoordinates(ownerId);
     final resolvedCoords = await _resolveCoordinates(
       ownerId: ownerId,
@@ -69,10 +75,14 @@ class PropertyFirebaseService {
 
     await _db.collection('properties').doc(property.id).set({
       ...property.toMap(),
+      'city': city,
+      'cityKey': cityKey,
       'lat': resolvedCoords.$1,
       'lng': resolvedCoords.$2,
-      if (ownerCoordinates != null) 'ownerLocationLatitude': ownerCoordinates.$1,
-      if (ownerCoordinates != null) 'ownerLocationLongitude': ownerCoordinates.$2,
+      if (ownerCoordinates != null)
+        'ownerLocationLatitude': ownerCoordinates.$1,
+      if (ownerCoordinates != null)
+        'ownerLocationLongitude': ownerCoordinates.$2,
       'ownerId': ownerId,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -81,6 +91,11 @@ class PropertyFirebaseService {
 
   Future<void> updateProperty(PropertyDto property) async {
     final ownerId = _requireOwnerId();
+    final city = property.city.trim();
+    final cityKey = normalizeCityKey(city);
+    if (city.isEmpty || cityKey.isEmpty) {
+      throw StateError('Property city is required and must be valid.');
+    }
     final ownerCoordinates = await _readOwnerCoordinates(ownerId);
     final resolvedCoords = await _resolveCoordinates(
       ownerId: ownerId,
@@ -91,10 +106,14 @@ class PropertyFirebaseService {
 
     await _db.collection('properties').doc(property.id).update({
       ...property.toMap(),
+      'city': city,
+      'cityKey': cityKey,
       'lat': resolvedCoords.$1,
       'lng': resolvedCoords.$2,
-      if (ownerCoordinates != null) 'ownerLocationLatitude': ownerCoordinates.$1,
-      if (ownerCoordinates != null) 'ownerLocationLongitude': ownerCoordinates.$2,
+      if (ownerCoordinates != null)
+        'ownerLocationLatitude': ownerCoordinates.$1,
+      if (ownerCoordinates != null)
+        'ownerLocationLongitude': ownerCoordinates.$2,
       'ownerId': ownerId,
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -227,14 +246,21 @@ class PropertyFirebaseService {
       if (!propertyDoc.exists) {
         throw StateError('Selected property does not exist');
       }
+      final propertyData = propertyDoc.data() ?? <String, dynamic>{};
+      final propertyCity = (propertyData['city'] ?? '').toString().trim();
+      final propertyCityKey = normalizeCityKey(
+        (propertyData['cityKey'] ?? propertyCity).toString(),
+      );
+      if (propertyCity.isEmpty || propertyCityKey.isEmpty) {
+        throw StateError('Selected property has an invalid city configuration');
+      }
 
       final ownerDoc = await txn.get(ownerRef);
       final ownerData = ownerDoc.data() ?? <String, dynamic>{};
       final currentCount =
           (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
 
-      final data = propertyDoc.data();
-      final rooms = _normalizeRooms(data?['rooms']);
+      final rooms = _normalizeRooms(propertyData['rooms']);
       final roomIndex = rooms.indexWhere((room) => room['id'] == tenant.roomId);
 
       if (roomIndex == -1) {
@@ -251,6 +277,8 @@ class PropertyFirebaseService {
 
       rooms[roomIndex] = {...room, 'isOccupied': true, 'tenantId': tenant.id};
 
+      tenantMap['city'] = propertyCity;
+      tenantMap['cityKey'] = propertyCityKey;
       txn.set(tenantRef, tenantMap);
       txn.update(propertyRef, {'rooms': rooms});
 
@@ -338,14 +366,14 @@ class PropertyFirebaseService {
     }
   }
 
-
   Future<(double, double)?> _readOwnerCoordinates(String ownerId) async {
     final snapshot = await _db.collection('users').doc(ownerId).get();
     final data = snapshot.data();
     if (data == null) return null;
 
-    final geoPoint =
-        data['location'] is GeoPoint ? data['location'] as GeoPoint : null;
+    final geoPoint = data['location'] is GeoPoint
+        ? data['location'] as GeoPoint
+        : null;
 
     final lat = _toDouble(data['locationLatitude']) ?? geoPoint?.latitude;
     final lng = _toDouble(data['locationLongitude']) ?? geoPoint?.longitude;
@@ -400,7 +428,11 @@ class PropertyFirebaseService {
   }
 
   String _normalizePhone(String phone) {
-    return phone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 12 && digits.startsWith('91')) {
+      return digits.substring(2);
+    }
+    return digits;
   }
 
   String _hashPhone(String normalizedPhone) {

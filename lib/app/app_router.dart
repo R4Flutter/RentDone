@@ -11,6 +11,7 @@ import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/phone_capture_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/signup_screen.dart';
+import 'package:rentdone/features/auth/presentation/pages/verify_email_code_screen.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart'
     as owner_add_tenant;
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_screen.dart';
@@ -35,8 +36,10 @@ import 'package:rentdone/features/owner/reports/presentation/pages/report_screen
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/presentation/screens/transaction_history_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_dashboard_screen.dart';
+import 'package:rentdone/features/tenant/presentation/pages/tenant_ad_subscription_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_documents_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_dashboard_shell.dart';
+import 'package:rentdone/features/tenant/presentation/pages/tenant_notifications_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_payments_screen.dart';
 import 'package:rentdone/features/tenant/presentation/pages/tenant_profile_screen.dart';
 import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_city_entry_screen.dart';
@@ -76,6 +79,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         }
       }
 
+      UserRole inferRoleForVerification() {
+        if (path.startsWith('/tenant')) {
+          return UserRole.tenant;
+        }
+        if (path.startsWith('/owner')) {
+          return UserRole.owner;
+        }
+        final roleParam = state.uri.queryParameters['role'];
+        return UserRoleX.tryParse(roleParam) ?? UserRole.owner;
+      }
+
       // Allow access to role selection and login for unauthenticated users
       if (!isLoggedIn) {
         final requiresAuth =
@@ -105,11 +119,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           }
         }
 
-        return null; // Allow /role, /phone, /login and /signup
+        if (path == '/verify-email-code') {
+          return null;
+        }
+
+        return null; // Allow /role, /phone, /login, /signup and /verify-email-code
+      }
+
+      final currentUser = firebaseAuth.currentUser!;
+      var latestUser = currentUser;
+      if (!latestUser.emailVerified) {
+        // If a stale unverified session blocks login/signup, clear session so
+        // users can switch accounts without getting trapped in redirects.
+        const authEntryPaths = {'/role', '/phone', '/login', '/signup'};
+        if (authEntryPaths.contains(path)) {
+          await firebaseAuth.signOut();
+          return null;
+        }
+
+        try {
+          await latestUser.reload();
+          latestUser = firebaseAuth.currentUser ?? latestUser;
+        } catch (_) {
+          // If reload fails, fall back to existing verification state.
+        }
+      }
+
+      if (!latestUser.emailVerified) {
+        if (path != '/verify-email-code') {
+          final selectedRole = inferRoleForVerification();
+          final verifyUri = Uri(
+            path: '/verify-email-code',
+            queryParameters: {
+              'role': selectedRole.name,
+              'phone': state.uri.queryParameters['phone'] ?? '',
+              'email': (latestUser.email ?? '').toLowerCase(),
+            },
+          );
+          return verifyUri.toString();
+        }
+        return null;
       }
 
       // User is authenticated - check their role
-      final uid = firebaseAuth.currentUser!.uid;
+      final uid = latestUser.uid;
       final role = await ref.read(authRepositoryProvider).getUserRole(uid);
 
       // If user has no role yet, only allow /role and /login
@@ -117,7 +170,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         if (path == '/role' ||
             path == '/phone' ||
             path == '/login' ||
-            path == '/signup') {
+            path == '/signup' ||
+            path == '/verify-email-code') {
           return null; // Allow these paths
         }
         return '/role'; // Redirect everything else to role selection
@@ -136,21 +190,60 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/phone' ||
           path == '/login' ||
           path == '/signup' ||
+          path == '/verify-email-code' ||
           path == '/') {
-        // Check whether the user's profile is complete (name + phone required)
+        // Check onboarding completeness before sending authenticated users home.
         try {
-          final userDoc = await ref
-              .read(firestoreProvider)
-              .collection('users')
-              .doc(uid)
-              .get();
-          final data = userDoc.data() ?? {};
-          final phone = (data['phone'] as String? ?? '').trim();
-          final name = (data['name'] as String? ?? '').trim();
-          if (phone.isEmpty || name.isEmpty) {
-            return role == UserRole.owner
-                ? '/owner/profile?setup=true'
-                : '/tenant/profile?setup=true';
+          final firestore = ref.read(firestoreProvider);
+
+          if (role == UserRole.owner) {
+            final userDoc = await firestore.collection('users').doc(uid).get();
+            final data = userDoc.data() ?? {};
+            final phone =
+                ((data['phone'] ?? data['phoneNumber']) as String? ?? '')
+                    .trim();
+            final name = (data['name'] as String? ?? '').trim();
+
+            if (phone.isEmpty || name.isEmpty) {
+              return '/owner/profile?setup=true';
+            }
+          } else {
+            final results = await Future.wait([
+              firestore.collection('users').doc(uid).get(),
+              firestore.collection('tenants').doc(uid).get(),
+            ]);
+
+            final userData = results[0].data() ?? {};
+            final tenantData = results[1].data() ?? {};
+
+            final name =
+                ((tenantData['name'] ?? userData['name']) as String? ?? '')
+                    .trim();
+            final phone =
+                ((tenantData['phoneNumber'] ??
+                                tenantData['phone'] ??
+                                userData['phoneNumber'] ??
+                                userData['phone'])
+                            as String? ??
+                        '')
+                    .trim();
+
+            final propertyName = (tenantData['propertyName'] as String? ?? '')
+                .trim();
+            final roomNumber = (tenantData['roomNumber'] as String? ?? '')
+                .trim();
+            final rentAmount = (tenantData['rentAmount'] as num?)?.toInt() ?? 0;
+
+            final isPersonalComplete = name.isNotEmpty && phone.isNotEmpty;
+            final isAllocationComplete =
+                propertyName.isNotEmpty &&
+                roomNumber.isNotEmpty &&
+                roomNumber != '-' &&
+                rentAmount > 0;
+
+            if (!isPersonalComplete || !isAllocationComplete) {
+              return '/tenant/profile?setup=true';
+            }
           }
         } catch (_) {
           // If Firestore check fails, fall through to dashboard normally
@@ -236,6 +329,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      GoRoute(
+        path: '/verify-email-code',
+        name: 'verifyEmailCode',
+        builder: (context, state) {
+          final roleParam = state.uri.queryParameters['role'];
+          final phone = state.uri.queryParameters['phone'] ?? '';
+          final email = state.uri.queryParameters['email'] ?? '';
+          final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
+
+          return BackHandler.root(
+            dialogTitle: 'Exit RentDone?',
+            dialogMessage: 'Are you sure you want to exit?',
+            child: VerifyEmailCodeScreen(
+              selectedRole: selectedRole,
+              phoneNumber: phone,
+              email: email,
+            ),
+          );
+        },
+      ),
+
       // ============================================================
       // 🧑‍💼 TENANT ROUTES
       // ============================================================
@@ -250,7 +364,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/tenant/city',
             name: 'tenantCity',
-            builder: (context, state) => const TenantCityEntryScreen(),
+            builder: (context, state) => TenantCityEntryScreen(
+              initialCity: state.uri.queryParameters['city'],
+            ),
           ),
           GoRoute(
             path: '/tenant/map',
@@ -283,6 +399,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'tenantTransactions',
             builder: (context, state) =>
                 const TransactionHistoryScreen(actor: TransactionActor.tenant),
+          ),
+          GoRoute(
+            path: '/tenant/subscription',
+            name: 'tenantSubscription',
+            builder: (context, state) => const TenantAdSubscriptionScreen(),
+          ),
+          GoRoute(
+            path: '/tenant/notifications',
+            name: 'tenantNotifications',
+            builder: (context, state) => const TenantNotificationsScreen(),
           ),
         ],
       ),

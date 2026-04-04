@@ -13,6 +13,7 @@ const _kTenantNotchDepth = 42.0;
 const _kTenantTopRadius = 30.0;
 const _kTenantSideInset = 24.0;
 const _kTenantTotalHeight = _kTenantBarHeight + _kTenantIconRise;
+const _kTenantBottomGap = 0.0;
 
 double _tenantLerp(double a, double b, double t) => a + (b - a) * t;
 
@@ -200,9 +201,11 @@ class _TenantBottomNavBarState extends State<_TenantBottomNavBar>
     final borderColor = isDark
         ? AppColors.white.withValues(alpha: 0.14)
         : AppColors.black.withValues(alpha: 0.08);
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final bottomOffset = bottomInset + _kTenantBottomGap;
 
     return SizedBox(
-      height: _kTenantTotalHeight,
+      height: _kTenantTotalHeight + bottomOffset,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
@@ -225,8 +228,25 @@ class _TenantBottomNavBarState extends State<_TenantBottomNavBar>
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
+                  if (bottomInset > 0)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: bottomInset,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: navBase.withValues(
+                            alpha: isDark ? 0.94 : 0.98,
+                          ),
+                          border: Border(
+                            top: BorderSide(color: borderColor, width: 0.7),
+                          ),
+                        ),
+                      ),
+                    ),
                   Positioned(
-                    bottom: 0,
+                    bottom: bottomOffset,
                     left: 0,
                     right: 0,
                     height: _kTenantBarHeight,
@@ -256,7 +276,7 @@ class _TenantBottomNavBarState extends State<_TenantBottomNavBar>
                     ),
                   ),
                   Positioned(
-                    bottom: 0,
+                    bottom: bottomOffset,
                     left: 0,
                     right: 0,
                     height: _kTenantBarHeight,
@@ -282,7 +302,11 @@ class _TenantBottomNavBarState extends State<_TenantBottomNavBar>
                       ),
                     ),
                   ),
-                  Positioned.fill(
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: bottomOffset,
+                    height: _kTenantTotalHeight,
                     child: Padding(
                       padding: const EdgeInsets.only(
                         top: _kTenantIconRise,

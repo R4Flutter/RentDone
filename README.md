@@ -141,6 +141,25 @@ flutter run --dart-define=USE_FUNCTIONS_EMULATOR=true --dart-define=FUNCTIONS_EM
 
 For Android Emulator, use `FUNCTIONS_EMULATOR_HOST=10.0.2.2`.
 
+### 3) Run Auth Integration Smoke Test (Emulator)
+
+This project includes an emulator-only auth integration smoke test at
+`integration_test/auth_emulator_smoke_test.dart`.
+
+Run it with `flutter drive`:
+
+```bash
+flutter drive --driver=test_driver/integration_test.dart --target=integration_test/auth_emulator_smoke_test.dart --dart-define=USE_AUTH_EMULATOR=true --dart-define=USE_FIRESTORE_EMULATOR=true --dart-define=FIREBASE_EMULATOR_HOST=127.0.0.1 --dart-define=AUTH_EMULATOR_PORT=9099 --dart-define=FIRESTORE_EMULATOR_PORT=8080
+```
+
+Optional local quick run (`flutter test`) command:
+
+```bash
+flutter test integration_test/auth_emulator_smoke_test.dart --dart-define=USE_AUTH_EMULATOR=true --dart-define=USE_FIRESTORE_EMULATOR=true --dart-define=FIREBASE_EMULATOR_HOST=127.0.0.1 --dart-define=AUTH_EMULATOR_PORT=9099 --dart-define=FIRESTORE_EMULATOR_PORT=8080
+```
+
+For Android Emulator host networking, set `FIREBASE_EMULATOR_HOST=10.0.2.2`.
+
 ### Recommended release checklist
 
 - Enable Email/Password and Google provider in Firebase Auth.

@@ -16,15 +16,23 @@ class AdMobConfig {
     defaultValue: 'ca-app-pub-5463912491137261/6269074309',
   );
 
+  static const String _releaseBannerTransactionUnit = String.fromEnvironment(
+    'ADMOB_BANNER_TRANSACTION_UNIT',
+    defaultValue: '',
+  );
+
   static const String _testNativeAndroid =
       'ca-app-pub-3940256099942544/2247696110';
-  static const String _testNativeIos =
-      'ca-app-pub-3940256099942544/3986624511';
+  static const String _testNativeIos = 'ca-app-pub-3940256099942544/3986624511';
 
   static const String _testRewardedAndroid =
       'ca-app-pub-3940256099942544/5224354917';
   static const String _testRewardedIos =
       'ca-app-pub-3940256099942544/1712485313';
+
+  static const String _testBannerAndroid =
+      'ca-app-pub-3940256099942544/6300978111';
+  static const String _testBannerIos = 'ca-app-pub-3940256099942544/2934735716';
 
   static bool get isSupportedPlatform {
     if (kIsWeb) return false;
@@ -42,8 +50,16 @@ class AdMobConfig {
   static bool get enableNativeAdsInDebug {
     return const bool.fromEnvironment(
       'ENABLE_NATIVE_ADS_IN_DEBUG',
-      defaultValue: false,
+      defaultValue: true,
     );
+  }
+
+  static bool get bypassAdThrottleInDebug {
+    return kDebugMode;
+  }
+
+  static bool get showAdPlaceholderInDebug {
+    return kDebugMode;
   }
 
   static bool get shouldLoadNativeAds {
@@ -68,17 +84,17 @@ class AdMobConfig {
     return _releaseRewardedUnit;
   }
 
-  static bool get isAffiliateEnabled {
-    return const bool.fromEnvironment(
-      'ENABLE_CREDIT_CARD_AFFILIATE',
-      defaultValue: true,
-    );
+  static bool get shouldLoadBannerAds {
+    if (!isSupportedPlatform) return false;
+    return useTestAds || _releaseBannerTransactionUnit.isNotEmpty;
   }
 
-  static String get affiliateCreditCardUrl {
-    return const String.fromEnvironment(
-      'CREDIT_CARD_AFFILIATE_URL',
-      defaultValue: 'https://example.com/credit-card-offer',
-    );
+  static String get transactionBannerUnitId {
+    if (useTestAds) {
+      return defaultTargetPlatform == TargetPlatform.iOS
+          ? _testBannerIos
+          : _testBannerAndroid;
+    }
+    return _releaseBannerTransactionUnit;
   }
 }

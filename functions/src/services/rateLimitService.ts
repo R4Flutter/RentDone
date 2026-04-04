@@ -3,11 +3,12 @@ import { FieldValue, db } from "../utils/firebase";
 const DEFAULT_MAX_PER_DAY: Record<string, number> = {
   PAYMENT_RECEIVED: 20,
   RENT_DUE_REMINDER: 4,
+  CHEAPER_PROPERTY_ALERT: 2,
 };
 
 export const checkAndIncrementRateLimit = async (
   userId: string,
-  notificationType: "PAYMENT_RECEIVED" | "RENT_DUE_REMINDER",
+  notificationType: "PAYMENT_RECEIVED" | "RENT_DUE_REMINDER" | "CHEAPER_PROPERTY_ALERT",
 ): Promise<boolean> => {
   const dayKey = new Date().toISOString().slice(0, 10);
   const ref = db

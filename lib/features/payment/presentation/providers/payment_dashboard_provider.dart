@@ -7,10 +7,16 @@ import 'package:rentdone/features/payment/domain/entities/payment_due.dart';
 import 'package:rentdone/features/payment/domain/entities/payment_failure.dart';
 import 'package:rentdone/features/payment/domain/entities/payment_intent.dart';
 import 'package:rentdone/features/payment/presentation/providers/payment_di.dart';
-import 'package:rentdone/core/logging/payment_event_logger.dart';
 import 'package:rentdone/core/config/app_config_service.dart';
 
-enum PaymentFlowStatus { idle, loading, processingPayment, success, failure }
+enum PaymentFlowStatus {
+  idle,
+  loading,
+  processingPayment,
+  pendingVerification,
+  success,
+  failure,
+}
 
 class PaymentDashboardState {
   final PaymentFlowStatus flowStatus;
@@ -44,7 +50,28 @@ class PaymentDashboardState {
 class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
   final _firestore = FirebaseFirestore.instance;
 
+  bool _shouldMarkPendingVerification(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('verification-failed') ||
+        normalized.contains('auto-reconcile') ||
+        normalized.contains('pending') ||
+        normalized.contains('gateway-check-failed') ||
+        normalized.contains('taking longer than expected');
+  }
+
   Future<PaymentDue?> _getTenantDue(String uid) async {
+    try {
+      final resolvedDue = await ref
+          .read(getCurrentDueUseCaseProvider)
+          .call(tenantId: uid);
+      if (resolvedDue != null) {
+        return resolvedDue;
+      }
+    } catch (_) {
+      // Fall back to tenant snapshot to keep checkout available even
+      // when lease/payment records are temporarily incomplete.
+    }
+
     final doc = await _firestore.collection('tenants').doc(uid).get();
 
     if (!doc.exists) return null;
@@ -124,32 +151,25 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
     if (due == null) {
       const msg = 'Tenant data not found. Cannot proceed with payment.';
       state = AsyncValue.data(
-        current.copyWith(
-          flowStatus: PaymentFlowStatus.failure,
-          message: msg,
-        ),
+        current.copyWith(flowStatus: PaymentFlowStatus.failure, message: msg),
       );
       return null;
     }
 
-    final logger = PaymentEventLogger.instance;
     final appConfig = await AppConfigService().getConfig(forceRefresh: true);
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     // ✅ FETCH CORRECT EMAIL + PHONE FROM FIRESTORE
-    final tenantDoc =
-        await _firestore.collection('tenants').doc(uid).get();
+    final tenantDoc = await _firestore.collection('tenants').doc(uid).get();
 
     final tenantData = tenantDoc.data() ?? {};
 
     final email = (tenantData['email'] ?? '').toString().trim();
 
-    final phone = (
-      tenantData['phone'] ??
-      tenantData['phoneNumber'] ??
-      ''
-    ).toString().trim();
+    final phone = (tenantData['phone'] ?? tenantData['phoneNumber'] ?? '')
+        .toString()
+        .trim();
 
     if (email.isEmpty || phone.isEmpty) {
       throw Exception("Tenant contact details missing.");
@@ -158,10 +178,7 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
     if (!appConfig.paymentsEnabled || appConfig.maintenanceMode) {
       const msg = 'Payments are currently disabled.';
       state = AsyncValue.data(
-        current.copyWith(
-          flowStatus: PaymentFlowStatus.failure,
-          message: msg,
-        ),
+        current.copyWith(flowStatus: PaymentFlowStatus.failure, message: msg),
       );
       return null;
     }
@@ -174,14 +191,18 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
     );
 
     try {
+      final now = DateTime.now();
+      final idempotencyKey =
+          '${uid}_${now.year}_${now.month}_${gateway}_${now.microsecondsSinceEpoch}';
+
       final intent = await ref
           .read(createPaymentIntentUseCaseProvider)
           .call(
             leaseId: uid,
-            month: DateTime.now().month,
-            year: DateTime.now().year,
+            month: now.month,
+            year: now.year,
             gateway: gateway,
-           idempotencyKey: '${uid}_${DateTime.now().year}_${DateTime.now().month}_$gateway',
+            idempotencyKey: idempotencyKey,
           );
 
       final result = await paymentGateway.initializePayment(
@@ -202,15 +223,17 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
         throw Exception(result.failureReason ?? 'Payment failed');
       }
 
-      await ref.read(verifyPaymentUseCaseProvider).call(
-        paymentId: intent.paymentId,
-        gateway: gateway,
-        payload: {
-          'orderId': result.orderId,
-          'paymentId': result.gatewayPaymentId,
-          'signature': result.signature,
-        },
-      );
+      await ref
+          .read(verifyPaymentUseCaseProvider)
+          .call(
+            paymentId: intent.paymentId,
+            gateway: gateway,
+            payload: {
+              'orderId': result.orderId,
+              'paymentId': result.gatewayPaymentId,
+              'signature': result.signature,
+            },
+          );
 
       final updatedDue = await _getTenantDue(uid);
 
@@ -224,10 +247,20 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
 
       return intent;
     } catch (e) {
+      final rawMessage = e.toString().replaceFirst('Exception: ', '').trim();
+      final isPendingVerification =
+          rawMessage.isNotEmpty && _shouldMarkPendingVerification(rawMessage);
+
       state = AsyncValue.data(
         current.copyWith(
-          flowStatus: PaymentFlowStatus.failure,
-          message: e.toString(),
+          flowStatus: isPendingVerification
+              ? PaymentFlowStatus.pendingVerification
+              : PaymentFlowStatus.failure,
+          message: rawMessage.isEmpty
+              ? (isPendingVerification
+                    ? 'Payment pending. We are verifying this securely.'
+                    : 'Payment failed. Please try again.')
+              : rawMessage,
         ),
       );
       return null;

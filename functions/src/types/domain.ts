@@ -1,6 +1,6 @@
 import { DocumentReference } from "firebase-admin/firestore";
 
-export type NotificationType = "PAYMENT_RECEIVED" | "RENT_DUE_REMINDER";
+export type NotificationType = "PAYMENT_RECEIVED" | "RENT_DUE_REMINDER" | "CHEAPER_PROPERTY_ALERT";
 
 export interface DeviceTokenDoc {
   token: string;

@@ -40,7 +40,8 @@ class RazorpayService {
     required PaymentService paymentService,
     FirebaseFunctions? functions,
   }) : _paymentService = paymentService,
-       _functions = functions ?? FirebaseFunctions.instance {
+       _functions =
+           functions ?? FirebaseFunctions.instanceFor(region: 'asia-south1') {
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
@@ -195,7 +196,16 @@ class RazorpayService {
       });
 
       final data = Map<String, dynamic>.from(response.data as Map);
-      return data['ok'] == true || data['verified'] == true;
+      final status = (data['status'] ?? '').toString().trim().toLowerCase();
+      final hasPaymentId = (data['paymentId'] ?? '')
+          .toString()
+          .trim()
+          .isNotEmpty;
+      return data['ok'] == true ||
+          data['verified'] == true ||
+          status == 'paid' ||
+          status == 'success' ||
+          (hasPaymentId && status != 'failed');
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'unimplemented' || e.code == 'not-found') {
         // Mock-ready fallback for environments where verification callable

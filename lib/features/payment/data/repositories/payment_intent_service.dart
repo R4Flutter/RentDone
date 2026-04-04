@@ -48,9 +48,47 @@ class PaymentIntentService {
         payload: payload,
       );
     } on FirebaseFunctionsException catch (error) {
+      final normalizedGateway = gateway.trim().toLowerCase();
+      if (normalizedGateway == 'razorpay' &&
+          _shouldTryRazorpayFallback(error)) {
+        final orderId = (payload['orderId'] ?? '').toString().trim();
+        final razorpayPaymentId = (payload['paymentId'] ?? '')
+            .toString()
+            .trim();
+        final signature = (payload['signature'] ?? '').toString().trim();
+
+        if (orderId.isNotEmpty &&
+            razorpayPaymentId.isNotEmpty &&
+            signature.isNotEmpty) {
+          try {
+            await _functions.confirmRazorpayPayment(
+              paymentId: paymentId,
+              razorpayOrderId: orderId,
+              razorpayPaymentId: razorpayPaymentId,
+              razorpaySignature: signature,
+            );
+            return;
+          } on FirebaseFunctionsException catch (fallbackError) {
+            throw PaymentFailureMapper.mapFunctionsFailure(fallbackError);
+          }
+        }
+      }
       throw PaymentFailureMapper.mapFunctionsFailure(error);
     } catch (error) {
       throw const ServerFailure('Payment verification failed');
+    }
+  }
+
+  bool _shouldTryRazorpayFallback(FirebaseFunctionsException error) {
+    switch (error.code) {
+      case 'unavailable':
+      case 'not-found':
+      case 'failed-precondition':
+      case 'permission-denied':
+      case 'invalid-argument':
+        return true;
+      default:
+        return false;
     }
   }
 

@@ -24,7 +24,33 @@ function getSecurityConfig() {
     allowedOrigin: String(
       cfg.allowed_origin || process.env.SECURITY_ALLOWED_ORIGIN || '',
     ).trim(),
+    enforcePublicCallableAppCheck: parseBool(
+      cfg.enforce_public_callable_app_check,
+      false,
+    ),
   };
+}
+
+async function assertPublicCallableAppCheckOrThrow(context, { operation = 'public_callable' } = {}) {
+  const { enforcePublicCallableAppCheck } = getSecurityConfig();
+  if (context?.app) {
+    return;
+  }
+
+  if (enforcePublicCallableAppCheck) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'App Check token is required',
+    );
+  }
+
+  await recordSecuritySignal({
+    type: 'app_check_missing',
+    channel: String(operation || 'public_callable').toLowerCase(),
+    uid: context?.auth?.uid || null,
+    reason: 'missing-app-check-token',
+    statusCode: 0,
+  });
 }
 
 function assertCallableAuth(context) {
@@ -270,6 +296,89 @@ function minuteBucketKey(date = new Date()) {
   const h = String(date.getUTCHours()).padStart(2, '0');
   const min = String(date.getUTCMinutes()).padStart(2, '0');
   return `${y}${m}${d}${h}${min}`;
+}
+
+function hashRateLimitKey(value) {
+  return crypto
+    .createHash('sha256')
+    .update(String(value || '').trim(), 'utf8')
+    .digest('hex')
+    .slice(0, 24);
+}
+
+function callableClientKey(context) {
+  const uid = String(context?.auth?.uid || '').trim();
+  if (uid) {
+    return `uid:${uid}`;
+  }
+
+  const appId = String(context?.app?.appId || '').trim();
+  if (appId) {
+    return `app:${appId}`;
+  }
+
+  return 'anonymous';
+}
+
+async function enforceCallableRateLimitOrThrow({
+  context,
+  operation,
+  limitPerMinute = 20,
+  meta = {},
+}) {
+  const safeOperation = String(operation || 'callable').trim().toLowerCase();
+  const bucket = minuteBucketKey();
+  const clientKey = callableClientKey(context);
+  const keyHash = hashRateLimitKey(clientKey);
+  const ref = db.collection('_callableRateLimits').doc(`${safeOperation}_${keyHash}_${bucket}`);
+
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const current = snap.exists ? Number(snap.data()?.count || 0) : 0;
+
+      if (current >= limitPerMinute) {
+        throw new functions.https.HttpsError('resource-exhausted', 'Too many requests. Please retry shortly.');
+      }
+
+      const expiresAt = Timestamp.fromDate(new Date(Date.now() + (24 * 60 * 60 * 1000)));
+      tx.set(ref, {
+        operation: safeOperation,
+        bucket,
+        keyHash,
+        count: current + 1,
+        limitPerMinute,
+        updatedAt: FieldValue.serverTimestamp(),
+        expiresAt,
+        ...(snap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      }, { merge: true });
+    });
+  } catch (error) {
+    if (error instanceof functions.https.HttpsError && error.code === 'resource-exhausted') {
+      await recordSecuritySignal({
+        type: 'rate_limit',
+        channel: safeOperation,
+        uid: context?.auth?.uid || null,
+        reason: 'callable-rate-limited',
+        statusCode: 429,
+        meta,
+      });
+    }
+    throw error;
+  }
+}
+
+async function logBackendAuditEvent({ eventType, payload = {} }) {
+  try {
+    await db.collection('_backendAudit').add({
+      eventType: String(eventType || 'unknown').trim().toLowerCase(),
+      payload,
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAt: Timestamp.fromDate(new Date(Date.now() + (14 * 24 * 60 * 60 * 1000))),
+    });
+  } catch (_) {
+    // Audit write failures should not block primary business flow.
+  }
 }
 
 const PAYMENT_RATE_LIMIT = 5;
@@ -1052,12 +1161,103 @@ function toDate(value) {
   return null;
 }
 
-function normalizeIndianPhone(value) {
-  if (!value) return null;
+function parseIndianPhone(value, { allowTestNumbers = true } = {}) {
+  if (!value) {
+    return { valid: false, reason: 'missing' };
+  }
+
   const digits = String(value).replace(/\D/g, '');
-  if (digits.length === 10) return `91${digits}`;
-  if (digits.length === 12 && digits.startsWith('91')) return digits;
-  return null;
+  let localPhone = '';
+
+  if (digits.length === 10 && /^[6-9]\d{9}$/.test(digits)) {
+    localPhone = digits;
+  } else if (
+    digits.length === 12
+    && digits.startsWith('91')
+    && /^[6-9]\d{9}$/.test(digits.slice(2))
+  ) {
+    localPhone = digits.slice(2);
+  }
+
+  if (!localPhone) {
+    return { valid: false, reason: 'format' };
+  }
+
+  const knownDummyNumbers = new Set([
+    '9999999999',
+    '9876543210',
+    '0123456789',
+    '1234567890',
+  ]);
+
+  if (!allowTestNumbers && knownDummyNumbers.has(localPhone)) {
+    return { valid: false, reason: 'dummy' };
+  }
+
+  return {
+    valid: true,
+    localPhone,
+    normalized91: `91${localPhone}`,
+    e164: `+91${localPhone}`,
+  };
+}
+
+function normalizeIndianPhone(value) {
+  const parsed = parseIndianPhone(value, { allowTestNumbers: true });
+  return parsed.valid ? parsed.normalized91 : null;
+}
+
+function phoneLookupVariants(localPhone) {
+  const safeLocal = String(localPhone || '').trim();
+  if (!safeLocal) {
+    return {
+      values: [],
+      hashValues: [],
+    };
+  }
+
+  const values = Array.from(new Set([
+    safeLocal,
+    `91${safeLocal}`,
+    `+91${safeLocal}`,
+  ]));
+
+  const hashValues = values.map((value) => crypto
+    .createHash('sha256')
+    .update(value, 'utf8')
+    .digest('hex'));
+
+  return {
+    values,
+    hashValues,
+  };
+}
+
+async function lookupTenantDocsByPhoneVariants(localPhone) {
+  const variants = phoneLookupVariants(localPhone);
+  const docsById = new Map();
+
+  const addSnapshot = (snapshot) => {
+    snapshot.docs.forEach((doc) => {
+      docsById.set(doc.id, doc);
+    });
+  };
+
+  const queryTasks = [];
+
+  for (const value of variants.values) {
+    queryTasks.push(db.collection('tenants').where('phoneNumber', '==', value).limit(5).get());
+    queryTasks.push(db.collection('tenants').where('phone', '==', value).limit(5).get());
+    queryTasks.push(db.collection('tenants').where('normalizedPhone', '==', value).limit(5).get());
+  }
+
+  for (const hashValue of variants.hashValues) {
+    queryTasks.push(db.collection('tenants').where('phoneHash', '==', hashValue).limit(5).get());
+  }
+
+  const snapshots = await Promise.all(queryTasks);
+  snapshots.forEach(addSnapshot);
+  return Array.from(docsById.values());
 }
 
 
@@ -2105,6 +2305,32 @@ function resolvePaymentStatusFromAmounts({ paidAmount, remainingAmount }) {
   return 'pending';
 }
 
+const PAYMENT_STATE_TRANSITIONS = {
+  created: ['pending', 'processing', 'cancelled', 'failed'],
+  pending: ['processing', 'paid', 'failed', 'cancelled'],
+  processing: ['paid', 'failed', 'cancelled'],
+  paid: ['refunded'],
+  failed: [],
+  cancelled: [],
+  refunded: [],
+  partial: ['processing', 'paid', 'failed', 'cancelled'],
+  success: ['refunded'],
+};
+
+function normalizePaymentState(value) {
+  return String(value || '').trim().toLowerCase() || 'created';
+}
+
+function canTransitionPaymentState(fromState, toState) {
+  const from = normalizePaymentState(fromState);
+  const to = normalizePaymentState(toState);
+  if (from === to) {
+    return true;
+  }
+  const allowed = PAYMENT_STATE_TRANSITIONS[from] || [];
+  return allowed.includes(to);
+}
+
 async function logPaymentIntegrityEvent(eventType, payload) {
   try {
     await db.collection('_paymentEvents').add({
@@ -2182,10 +2408,16 @@ function validatePaymentDocumentIntegrity({
   expectedOwnerId,
   expectedMethod,
 }) {
-  const baseAmount = normalizeIntegerAmount(payment?.baseAmount || payment?.amount);
-  const paidAmount = normalizeIntegerAmount(payment?.paidAmount);
-  const remainingAmount = normalizeIntegerAmount(payment?.remainingAmount);
-  const status = String(payment?.status || '').trim().toLowerCase();
+  const baseAmount = normalizeIntegerAmount(payment?.baseAmount || payment?.rentAmount || payment?.amount);
+  const rawPaidAmount = payment?.paidAmount;
+  const rawRemainingAmount = payment?.remainingAmount;
+  const hasPaidAmount = rawPaidAmount !== undefined && rawPaidAmount !== null;
+  const hasRemainingAmount = rawRemainingAmount !== undefined && rawRemainingAmount !== null;
+  const paidAmount = normalizeIntegerAmount(rawPaidAmount);
+  const remainingAmount = hasRemainingAmount
+    ? normalizeIntegerAmount(rawRemainingAmount)
+    : Math.max(0, baseAmount - paidAmount);
+  const status = normalizePaymentState(payment?.status);
   const tenantId = String(payment?.tenantId || '').trim();
   const ownerId = String(payment?.ownerId || '').trim();
   const method = String(payment?.method || '').trim().toLowerCase();
@@ -2196,15 +2428,17 @@ function validatePaymentDocumentIntegrity({
   if (paidAmount < 0 || remainingAmount < 0) {
     return { ok: false, code: 'verification-failed', reason: 'negative-amounts' };
   }
-  if (paidAmount + remainingAmount !== baseAmount) {
+  if ((hasPaidAmount || hasRemainingAmount) && paidAmount + remainingAmount !== baseAmount) {
     return { ok: false, code: 'verification-failed', reason: 'amount-mismatch' };
   }
 
-  const expectedStatus = resolvePaymentStatusFromAmounts({
-    paidAmount,
-    remainingAmount,
-  });
-  if (status !== expectedStatus) {
+  const expectedStatus = resolvePaymentStatusFromAmounts({ paidAmount, remainingAmount });
+  const expectedStates = expectedStatus === 'paid'
+    ? ['paid', 'success']
+    : expectedStatus === 'partial'
+      ? ['partial', 'processing', 'pending']
+      : ['created', 'pending', 'processing', 'unpaid'];
+  if (!expectedStates.includes(status)) {
     return { ok: false, code: 'verification-failed', reason: 'status-mismatch' };
   }
 
@@ -2319,17 +2553,14 @@ async function blockDuplicatePaymentOrThrow({
 
   const conflictingDoc = duplicates.docs.find((doc) => {
     const existingKey = String(doc.get('idempotencyKey') || '').trim();
-    const conflictingDoc = duplicates.docs.find((doc) => {
-  const existingKey = String(doc.get('idempotencyKey') || '').trim();
-  const status = String(doc.get('status') || '').toLowerCase();
+    const status = String(doc.get('status') || '').toLowerCase();
 
-  if (!existingKey || existingKey === idempotencyKey) {
-    return false;
-  }
+    if (!existingKey || existingKey === idempotencyKey) {
+      return false;
+    }
 
-  // ✅ ONLY BLOCK IF PAYMENT IS ACTUALLY COMPLETED
-  return status === 'paid' || status === 'success';
-});
+    // Block only completed transactions to avoid trapping legitimate retries.
+    return status === 'paid' || status === 'success';
   });
 
   if (!conflictingDoc) {
@@ -3259,12 +3490,20 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
           gatewayCostPercent: feeConfig.gatewayCostPercent,
           gstPercent: feeConfig.gstPercent,
           totalAmount,
-          status: 'pending',
+          paidAmount: 0,
+          remainingAmount: rentAmount,
+          status: 'created',
           method: gateway,
           gateway,
           currency,
           transactionId: idempotencyKey,
           idempotencyKey,
+          source: 'client',
+          stateTimeline: FieldValue.arrayUnion({
+            state: 'created',
+            source: 'client',
+            at: Timestamp.now(),
+          }),
           updatedAt: FieldValue.serverTimestamp(),
           createdAt: FieldValue.serverTimestamp(),
         },
@@ -3490,6 +3729,15 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
         const txSnap = await t.get(transactionRef);
         if (txSnap.exists && txSnap.get('status') === 'success') return false;
 
+        const paymentTxSnap = await t.get(paymentRef);
+        const currentState = normalizePaymentState(paymentTxSnap.get('status'));
+        if (!canTransitionPaymentState(currentState, 'paid')) {
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            `invalid-payment-state-transition:${currentState}->paid`,
+          );
+        }
+
         const rentAmountInPaise = Number(payment.rentAmountInPaise || (Number(payment.rentAmount || payment.baseAmount || payment.amount || 0) * 100));
         const convenienceFeeInPaise = Number(payment.convenienceFeeInPaise || 0);
         const totalPayableInPaise = Number(payment.totalPayableInPaise || payment.amountInPaise || (rentAmountInPaise + convenienceFeeInPaise));
@@ -3502,10 +3750,19 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
             method: 'razorpay',
             transactionId: transactionId,
             razorpayOrderId,
+            razorpayPaymentId,
             paidAmount: Math.trunc(rentAmountInPaise / 100),
+            remainingAmount: 0,
             paidRentAmountInPaise: rentAmountInPaise,
             paidConvenienceFeeInPaise: convenienceFeeInPaise,
             collectedAmountInPaise: totalPayableInPaise,
+            source: 'client',
+            verifiedAt: FieldValue.serverTimestamp(),
+            stateTimeline: FieldValue.arrayUnion({
+              state: 'paid',
+              source: 'client',
+              at: Timestamp.now(),
+            }),
             paidAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp(),
           },
@@ -4425,6 +4682,296 @@ exports.verifyOwnerRazorpayPayment = functions.region('asia-south1').https.onCal
 // OWNER SUBSCRIPTION
 // ==========================================================
 
+const TENANT_AD_SUBSCRIPTION_PLANS = {
+  ad_free_1m: {
+    code: 'ad_free_1m',
+    title: 'Ad Free - 1 Month',
+    amountInr: 29,
+    durationDays: 30,
+  },
+  ad_free_2m: {
+    code: 'ad_free_2m',
+    title: 'Ad Free - 2 Months',
+    amountInr: 49,
+    durationDays: 60,
+  },
+};
+
+function resolveTenantAdPlanOrThrow(planCode) {
+  const key = String(planCode || '').trim().toLowerCase();
+  const plan = TENANT_AD_SUBSCRIPTION_PLANS[key] || null;
+  if (!plan) {
+    throw new functions.https.HttpsError('invalid-argument', 'invalid-subscription-plan');
+  }
+  return plan;
+}
+
+async function activateTenantAdSubscription({
+  tenantId,
+  planCode,
+  source,
+  subscriptionPaymentId,
+  razorpayOrderId,
+  razorpayPaymentId,
+}) {
+  const plan = resolveTenantAdPlanOrThrow(planCode);
+  const now = new Date();
+  const expiry = new Date(now.getTime() + (plan.durationDays * 24 * 60 * 60 * 1000));
+
+  const payload = {
+    adSubscription: {
+      planCode: plan.code,
+      planTitle: plan.title,
+      amountInr: plan.amountInr,
+      durationDays: plan.durationDays,
+      startDate: Timestamp.fromDate(now),
+      expiryDate: Timestamp.fromDate(expiry),
+      isActive: true,
+      source: String(source || 'server').trim(),
+      subscriptionPaymentId: String(subscriptionPaymentId || '').trim() || null,
+      razorpayOrderId: String(razorpayOrderId || '').trim() || null,
+      razorpayPaymentId: String(razorpayPaymentId || '').trim() || null,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  await Promise.all([
+    db.collection('tenants').doc(tenantId).set(payload, { merge: true }),
+    db.collection('users').doc(tenantId).set(payload, { merge: true }),
+  ]);
+
+  return {
+    planCode: plan.code,
+    expiryAtMillis: expiry.getTime(),
+  };
+}
+
+exports.createTenantSubscriptionPaymentIntent = functions.region('asia-south1')
+  .https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  await assertTenantAccessOrThrow(context.auth.uid);
+  await assertPaymentsEnabledOrThrow({ gateway: 'razorpay' });
+
+  const tenantId = context.auth.uid;
+  const plan = resolveTenantAdPlanOrThrow(data?.planCode);
+  const idempotencyKey = String(data?.idempotencyKey || '').trim()
+    || `tenant_sub_${tenantId}_${Date.now()}`;
+
+  await rateLimitOrThrow({
+    uid: tenantId,
+    action: 'tenant_subscription_intent',
+    meta: { planCode: plan.code },
+  });
+
+  const existingSnap = await db
+    .collection('tenant_subscription_payments')
+    .where('tenantId', '==', tenantId)
+    .where('idempotencyKey', '==', idempotencyKey)
+    .limit(1)
+    .get();
+
+  if (!existingSnap.empty) {
+    const existing = existingSnap.docs[0];
+    const existingData = existing.data() || {};
+    return {
+      subscriptionPaymentId: existing.id,
+      orderId: String(existingData.razorpayOrderId || '').trim(),
+      keyId: String(existingData.razorpayKeyId || '').trim(),
+      amountInPaise: Number(existingData.amountInPaise || (plan.amountInr * 100)),
+      currency: String(existingData.currency || 'INR').trim() || 'INR',
+      planCode: String(existingData.planCode || plan.code).trim(),
+      planTitle: String(existingData.planTitle || plan.title).trim(),
+      durationDays: Number(existingData.durationDays || plan.durationDays),
+      status: String(existingData.status || 'pending').trim().toLowerCase(),
+      idempotencyKey,
+    };
+  }
+
+  const subscriptionPaymentRef = db.collection('tenant_subscription_payments').doc();
+  const subscriptionPaymentId = subscriptionPaymentRef.id;
+  const amountInPaise = plan.amountInr * 100;
+
+  await subscriptionPaymentRef.set({
+    subscriptionPaymentId,
+    tenantId,
+    planCode: plan.code,
+    planTitle: plan.title,
+    durationDays: plan.durationDays,
+    amountInRupees: plan.amountInr,
+    amountInPaise,
+    currency: 'INR',
+    status: 'created',
+    idempotencyKey,
+    source: 'client',
+    stateTimeline: [
+      {
+        state: 'created',
+        source: 'client',
+        at: Timestamp.now(),
+      },
+    ],
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  const order = await createRazorpayOrderForPayment({
+    paymentRef: subscriptionPaymentRef,
+    paymentId: subscriptionPaymentId,
+    amountInPaise,
+    currency: 'INR',
+    notes: {
+      type: 'tenant_ad_subscription',
+      tenantId,
+      planCode: plan.code,
+      subscriptionPaymentId,
+    },
+  });
+
+  await subscriptionPaymentRef.set({
+    status: 'pending',
+    stateTimeline: FieldValue.arrayUnion({
+      state: 'pending',
+      source: 'client',
+      at: Timestamp.now(),
+    }),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  return {
+    subscriptionPaymentId,
+    orderId: order.orderId,
+    keyId: order.keyId,
+    amountInPaise: Number(order.amount || amountInPaise),
+    currency: String(order.currency || 'INR').trim() || 'INR',
+    planCode: plan.code,
+    planTitle: plan.title,
+    durationDays: plan.durationDays,
+    status: 'pending',
+    idempotencyKey,
+  };
+});
+
+exports.verifyTenantSubscriptionPayment = functions.region('asia-south1')
+  .https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  await assertTenantAccessOrThrow(context.auth.uid);
+
+  const tenantId = context.auth.uid;
+  const subscriptionPaymentId = String(data?.subscriptionPaymentId || '').trim();
+  const razorpayOrderId = String(data?.razorpayOrderId || '').trim();
+  const razorpayPaymentId = String(data?.razorpayPaymentId || '').trim();
+  const razorpaySignature = String(data?.razorpaySignature || '').trim();
+
+  await rateLimitOrThrow({
+    uid: tenantId,
+    action: 'tenant_subscription_verify',
+    meta: { subscriptionPaymentId },
+  });
+
+  if (!subscriptionPaymentId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    throw new functions.https.HttpsError('invalid-argument', 'missing-verification-data');
+  }
+
+  const subscriptionPaymentRef = db.collection('tenant_subscription_payments').doc(subscriptionPaymentId);
+  const subscriptionPaymentSnap = await subscriptionPaymentRef.get();
+  if (!subscriptionPaymentSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'subscription-payment-not-found');
+  }
+
+  const payment = subscriptionPaymentSnap.data() || {};
+  if (String(payment.tenantId || '').trim() !== tenantId) {
+    throw new functions.https.HttpsError('permission-denied', 'subscription-payment-ownership-mismatch');
+  }
+
+  if (normalizePaymentState(payment.status) === 'paid') {
+    return {
+      ok: true,
+      status: 'paid',
+      planCode: String(payment.planCode || '').trim(),
+    };
+  }
+
+  const storedOrderId = String(payment.razorpayOrderId || '').trim();
+  if (!storedOrderId || storedOrderId !== razorpayOrderId) {
+    throw new functions.https.HttpsError('failed-precondition', 'order-id-mismatch');
+  }
+
+  const { keyId, keySecret, mode } = getRazorpayConfig();
+  if (!keyId || !keySecret) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `Razorpay keys not configured for mode=${mode}`,
+    );
+  }
+
+  const expected = crypto
+    .createHmac('sha256', keySecret)
+    .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+    .digest('hex');
+
+  if (!safeEqualDigest(expected, razorpaySignature, 'hex')) {
+    throw new functions.https.HttpsError('permission-denied', 'invalid-signature');
+  }
+
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+  const paymentRes = await fetch(
+    `https://api.razorpay.com/v1/payments/${encodeURIComponent(razorpayPaymentId)}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Basic ${auth}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+
+  if (!paymentRes.ok) {
+    const text = await paymentRes.text();
+    throw new functions.https.HttpsError('unavailable', `gateway-check-failed:${text}`);
+  }
+
+  const razorpayPayment = await paymentRes.json();
+  const gatewayOrderId = String(razorpayPayment.order_id || '').trim();
+  const gatewayStatus = String(razorpayPayment.status || '').trim().toLowerCase();
+  if (!gatewayOrderId || gatewayOrderId !== razorpayOrderId) {
+    throw new functions.https.HttpsError('failed-precondition', 'order-id-gateway-mismatch');
+  }
+  if (gatewayStatus !== 'captured' && gatewayStatus !== 'authorized') {
+    throw new functions.https.HttpsError('failed-precondition', 'gateway-payment-not-captured');
+  }
+
+  await subscriptionPaymentRef.set({
+    status: 'paid',
+    source: 'client',
+    razorpayPaymentId,
+    razorpaySignature,
+    verifiedAt: FieldValue.serverTimestamp(),
+    stateTimeline: FieldValue.arrayUnion({
+      state: 'paid',
+      source: 'client',
+      at: Timestamp.now(),
+    }),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  const activation = await activateTenantAdSubscription({
+    tenantId,
+    planCode: payment.planCode,
+    source: 'client',
+    subscriptionPaymentId,
+    razorpayOrderId,
+    razorpayPaymentId,
+  });
+
+  return {
+    ok: true,
+    status: 'paid',
+    planCode: activation.planCode,
+    expiryAtMillis: activation.expiryAtMillis,
+  };
+});
+
 async function assertOwnerAccessOrThrow(ownerId) {
   const ownerUserDoc = await db.collection('users').doc(ownerId).get();
   if (!ownerUserDoc.exists) {
@@ -4583,25 +5130,90 @@ function trustStatusLabel(score) {
   return 'Very Risky Tenant';
 }
 
+exports.validateIndianPhoneNoOtp = functions.region('asia-south1').https.onCall(async (data, context) => {
+  await assertPublicCallableAppCheckOrThrow(context, {
+    operation: 'validate_indian_phone_no_otp',
+  });
+
+  await enforceCallableRateLimitOrThrow({
+    context,
+    operation: 'validate_indian_phone_no_otp',
+    limitPerMinute: 12,
+    meta: {
+      hasAppCheck: Boolean(context?.app),
+    },
+  });
+
+  const rawPhone = String(data?.phoneNumber || '').trim();
+  const parsed = parseIndianPhone(rawPhone, { allowTestNumbers: false });
+
+  if (!parsed.valid) {
+    await recordSecuritySignal({
+      type: 'input_validation',
+      channel: 'phone_validation',
+      uid: context?.auth?.uid || null,
+      reason: parsed.reason || 'invalid-phone-format',
+      statusCode: 400,
+      meta: {
+        hasAppCheck: Boolean(context?.app),
+      },
+    });
+
+    const message = parsed.reason === 'dummy'
+      ? 'Please enter a real phone number, not a test number.'
+      : 'Invalid phone number format. Enter a valid Indian mobile number.';
+    throw new functions.https.HttpsError('invalid-argument', message);
+  }
+
+  await logBackendAuditEvent({
+    eventType: 'phone_validation_success',
+    payload: {
+      localPhoneLast4: parsed.localPhone.slice(-4),
+      hasAppCheck: Boolean(context?.app),
+      uidPresent: Boolean(context?.auth?.uid),
+    },
+  });
+
+  return {
+    valid: true,
+    localPhone: parsed.localPhone,
+    normalized91: parsed.normalized91,
+    e164: parsed.e164,
+  };
+});
+
 exports.lookupTenantTrustScore = functions.region('asia-south1')
   .https.onCall(async (data, context) => {
   assertCallableAuth(context);
+
+  await enforceCallableRateLimitOrThrow({
+    context,
+    operation: 'lookup_tenant_trust_score',
+    limitPerMinute: 20,
+    meta: {
+      hasAppCheck: Boolean(context?.app),
+    },
+  });
 
   const ownerId = context.auth.uid;
   await assertOwnerAccessOrThrow(ownerId);
 
   const rawPhone = String(data?.phoneNumber || '').trim();
-  const digits = rawPhone.replace(/\D/g, '');
-  let localPhone = '';
-  if (digits.length === 10 && /^[6-9]/.test(digits)) {
-    localPhone = digits;
-  } else if (digits.length === 12 && digits.startsWith('91') && /^[6-9]/.test(digits.slice(2))) {
-    localPhone = digits.slice(2);
-  }
-
-  if (!localPhone) {
+  const parsedPhone = parseIndianPhone(rawPhone, { allowTestNumbers: false });
+  if (!parsedPhone.valid) {
+    await recordSecuritySignal({
+      type: 'input_validation',
+      channel: 'trust_lookup',
+      uid: ownerId,
+      reason: parsedPhone.reason || 'invalid-phone-format',
+      statusCode: 400,
+      meta: {
+        hasAppCheck: Boolean(context?.app),
+      },
+    });
     throw new functions.https.HttpsError('invalid-argument', 'Invalid phone number format');
   }
+  const localPhone = parsedPhone.localPhone;
 
   const dayKey = new Date().toISOString().slice(0, 10);
   const quotaRef = db.collection('ownerTrustScoreLookupQuota').doc(`${ownerId}_${dayKey}`);
@@ -4626,28 +5238,7 @@ exports.lookupTenantTrustScore = functions.region('asia-south1')
     }, { merge: true });
   });
 
-  const normalized91 = `91${localPhone}`;
-
-  const snapshots = [];
-  snapshots.push(await db.collection('tenants').where('phoneNumber', '==', localPhone).limit(5).get());
-  if (snapshots[snapshots.length - 1].empty) {
-    snapshots.push(await db.collection('tenants').where('phoneNumber', '==', normalized91).limit(5).get());
-  }
-  if (snapshots[snapshots.length - 1].empty) {
-    snapshots.push(await db.collection('tenants').where('phone', '==', localPhone).limit(5).get());
-  }
-  if (snapshots[snapshots.length - 1].empty) {
-    snapshots.push(await db.collection('tenants').where('phone', '==', normalized91).limit(5).get());
-  }
-
-  const docsById = new Map();
-  snapshots.forEach((snap) => {
-    snap.docs.forEach((doc) => {
-      docsById.set(doc.id, doc);
-    });
-  });
-
-  const matches = Array.from(docsById.values());
+  const matches = await lookupTenantDocsByPhoneVariants(localPhone);
   matches.sort((a, b) => {
     const as = Number(a.data()?.trustScore ?? -1);
     const bs = Number(b.data()?.trustScore ?? -1);
@@ -4695,6 +5286,17 @@ exports.lookupTenantTrustScore = functions.region('asia-south1')
     hasScore: response.trustScore != null,
     matchCount: response.matchCount,
     createdAt: FieldValue.serverTimestamp(),
+  });
+
+  await logBackendAuditEvent({
+    eventType: response.found ? 'trust_lookup_hit' : 'trust_lookup_miss',
+    payload: {
+      ownerId,
+      phoneLast4: localPhone.slice(-4),
+      matchCount: response.matchCount,
+      hasScore: response.trustScore != null,
+      hasAppCheck: Boolean(context?.app),
+    },
   });
 
   return response;
@@ -4873,12 +5475,30 @@ exports.confirmRazorpayPayment = functions.region('asia-south1')
       );
     }
 
+    const currentState = normalizePaymentState(payment.status);
+    if (!canTransitionPaymentState(currentState, 'paid')) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        `invalid-payment-state-transition:${currentState}->paid`,
+      );
+    }
+
     await paymentRef.set(
       {
         status: 'paid',
-        method: 'online',
+        method: 'razorpay',
         transactionId: razorpayPaymentId,
+        razorpayPaymentId,
         razorpayOrderId,
+        paidAmount: normalizeIntegerAmount(payment.baseAmount || payment.rentAmount || payment.amount),
+        remainingAmount: 0,
+        source: 'client',
+        verifiedAt: FieldValue.serverTimestamp(),
+        stateTimeline: FieldValue.arrayUnion({
+          state: 'paid',
+          source: 'client',
+          at: Timestamp.now(),
+        }),
         paidAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       },
@@ -5140,12 +5760,32 @@ exports.razorpayWebhook = functions.region('asia-south1')
 
   const event = req.body?.event;
   const payload = req.body?.payload || {};
+  const webhookLogId = eventIdHeader || crypto.createHash('sha256').update(replayKey).digest('hex');
+
+  await db.collection('webhook_logs').doc(webhookLogId).set(
+    {
+      eventId: webhookLogId,
+      eventType: String(event || '').trim(),
+      provider: 'razorpay',
+      payload: req.body || {},
+      processed: false,
+      createdAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
 
   if (event === 'payment.captured' || event === 'order.paid') {
     const paymentEntity = payload?.payment?.entity;
     const orderEntity = payload?.order?.entity;
     let paymentId = await getPaymentIdFromPayload(payload);
     const orderId = paymentEntity?.order_id || orderEntity?.id;
+    const subscriptionPaymentId = String(
+      paymentEntity?.notes?.subscriptionPaymentId
+        || paymentEntity?.notes?.subscription_payment_id
+        || orderEntity?.notes?.subscriptionPaymentId
+        || orderEntity?.notes?.subscription_payment_id
+        || '',
+    ).trim();
 
     if (!paymentId && orderId) {
       const snap = await db
@@ -5159,22 +5799,123 @@ exports.razorpayWebhook = functions.region('asia-south1')
     }
 
     if (paymentId) {
-      await db.collection('payments').doc(paymentId).set(
-        {
-          status: 'paid',
-          method: 'online',
-          transactionId: paymentEntity?.id,
-          razorpayOrderId: orderId,
-          paidAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
+      const paymentRef = db.collection('payments').doc(paymentId);
+      await db.runTransaction(async (t) => {
+        const paymentSnap = await t.get(paymentRef);
+        if (!paymentSnap.exists) {
+          return;
+        }
+        const paymentData = paymentSnap.data() || {};
+        const currentState = normalizePaymentState(paymentData.status);
+        if (!canTransitionPaymentState(currentState, 'paid')) {
+          return;
+        }
+
+        const paidAmount = normalizeIntegerAmount(
+          paymentData.baseAmount || paymentData.rentAmount || paymentData.amount,
+        );
+
+        t.set(
+          paymentRef,
+          {
+            status: 'paid',
+            method: 'razorpay',
+            transactionId: paymentEntity?.id || paymentData.transactionId || '',
+            razorpayPaymentId: paymentEntity?.id || '',
+            razorpayOrderId: orderId || paymentData.razorpayOrderId || '',
+            paidAmount,
+            remainingAmount: 0,
+            source: 'webhook',
+            verifiedAt: FieldValue.serverTimestamp(),
+            stateTimeline: FieldValue.arrayUnion({
+              state: 'paid',
+              source: 'webhook',
+              at: Timestamp.now(),
+            }),
+            paidAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+      });
+    }
+
+    if (subscriptionPaymentId) {
+      const subscriptionRef = db.collection('tenant_subscription_payments').doc(subscriptionPaymentId);
+      const subscriptionSnap = await subscriptionRef.get();
+      if (subscriptionSnap.exists) {
+        const subscriptionData = subscriptionSnap.data() || {};
+        const currentState = normalizePaymentState(subscriptionData.status);
+        if (canTransitionPaymentState(currentState, 'paid')) {
+          await subscriptionRef.set(
+            {
+              status: 'paid',
+              source: 'webhook',
+              razorpayOrderId: orderId || subscriptionData.razorpayOrderId || '',
+              razorpayPaymentId: String(paymentEntity?.id || '').trim(),
+              verifiedAt: FieldValue.serverTimestamp(),
+              stateTimeline: FieldValue.arrayUnion({
+                state: 'paid',
+                source: 'webhook',
+                at: Timestamp.now(),
+              }),
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+
+          const tenantId = String(subscriptionData.tenantId || '').trim();
+          const planCode = String(subscriptionData.planCode || '').trim();
+          if (tenantId && planCode) {
+            await activateTenantAdSubscription({
+              tenantId,
+              planCode,
+              source: 'webhook',
+              subscriptionPaymentId,
+              razorpayOrderId: orderId || subscriptionData.razorpayOrderId || '',
+              razorpayPaymentId: String(paymentEntity?.id || '').trim(),
+            });
+          }
+        }
+      }
     }
   } else if (event === 'payment.failed') {
     const paymentEntity = payload?.payment?.entity;
     const paymentId = await getPaymentIdFromPayload(payload);
+    const subscriptionPaymentId = String(
+      paymentEntity?.notes?.subscriptionPaymentId
+        || paymentEntity?.notes?.subscription_payment_id
+        || '',
+    ).trim();
     if (paymentId) {
+      const paymentRef = db.collection('payments').doc(paymentId);
+      await db.runTransaction(async (t) => {
+        const paymentSnap = await t.get(paymentRef);
+        if (!paymentSnap.exists) {
+          return;
+        }
+        const paymentData = paymentSnap.data() || {};
+        const currentState = normalizePaymentState(paymentData.status);
+        if (!canTransitionPaymentState(currentState, 'failed')) {
+          return;
+        }
+        t.set(
+          paymentRef,
+          {
+            status: 'failed',
+            source: 'webhook',
+            failureReason: String(paymentEntity?.error_description || 'gateway-failed').trim(),
+            stateTimeline: FieldValue.arrayUnion({
+              state: 'failed',
+              source: 'webhook',
+              at: Timestamp.now(),
+            }),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+      });
+
       await db.collection('messages').doc(`${paymentId}_failed`).set({
         type: 'reminder',
         title: 'Payment failed',
@@ -5185,10 +5926,300 @@ exports.razorpayWebhook = functions.region('asia-south1')
         read: false,
       });
     }
+
+    if (subscriptionPaymentId) {
+      const subscriptionRef = db.collection('tenant_subscription_payments').doc(subscriptionPaymentId);
+      const subscriptionSnap = await subscriptionRef.get();
+      if (subscriptionSnap.exists) {
+        const currentState = normalizePaymentState(subscriptionSnap.get('status'));
+        if (canTransitionPaymentState(currentState, 'failed')) {
+          await subscriptionRef.set(
+            {
+              status: 'failed',
+              source: 'webhook',
+              failureReason: String(paymentEntity?.error_description || 'gateway-failed').trim(),
+              stateTimeline: FieldValue.arrayUnion({
+                state: 'failed',
+                source: 'webhook',
+                at: Timestamp.now(),
+              }),
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+      }
+    }
   }
+
+  await db.collection('webhook_logs').doc(webhookLogId).set(
+    {
+      processed: true,
+      processedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
 
   res.json({ received: true });
 });
+
+exports.reconcilePendingPayments = functions.region('asia-south1').pubsub
+  .schedule('every 10 minutes')
+  .timeZone('Asia/Kolkata')
+  .onRun(async () => {
+    const { keyId, keySecret } = getRazorpayConfig();
+    if (!keyId || !keySecret) {
+      functions.logger.warn('RECONCILE_SKIPPED', {
+        reason: 'razorpay-keys-not-configured',
+      });
+      return null;
+    }
+
+    const now = Date.now();
+    const staleCutoff = Timestamp.fromDate(new Date(now - (3 * 60 * 1000)));
+    const hardFailCutoffMs = now - (45 * 60 * 1000);
+    const candidateStates = ['created', 'pending', 'processing'];
+
+    let scanned = 0;
+    let paid = 0;
+    let failed = 0;
+
+    for (const state of candidateStates) {
+      const snap = await db
+        .collection('payments')
+        .where('status', '==', state)
+        .where('updatedAt', '<=', staleCutoff)
+        .limit(40)
+        .get();
+
+      for (const doc of snap.docs) {
+        scanned += 1;
+        const data = doc.data() || {};
+        const orderId = String(data.razorpayOrderId || '').trim();
+        if (!orderId) {
+          continue;
+        }
+
+        try {
+          const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+          const response = await fetch(
+            `https://api.razorpay.com/v1/orders/${orderId}/payments`,
+            {
+              method: 'GET',
+              headers: {
+                Authorization: `Basic ${auth}`,
+                'Content-Type': 'application/json',
+              },
+            },
+          );
+
+          if (!response.ok) {
+            continue;
+          }
+
+          const body = await response.json();
+          const items = Array.isArray(body?.items) ? body.items : [];
+          const captured = items.find((item) => String(item?.status || '').toLowerCase() === 'captured');
+          const rejected = items.find((item) => {
+            const s = String(item?.status || '').toLowerCase();
+            return s === 'failed' || s === 'refunded';
+          });
+
+          if (captured) {
+            await doc.ref.set(
+              {
+                status: 'paid',
+                method: 'razorpay',
+                transactionId: String(captured.id || data.transactionId || '').trim(),
+                razorpayPaymentId: String(captured.id || '').trim(),
+                paidAmount: normalizeIntegerAmount(data.baseAmount || data.rentAmount || data.amount),
+                remainingAmount: 0,
+                source: 'retry',
+                verifiedAt: FieldValue.serverTimestamp(),
+                stateTimeline: FieldValue.arrayUnion({
+                  state: 'paid',
+                  source: 'retry',
+                  at: Timestamp.now(),
+                }),
+                paidAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+            paid += 1;
+            continue;
+          }
+
+          const updatedAt = toDate(data.updatedAt) || toDate(data.createdAt) || new Date(0);
+          if ((rejected || updatedAt.getTime() <= hardFailCutoffMs) && canTransitionPaymentState(data.status, 'failed')) {
+            await doc.ref.set(
+              {
+                status: 'failed',
+                source: 'retry',
+                failureReason: rejected
+                  ? String(rejected.error_description || 'gateway-failed').trim()
+                  : 'verification-timeout',
+                stateTimeline: FieldValue.arrayUnion({
+                  state: 'failed',
+                  source: 'retry',
+                  at: Timestamp.now(),
+                }),
+                updatedAt: FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+            failed += 1;
+          }
+        } catch (error) {
+          functions.logger.warn('PAYMENT_RECONCILE_ITERATION_FAILED', {
+            paymentId: doc.id,
+            error: error?.message || String(error),
+          });
+        }
+      }
+    }
+
+    functions.logger.info('PAYMENT_RECONCILE_SUMMARY', {
+      scanned,
+      paid,
+      failed,
+    });
+
+    return null;
+  });
+
+exports.reconcilePendingTenantSubscriptions = functions.region('asia-south1').pubsub
+  .schedule('every 10 minutes')
+  .timeZone('Asia/Kolkata')
+  .onRun(async () => {
+    const { keyId, keySecret } = getRazorpayConfig();
+    if (!keyId || !keySecret) {
+      functions.logger.warn('TENANT_SUB_RECONCILE_SKIPPED', {
+        reason: 'razorpay-keys-not-configured',
+      });
+      return null;
+    }
+
+    const now = Date.now();
+    const staleCutoff = Timestamp.fromDate(new Date(now - (3 * 60 * 1000)));
+    const hardFailCutoffMs = now - (45 * 60 * 1000);
+    const candidateStates = ['created', 'pending', 'processing'];
+
+    let scanned = 0;
+    let paid = 0;
+    let failed = 0;
+
+    for (const state of candidateStates) {
+      const snap = await db
+        .collection('tenant_subscription_payments')
+        .where('status', '==', state)
+        .where('updatedAt', '<=', staleCutoff)
+        .limit(40)
+        .get();
+
+      for (const doc of snap.docs) {
+        scanned += 1;
+        const data = doc.data() || {};
+        const tenantId = String(data.tenantId || '').trim();
+        const planCode = String(data.planCode || '').trim();
+        const orderId = String(data.razorpayOrderId || '').trim();
+
+        if (!tenantId || !planCode || !orderId) {
+          continue;
+        }
+
+        try {
+          const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+          const response = await fetch(
+            `https://api.razorpay.com/v1/orders/${orderId}/payments`,
+            {
+              method: 'GET',
+              headers: {
+                Authorization: `Basic ${auth}`,
+                'Content-Type': 'application/json',
+              },
+            },
+          );
+
+          if (!response.ok) {
+            continue;
+          }
+
+          const body = await response.json();
+          const items = Array.isArray(body?.items) ? body.items : [];
+          const captured = items.find((item) => String(item?.status || '').toLowerCase() === 'captured');
+          const rejected = items.find((item) => {
+            const s = String(item?.status || '').toLowerCase();
+            return s === 'failed' || s === 'refunded';
+          });
+
+          if (captured && canTransitionPaymentState(data.status, 'paid')) {
+            await doc.ref.set(
+              {
+                status: 'paid',
+                source: 'retry',
+                razorpayPaymentId: String(captured.id || '').trim(),
+                verifiedAt: FieldValue.serverTimestamp(),
+                stateTimeline: FieldValue.arrayUnion({
+                  state: 'paid',
+                  source: 'retry',
+                  at: Timestamp.now(),
+                }),
+                updatedAt: FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+
+            await activateTenantAdSubscription({
+              tenantId,
+              planCode,
+              source: 'retry',
+              subscriptionPaymentId: doc.id,
+              razorpayOrderId: orderId,
+              razorpayPaymentId: String(captured.id || '').trim(),
+            });
+
+            paid += 1;
+            continue;
+          }
+
+          const updatedAt = toDate(data.updatedAt) || toDate(data.createdAt) || new Date(0);
+          if ((rejected || updatedAt.getTime() <= hardFailCutoffMs) && canTransitionPaymentState(data.status, 'failed')) {
+            await doc.ref.set(
+              {
+                status: 'failed',
+                source: 'retry',
+                failureReason: rejected
+                  ? String(rejected.error_description || 'gateway-failed').trim()
+                  : 'verification-timeout',
+                stateTimeline: FieldValue.arrayUnion({
+                  state: 'failed',
+                  source: 'retry',
+                  at: Timestamp.now(),
+                }),
+                updatedAt: FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+            failed += 1;
+          }
+        } catch (error) {
+          functions.logger.warn('TENANT_SUB_RECONCILE_ITERATION_FAILED', {
+            subscriptionPaymentId: doc.id,
+            error: error?.message || String(error),
+          });
+        }
+      }
+    }
+
+    functions.logger.info('TENANT_SUB_RECONCILE_SUMMARY', {
+      scanned,
+      paid,
+      failed,
+    });
+
+    return null;
+  });
 
 exports.stripeWebhook = functions.region('asia-south1')
   .https.onRequest(async (req, res) => {

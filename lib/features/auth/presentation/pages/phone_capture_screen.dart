@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +23,7 @@ class _PhoneCapturePageState extends State<PhoneCapturePage>
   late final FocusNode _phoneFocus;
   late final AnimationController _bgController;
   bool _confirmed = false;
+  bool _isCheckingPhone = false;
 
   @override
   void initState() {
@@ -368,15 +370,35 @@ class _PhoneCapturePageState extends State<PhoneCapturePage>
                                       backgroundColor:
                                           AppTheme.liquidPrimaryStart,
                                     ),
-                                    onPressed: _goToLogin,
-                                    child: const Text(
-                                      'Continue to Sign In',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                    onPressed: _isCheckingPhone
+                                        ? null
+                                        : _goToLogin,
+                                    child: _isCheckingPhone
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Continue to Sign In',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
                                   ),
                                 ),
+                                if (_isCheckingPhone) ...[
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Validating number securely...',
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: textSecondary,
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 8),
                                 Center(
                                   child: TextButton(
@@ -608,6 +630,61 @@ class _PhoneCapturePageState extends State<PhoneCapturePage>
     );
 
     if (confirmed != true || !mounted) return;
+
+    setState(() => _isCheckingPhone = true);
+
+    try {
+      await _validatePhoneWithBackend(digits);
+    } on FirebaseFunctionsException catch (error) {
+      if (!mounted) return;
+      final validatorUnavailable =
+          error.code == 'not-found' || error.code == 'unimplemented';
+      if (validatorUnavailable) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Server validator is temporarily unavailable. Continuing with local validation.',
+              ),
+            ),
+          );
+        setState(() => _isCheckingPhone = false);
+        context.go('/login?role=${widget.selectedRole.name}&phone=$digits');
+        return;
+      }
+
+      final message = (error.message?.trim().isNotEmpty ?? false)
+          ? error.message!.trim()
+          : 'Enter a valid Indian mobile number.';
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+      setState(() => _isCheckingPhone = false);
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Could not validate phone right now. Please retry.'),
+          ),
+        );
+      setState(() => _isCheckingPhone = false);
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isCheckingPhone = false);
     context.go('/login?role=${widget.selectedRole.name}&phone=$digits');
+  }
+
+  Future<void> _validatePhoneWithBackend(String localPhone) async {
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'validateIndianPhoneNoOtp',
+      options: HttpsCallableOptions(timeout: const Duration(seconds: 10)),
+    );
+    await callable.call(<String, dynamic>{'phoneNumber': localPhone});
   }
 }

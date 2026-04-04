@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:rentdone/core/utils/city_key_normalizer.dart';
 import 'package:rentdone/core/trust/tenant_trust_score.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/tenant_dto.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
@@ -45,9 +46,16 @@ class AddTenantFirebaseService {
       if (!propertyDoc.exists) {
         throw StateError('Selected property does not exist');
       }
+      final propertyData = propertyDoc.data() ?? <String, dynamic>{};
+      final propertyCity = (propertyData['city'] ?? '').toString().trim();
+      final propertyCityKey = normalizeCityKey(
+        (propertyData['cityKey'] ?? propertyCity).toString(),
+      );
+      if (propertyCity.isEmpty || propertyCityKey.isEmpty) {
+        throw StateError('Selected property has an invalid city configuration');
+      }
 
-      final data = propertyDoc.data();
-      final rooms = _normalizeRooms(data?['rooms']);
+      final rooms = _normalizeRooms(propertyData['rooms']);
       final roomIndex = rooms.indexWhere((room) => room['id'] == dto.roomId);
 
       if (roomIndex == -1) {
@@ -64,6 +72,8 @@ class AddTenantFirebaseService {
 
       rooms[roomIndex] = {...room, 'isOccupied': true, 'tenantId': dto.id};
 
+      tenantMap['city'] = propertyCity;
+      tenantMap['cityKey'] = propertyCityKey;
       txn.set(tenantRef, tenantMap, SetOptions(merge: true));
       txn.update(propertyRef, {'rooms': rooms});
     });
@@ -79,7 +89,11 @@ class AddTenantFirebaseService {
   }
 
   String _normalizePhone(String phone) {
-    return phone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 12 && digits.startsWith('91')) {
+      return digits.substring(2);
+    }
+    return digits;
   }
 
   String _hashPhone(String normalizedPhone) {

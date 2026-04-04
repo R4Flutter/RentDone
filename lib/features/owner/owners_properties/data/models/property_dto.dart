@@ -1,5 +1,6 @@
 import 'package:rentdone/features/owner/owners_properties/data/models/room_dto.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
+import 'package:rentdone/core/utils/city_key_normalizer.dart';
 
 class PropertyDto {
   final String id;
@@ -91,6 +92,7 @@ class PropertyDto {
   }
 
   Map<String, dynamic> toMap() {
+    final normalizedCityKey = normalizeCityKey(city);
     return {
       'id': id,
       'ownerId': ownerId,
@@ -99,6 +101,7 @@ class PropertyDto {
       'totalRooms': totalRooms,
       'rooms': rooms.map((room) => room.toMap()).toList(),
       'city': city,
+      'cityKey': normalizedCityKey,
       'lat': lat,
       'lng': lng,
       'isPublished': isPublished,

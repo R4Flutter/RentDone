@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.trackNotificationAnalytics = exports.sendMulticastWithRetry = exports.reserveNotificationEvent = void 0;
+exports.trackNotificationAnalytics = exports.sendMulticastWithRetry = exports.updateNotificationEventStatus = exports.reserveNotificationEvent = void 0;
 const firebase_1 = require("../utils/firebase");
 const logger_1 = require("../utils/logger");
 const FCM_BATCH_SIZE = 500;
@@ -21,6 +21,8 @@ const reserveNotificationEvent = async (eventKey, payload) => {
     try {
         await ref.create({
             ...payload,
+            status: "reserved",
+            reservedAt: firebase_1.FieldValue.serverTimestamp(),
             createdAt: firebase_1.FieldValue.serverTimestamp(),
             expiresAt: firebase_1.Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
         });
@@ -35,6 +37,26 @@ const reserveNotificationEvent = async (eventKey, payload) => {
     }
 };
 exports.reserveNotificationEvent = reserveNotificationEvent;
+const updateNotificationEventStatus = async (eventKey, status, payload) => {
+    try {
+        await firebase_1.db.collection("_notificationEvents").doc(eventKey).set({
+            status,
+            ...(status === "sent"
+                ? { sentAt: firebase_1.FieldValue.serverTimestamp() }
+                : { failedAt: firebase_1.FieldValue.serverTimestamp() }),
+            ...(payload ?? {}),
+            updatedAt: firebase_1.FieldValue.serverTimestamp(),
+        }, { merge: true });
+    }
+    catch (error) {
+        (0, logger_1.logError)("updateNotificationEventStatus failed", {
+            eventKey,
+            status,
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+exports.updateNotificationEventStatus = updateNotificationEventStatus;
 const sendChunk = async (tokens, payload) => {
     const invalidTokens = [];
     const retryTokens = [];

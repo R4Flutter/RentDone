@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:rentdone/core/utils/city_key_normalizer.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/property_dto.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 
@@ -15,15 +16,15 @@ class TenantPropertyFirebaseService {
     required String city,
     LatLng? cityCenter,
   }) {
-    final trimmed = city.trim();
-    if (trimmed.isEmpty) {
+    final cityKey = normalizeCityKey(city);
+    if (cityKey.isEmpty) {
       return const Stream<List<Property>>.empty();
     }
 
-    final normalizedSearchCity = _normalizeText(trimmed);
     final query = firestore
         .collection('properties')
         .where('isPublished', isEqualTo: true)
+        .where('cityKey', isEqualTo: cityKey)
         .limit(400);
 
     return query.snapshots().asyncMap((snapshot) async {
@@ -76,11 +77,6 @@ class TenantPropertyFirebaseService {
           continue;
         }
 
-        // Strict city filter to avoid cross-city leakage (e.g. Mumbai showing Goa).
-        if (!_cityMatchesStrict(normalizedSearchCity, entity.city)) {
-          continue;
-        }
-
         // Ensure returned coordinates are still around selected city area.
         final isWithinSelectedArea = _isNearCityCenter(
           cityCenter: cityCenter,
@@ -102,20 +98,6 @@ class TenantPropertyFirebaseService {
         ..sort((a, b) => b.vacantRooms.compareTo(a.vacantRooms));
       return items;
     });
-  }
-
-  bool _cityMatchesStrict(String normalizedSearchCity, String propertyCityRaw) {
-    final propertyCity = _normalizeText(propertyCityRaw);
-    if (propertyCity.isEmpty || normalizedSearchCity.isEmpty) return false;
-    return propertyCity == normalizedSearchCity;
-  }
-
-  String _normalizeText(String value) {
-    return value
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9\s]'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
   }
 
   bool _isValidCoordinates(double? lat, double? lng) {

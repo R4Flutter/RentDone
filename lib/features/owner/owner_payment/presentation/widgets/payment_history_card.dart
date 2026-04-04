@@ -116,16 +116,38 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
     return AppTheme.errorRed;
   }
 
+  bool _isDigitalMethod(String method) {
+    final normalized = method.trim().toLowerCase();
+    return normalized.contains('razorpay') ||
+        normalized.contains('upi') ||
+        normalized.contains('online') ||
+        normalized.contains('card') ||
+        normalized.contains('netbanking');
+  }
+
+  bool _isPaidReceipt(TenantPaymentRecord payment) {
+    return payment.status == 'paid' && _isDigitalMethod(payment.method);
+  }
+
+  String _receiptId(TenantPaymentRecord payment) {
+    final transaction = (payment.transactionId ?? '').trim();
+    if (transaction.isNotEmpty) {
+      return transaction;
+    }
+    return payment.id;
+  }
+
   @override
   Widget build(BuildContext context) {
     final payment = widget.payment;
     final canUpdate =
-      !widget.readOnly &&
-      (payment.status == 'unpaid' || payment.status == 'partial');
+        !widget.readOnly &&
+        (payment.status == 'unpaid' || payment.status == 'partial');
     final isPartialOutstanding =
-      !widget.readOnly &&
-      payment.status == 'partial' &&
-      payment.remainingAmount > 0;
+        !widget.readOnly &&
+        payment.status == 'partial' &&
+        payment.remainingAmount > 0;
+    final showPaidReceipt = _isPaidReceipt(payment);
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -160,6 +182,10 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
                   ),
                 ),
                 PaymentStatusBadge(status: payment.status),
+                if (showPaidReceipt) ...[
+                  const SizedBox(width: 8),
+                  _receiptBadge(context),
+                ],
                 const SizedBox(width: 8),
                 if (_isUpdating)
                   const SizedBox(
@@ -230,6 +256,10 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
                       label: 'Created',
                       value: _readableDateTime(payment.createdAt),
                     ),
+                    if (showPaidReceipt) ...[
+                      const SizedBox(height: 8),
+                      _receiptPanel(context, payment),
+                    ],
                     if (payment.installments.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -591,6 +621,74 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
                 color: AppTheme.errorRed,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _receiptBadge(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: AppTheme.successGreen.withValues(alpha: 0.13),
+        border: Border.all(
+          color: AppTheme.successGreen.withValues(alpha: 0.40),
+        ),
+      ),
+      child: Text(
+        'Paid Receipt',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppTheme.successGreen,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _receiptPanel(BuildContext context, TenantPaymentRecord payment) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.successGreen.withValues(alpha: 0.08),
+        border: Border.all(
+          color: AppTheme.successGreen.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.verified_rounded,
+                size: 16,
+                color: AppTheme.successGreen,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Receipt Confirmed',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppTheme.successGreen,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _detailRow(
+            context,
+            label: 'Paid For Month',
+            value: _monthLabel(payment.date),
+          ),
+          _detailRow(context, label: 'Receipt ID', value: _receiptId(payment)),
+          _detailRow(
+            context,
+            label: 'Paid On',
+            value: _readableDateTime(payment.date),
           ),
         ],
       ),

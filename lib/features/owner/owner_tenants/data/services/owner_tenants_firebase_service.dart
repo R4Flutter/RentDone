@@ -102,30 +102,32 @@ class OwnerTenantsFirebaseService {
       throw StateError('Owner session not found. Please sign in again.');
     }
 
-    final normalizedPhone = _normalizePhone(phoneInput);
-    if (normalizedPhone.isEmpty) {
+    final variants = _buildPhoneVariants(phoneInput);
+    if (variants.isEmpty) {
       return const <TenantTrustLookup>[];
     }
 
-    final hashedPhone = _hashPhone(normalizedPhone);
-    final byHash = await _db
-        .collection('tenants')
-        .where('phoneHash', isEqualTo: hashedPhone)
-        .limit(10)
-        .get();
-
     final docsById = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
-    for (final doc in byHash.docs) {
-      docsById[doc.id] = doc;
+    final queryFutures = <Future<QuerySnapshot<Map<String, dynamic>>>>[];
+
+    for (final variant in variants) {
+      queryFutures.add(
+        _db.collection('tenants').where('phoneHash', isEqualTo: _hashPhone(variant)).limit(10).get(),
+      );
+      queryFutures.add(
+        _db.collection('tenants').where('phone', isEqualTo: variant).limit(10).get(),
+      );
+      queryFutures.add(
+        _db.collection('tenants').where('phoneNumber', isEqualTo: variant).limit(10).get(),
+      );
+      queryFutures.add(
+        _db.collection('tenants').where('normalizedPhone', isEqualTo: variant).limit(10).get(),
+      );
     }
 
-    if (docsById.isEmpty) {
-      final byPhoneExact = await _db
-          .collection('tenants')
-          .where('phone', isEqualTo: normalizedPhone)
-          .limit(10)
-          .get();
-      for (final doc in byPhoneExact.docs) {
+    final snapshots = await Future.wait(queryFutures);
+    for (final snapshot in snapshots) {
+      for (final doc in snapshot.docs) {
         docsById[doc.id] = doc;
       }
     }
@@ -223,7 +225,22 @@ class OwnerTenantsFirebaseService {
   }
 
   String _normalizePhone(String phone) {
-    return phone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 12 && digits.startsWith('91')) {
+      return digits.substring(2);
+    }
+    return digits;
+  }
+
+  Set<String> _buildPhoneVariants(String rawInput) {
+    final normalized = _normalizePhone(rawInput);
+    if (normalized.isEmpty) return <String>{};
+
+    if (normalized.length == 10 && RegExp(r'^[6-9]\d{9}$').hasMatch(normalized)) {
+      return <String>{normalized, '91$normalized', '+91$normalized'};
+    }
+
+    return <String>{normalized};
   }
 
   String _hashPhone(String normalizedPhone) {

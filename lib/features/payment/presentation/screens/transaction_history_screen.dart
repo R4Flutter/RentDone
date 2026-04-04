@@ -24,6 +24,7 @@ import 'package:rentdone/features/owner/owner_payment/presentation/providers/ten
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/add_payment_form.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/payment_history_card.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
+import 'package:rentdone/shared/widgets/controlled_banner_ad.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rentdone/features/payment/data/gateways/tenant_razorpay_gateway_adapter.dart';
 
@@ -275,6 +276,8 @@ class _TransactionHistoryScreenState
     final summary = ref.watch(tenantDashboardProvider).asData?.value;
     final showBlockingError = state.hasError && data.transactions.isEmpty;
     final showInitialLoader = state.isLoading && data.transactions.isEmpty;
+    final shouldShowBannerAd =
+        !showInitialLoader && data.transactions.isNotEmpty;
 
     if (showBlockingError) {
       return _HistoryError(
@@ -317,6 +320,12 @@ class _TransactionHistoryScreenState
                   rentAmount: summary.monthlyRent,
                   phone: summary.tenantPhone,
                 ),
+              if (shouldShowBannerAd) ...[
+                const SizedBox(height: 14),
+                const ControlledBannerAd(
+                  placementKey: 'tenant_transaction_history_inline',
+                ),
+              ],
               const SizedBox(height: 16),
               if (showInitialLoader)
                 const Center(child: CircularProgressIndicator())

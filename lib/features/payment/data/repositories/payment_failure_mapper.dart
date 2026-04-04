@@ -48,6 +48,22 @@ class PaymentFailureMapper {
       if (message.contains('razorpay mode-key mismatch')) {
         return 'Razorpay test/live configuration mismatch on backend. Switch backend mode to test or update keys.';
       }
+      if (message.contains('order id does not match')) {
+        return 'Payment verification failed due to order mismatch. Please retry from Pay Now.';
+      }
+    }
+
+    if (error.code == 'internal') {
+      if (message.contains('verification-failed')) {
+        return 'Payment verification is taking longer than expected. Please wait a moment; the backend will auto-reconcile this payment. Do not retry immediately to avoid duplicates.';
+      }
+    }
+
+    if (error.code == 'permission-denied') {
+      if (message.contains('invalid razorpay signature') ||
+          message.contains('invalid-signature')) {
+        return 'Razorpay verification failed. If money was deducted, it will be reconciled automatically or you can contact support with your Razorpay payment ID.';
+      }
     }
 
     if (error.code == 'not-found') {

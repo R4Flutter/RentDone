@@ -1,12 +1,16 @@
 import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rentdone/core/ads/rewarded_ad_service.dart';
 import 'package:rentdone/features/tenant/property_map/presentation/providers/tenant_map_providers.dart';
 
 class TenantCityEntryScreen extends ConsumerStatefulWidget {
-  const TenantCityEntryScreen({super.key});
+  const TenantCityEntryScreen({super.key, this.initialCity});
+
+  final String? initialCity;
 
   @override
   ConsumerState<TenantCityEntryScreen> createState() =>
@@ -28,12 +32,18 @@ class _TenantCityEntryScreenState extends ConsumerState<TenantCityEntryScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(RewardedAdService.instance.preload());
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     if (_isSubmitting) return;
 
     final city = _controller.text.trim();
@@ -54,12 +64,37 @@ class _TenantCityEntryScreenState extends ConsumerState<TenantCityEntryScreen> {
       _isSubmitting = true;
     });
 
-    context.push('/tenant/map?city=$city');
+    final rewarded = await RewardedAdService.instance.showRewardedAd(
+      onRewardEarned: () async {},
+    );
+
+    if (!mounted) return;
+
+    if (!rewarded) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please complete the ad to continue to map.'),
+        ),
+      );
+      return;
+    }
+
+    await context.push('/tenant/map?city=$city');
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final currentCity = ref.watch(selectedCityProvider);
+
+    final prefilledCity = (widget.initialCity ?? '').trim();
+    if (_controller.text.isEmpty && prefilledCity.isNotEmpty) {
+      _controller.text = prefilledCity;
+      ref.read(selectedCityProvider.notifier).setCity(prefilledCity);
+    }
 
     if (_controller.text.isEmpty && currentCity.trim().isNotEmpty) {
       _controller.text = currentCity;

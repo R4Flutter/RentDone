@@ -30,6 +30,8 @@ export const reserveNotificationEvent = async (
   try {
     await ref.create({
       ...payload,
+      status: "reserved",
+      reservedAt: FieldValue.serverTimestamp(),
       createdAt: FieldValue.serverTimestamp(),
       expiresAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
     });
@@ -40,6 +42,32 @@ export const reserveNotificationEvent = async (
       return false;
     }
     throw error;
+  }
+};
+
+export const updateNotificationEventStatus = async (
+  eventKey: string,
+  status: "sent" | "failed",
+  payload?: Record<string, unknown>,
+): Promise<void> => {
+  try {
+    await db.collection("_notificationEvents").doc(eventKey).set(
+      {
+        status,
+        ...(status === "sent"
+          ? { sentAt: FieldValue.serverTimestamp() }
+          : { failedAt: FieldValue.serverTimestamp() }),
+        ...(payload ?? {}),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  } catch (error) {
+    logError("updateNotificationEventStatus failed", {
+      eventKey,
+      status,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
 

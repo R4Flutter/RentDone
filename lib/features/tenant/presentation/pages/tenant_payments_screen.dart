@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/payment/data/gateways/tenant_razorpay_gateway_adapter.dart';
 import 'package:rentdone/features/payment/domain/entities/payment_failure.dart';
+import 'package:rentdone/features/payment/domain/services/tenant_payment_calculator.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/presentation/providers/payment_dashboard_provider.dart';
 import 'package:rentdone/features/payment/presentation/providers/payment_di.dart';
@@ -34,6 +36,11 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   bool _isPaying = false;
   bool _isSavingUpi = false;
   bool _isSavingRent = false;
+  Timer? _processingHintTimer;
+  int _processingHintIndex = 0;
+  String? _lastReceipt;
+  int _lastPaidAmount = 0;
+  DateTime? _lastPaidAt;
 
   String _ownerName = 'Owner';
   String _ownerUpiId = '';
@@ -52,14 +59,122 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
 
   @override
   void dispose() {
+    _processingHintTimer?.cancel();
     _amountController.dispose();
     super.dispose();
   }
 
+  void _startProcessingHints() {
+    _processingHintTimer?.cancel();
+    _processingHintIndex = 0;
+    _processingHintTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!mounted || !_isPaying) return;
+      setState(() {
+        _processingHintIndex = (_processingHintIndex + 1) % 2;
+      });
+    });
+  }
+
+  void _stopProcessingHints() {
+    _processingHintTimer?.cancel();
+    _processingHintTimer = null;
+    _processingHintIndex = 0;
+  }
+
+  Future<void> _showSuccessCelebration() async {
+    if (!mounted || _lastPaidAmount <= 0) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _SheetShell(
+          title: 'Rent Paid Successfully',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 74,
+                  height: 74,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: OwnerDashboardColors.brandPrimary(
+                      context,
+                    ).withValues(alpha: 0.17),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    size: 54,
+                    color: Color(0xFF4CD37A),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Rent done. Stress gone.',
+                style: TextStyle(
+                  color: OwnerDashboardColors.textPrimary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Amount: ${_formatRupees(_lastPaidAmount)}',
+                style: TextStyle(
+                  color: OwnerDashboardColors.textSecondary(context),
+                ),
+              ),
+              Text(
+                'Paid on: ${DateFormat('dd MMM yyyy, hh:mm a').format(_lastPaidAt ?? DateTime.now())}',
+                style: TextStyle(
+                  color: OwnerDashboardColors.textSecondary(context),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PrimaryActionButton(
+                      text: 'View History',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        this.context.push('/tenant/transactions');
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _PrimaryActionButton(
+                      text: 'Copy Receipt',
+                      onTap: () async {
+                        final receipt = _lastReceipt;
+                        if (receipt != null && receipt.trim().isNotEmpty) {
+                          await Clipboard.setData(ClipboardData(text: receipt));
+                        }
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   int get _enteredAmount => int.tryParse(_amountController.text.trim()) ?? 0;
-  int get _feeAmount => (_enteredAmount * 0.02).round();
-  int get _gstOnFeeAmount => (_feeAmount * 0.18).round();
-  int get _totalPayable => _enteredAmount + _feeAmount;
+
+  TenantPaymentQuote get _paymentQuote => TenantPaymentCalculator.calculate(
+    rentAmount: _enteredAmount,
+    paymentMethod: TenantPaymentMethod.netbanking,
+  );
 
   String _formatRupees(int amount) => '\u20B9${_currency.format(amount)}';
 
@@ -72,17 +187,22 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     final resolvedOwnerName = (owner?.ownerName ?? '').trim();
     final resolvedUpi = (owner?.ownerUpiId ?? '').trim();
     final resolvedRent =
-        room?.monthlyRent ??
         paymentState?.due?.monthlyRent ??
+        room?.monthlyRent ??
         summary.monthlyRent;
 
     final isSameTenant = _lastHydratedTenantId == summary.tenantId;
     final shouldRefreshOwnerName =
         resolvedOwnerName.isNotEmpty && _ownerName.trim().isEmpty;
     final shouldRefreshUpi = resolvedUpi.isNotEmpty && _ownerUpiId.isEmpty;
-    final shouldRefreshRent = resolvedRent > 0 && _monthlyRent <= 0;
+    final shouldRefreshRent =
+        resolvedRent > 0 && (_monthlyRent <= 0 || _monthlyRent != resolvedRent);
+    final currentEntered = int.tryParse(_amountController.text.trim());
     final shouldRefreshAmount =
-        resolvedRent > 0 && _amountController.text.trim().isEmpty;
+        resolvedRent > 0 &&
+        (_amountController.text.trim().isEmpty ||
+            currentEntered == null ||
+            currentEntered == _monthlyRent);
 
     if (isSameTenant &&
         !shouldRefreshOwnerName &&
@@ -119,6 +239,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     }
 
     setState(() => _isPaying = true);
+    _startProcessingHints();
 
     final messenger = ScaffoldMessenger.of(context);
 
@@ -134,6 +255,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
           ),
         );
         setState(() => _isPaying = false);
+        _stopProcessingHints();
       }
       return;
     }
@@ -166,12 +288,15 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
 
         final receipt = [
           'TenantPay Receipt',
-          'Amount Paid: ${_formatRupees(_totalPayable)}',
+          'Amount Paid: ${_formatRupees((intent.totalPayableInPaise / 100).ceil())}',
           'Transaction ID: ${intent.paymentId}',
           'Date: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
         ].join('\n');
 
         await Clipboard.setData(ClipboardData(text: receipt));
+        _lastReceipt = receipt;
+        _lastPaidAmount = (intent.totalPayableInPaise / 100).ceil();
+        _lastPaidAt = DateTime.now();
 
         if (!mounted) {
           return;
@@ -182,6 +307,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
             content: Text('Payment successful. Receipt copied to clipboard.'),
           ),
         );
+        await _showSuccessCelebration();
         return;
       }
 
@@ -209,6 +335,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
           : raw;
       messenger.showSnackBar(SnackBar(content: Text(message)));
     } finally {
+      _stopProcessingHints();
       if (mounted) {
         setState(() => _isPaying = false);
       }
@@ -414,6 +541,17 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
         final owner = ownerAsync.asData?.value;
         final room = roomAsync.asData?.value;
         final paymentState = paymentAsync.asData?.value;
+        final flowStatus = paymentState?.flowStatus ?? PaymentFlowStatus.idle;
+        final txState = txAsync.asData?.value;
+        final latestTx = txState?.transactions.isNotEmpty == true
+            ? txState!.transactions.first
+            : null;
+        final dueAmount = paymentState?.due?.totalPayable ?? _enteredAmount;
+        final isOverdue =
+            dueAmount > 0 && DateTime.now().day > summary.rentDueDay;
+        final dueStatus = dueAmount <= 0
+            ? 'Paid'
+            : (isOverdue ? 'Overdue' : 'Due');
 
         _hydrateFromState(
           summary: summary,
@@ -451,6 +589,60 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              _GlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Current Status',
+                          style: TextStyle(
+                            color: OwnerDashboardColors.textSecondary(context),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        _StatusPill(
+                          text: dueStatus,
+                          color: dueStatus == 'Paid'
+                              ? const Color(0xFF3BCB72)
+                              : dueStatus == 'Overdue'
+                              ? const Color(0xFFFF6B6B)
+                              : OwnerDashboardColors.brandPrimary(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Rent due: ${_formatRupees(dueAmount)}',
+                      style: TextStyle(
+                        color: OwnerDashboardColors.textPrimary(context),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Due day ${summary.rentDueDay} of every month',
+                      style: TextStyle(
+                        color: OwnerDashboardColors.textSecondary(context),
+                      ),
+                    ),
+                    if (latestTx != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Last payment: ${_formatRupees(latestTx.amount.toInt())} on ${DateFormat('dd MMM').format(latestTx.completedAt ?? latestTx.createdAt)}',
+                        style: TextStyle(
+                          color: OwnerDashboardColors.textSecondary(context),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
               _GlassCard(
                 child: _InfoCardContent(
                   title: 'Owner Details',
@@ -533,23 +725,59 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                       value: _formatRupees(_enteredAmount),
                     ),
                     _BreakdownRow(
-                      label: 'Gateway Fee (2%)',
-                      value: _formatRupees(_feeAmount),
+                      label:
+                          'Convenience Fee (${(_paymentQuote.feePercentUsed * 100).toStringAsFixed(2)}%)',
+                      value: _formatRupees(_paymentQuote.convenienceFee),
                     ),
                     _BreakdownRow(
-                      label: 'GST (18% on fee)',
-                      value: _formatRupees(_gstOnFeeAmount),
+                      label:
+                          'GST on Fee (${(_paymentQuote.gstPercentUsed * 100).toStringAsFixed(0)}%)',
+                      value: _formatRupees(_paymentQuote.gstOnConvenienceFee),
                     ),
                     Divider(color: OwnerDashboardColors.border(context)),
                     _BreakdownRow(
                       label: 'Total Payable',
-                      value: _formatRupees(_totalPayable),
+                      value: _formatRupees(_paymentQuote.totalPayable),
                       bold: true,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 10),
+              if (_isPaying)
+                _GlassCard(
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: OwnerDashboardColors.brandPrimary(context),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 240),
+                          child: Text(
+                            key: ValueKey(_processingHintIndex),
+                            _processingHintIndex == 0
+                                ? 'Processing securely...'
+                                : 'Almost done...',
+                            style: TextStyle(
+                              color: OwnerDashboardColors.textSecondary(
+                                context,
+                              ),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_isPaying) const SizedBox(height: 10),
               _GlassCard(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -571,6 +799,18 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 10),
+              _GlassCard(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: const [
+                    _TrustBadge(text: 'Razorpay Verified'),
+                    _TrustBadge(text: 'Owner Notified Instantly'),
+                    _TrustBadge(text: 'Receipt Available'),
+                  ],
+                ),
+              ),
               const SizedBox(height: 14),
               _PrimaryActionButton(
                 text: _isPaying ? 'Processing...' : 'Pay Now',
@@ -586,6 +826,27 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                     color: OwnerDashboardColors.textSecondary(context),
                   ),
                 ),
+              if (flowStatus == PaymentFlowStatus.pendingVerification) ...[
+                const SizedBox(height: 8),
+                _PrimaryActionButton(
+                  text: 'Check Payment Status',
+                  onTap: () async {
+                    await ref
+                        .read(paymentDashboardProvider.notifier)
+                        .refreshDue();
+                    await ref
+                        .read(transactionHistoryProvider.notifier)
+                        .refresh();
+                  },
+                ),
+              ],
+              if (flowStatus == PaymentFlowStatus.failure) ...[
+                const SizedBox(height: 8),
+                _PrimaryActionButton(
+                  text: 'Retry Payment',
+                  onTap: _isPaying ? null : _startPayment,
+                ),
+              ],
               if (txAsync.isLoading)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -597,6 +858,61 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _StatusPill({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.17),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.38)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+class _TrustBadge extends StatelessWidget {
+  final String text;
+
+  const _TrustBadge({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: OwnerDashboardColors.elevatedBackground(
+          context,
+        ).withValues(alpha: 0.88),
+        border: Border.all(color: OwnerDashboardColors.border(context)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: OwnerDashboardColors.textSecondary(context),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

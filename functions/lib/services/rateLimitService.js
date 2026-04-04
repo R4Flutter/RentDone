@@ -5,6 +5,7 @@ const firebase_1 = require("../utils/firebase");
 const DEFAULT_MAX_PER_DAY = {
     PAYMENT_RECEIVED: 20,
     RENT_DUE_REMINDER: 4,
+    CHEAPER_PROPERTY_ALERT: 2,
 };
 const checkAndIncrementRateLimit = async (userId, notificationType) => {
     const dayKey = new Date().toISOString().slice(0, 10);

@@ -210,20 +210,49 @@ class _MapBody extends ConsumerStatefulWidget {
   ConsumerState<_MapBody> createState() => _MapBodyState();
 }
 
-class _MapBodyState extends ConsumerState<_MapBody> {
+class _MapBodyState extends ConsumerState<_MapBody>
+    with SingleTickerProviderStateMixin {
   String _lastFitSignature = '';
   String _searchQuery = '';
   bool _onlyVacant = false;
   late final TextEditingController _searchController;
+  late final AnimationController _cameraController;
+  LatLng? _cameraStartCenter;
+  LatLng? _cameraTargetCenter;
+  double _cameraStartZoom = 12;
+  double _cameraTargetZoom = 12;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _cameraController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 680),
+        )..addListener(() {
+          final startCenter = _cameraStartCenter;
+          final targetCenter = _cameraTargetCenter;
+          if (startCenter == null || targetCenter == null || !mounted) {
+            return;
+          }
+          final curved = Curves.easeOutCubic.transform(_cameraController.value);
+          final center = LatLng(
+            lerpDouble(startCenter.latitude, targetCenter.latitude, curved) ??
+                targetCenter.latitude,
+            lerpDouble(startCenter.longitude, targetCenter.longitude, curved) ??
+                targetCenter.longitude,
+          );
+          final zoom =
+              lerpDouble(_cameraStartZoom, _cameraTargetZoom, curved) ??
+              _cameraTargetZoom;
+          widget.mapController.move(center, zoom);
+        });
   }
 
   @override
   void dispose() {
+    _cameraController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -275,6 +304,9 @@ class _MapBodyState extends ConsumerState<_MapBody> {
 
             return Stack(
               children: [
+                const Positioned.fill(
+                  child: IgnorePointer(child: _LiquidBackdrop()),
+                ),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: Padding(
@@ -283,7 +315,9 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                       mapController: widget.mapController,
                       options: MapOptions(
                         initialCenter: cityCenter,
-                        initialZoom: 12,
+                        initialZoom: 12.8,
+                        minZoom: 3,
+                        maxZoom: 18.5,
                       ),
                       children: [
                         TileLayer(
@@ -339,35 +373,63 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                   top: 16,
                   left: 18,
                   right: 18,
-                  child: _MapSearchHeader(
-                    city: widget.city,
-                    totalPropertyCount: properties.length,
-                    visiblePropertyCount: filteredProperties.length,
-                    searchQuery: _searchQuery,
-                    searchController: _searchController,
-                    onlyVacant: _onlyVacant,
-                    onChangeCity: widget.onChangeCity,
-                    onSearchChanged: (value) {
-                      setState(() => _searchQuery = value);
+                  child: TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 520),
+                    curve: Curves.easeOutCubic,
+                    tween: Tween<double>(begin: 0, end: 1),
+                    builder: (context, t, child) {
+                      return Transform.translate(
+                        offset: Offset(0, (1 - t) * -28),
+                        child: Opacity(
+                          opacity: t.clamp(0.0, 1.0),
+                          child: child,
+                        ),
+                      );
                     },
-                    onToggleVacant: () {
-                      setState(() => _onlyVacant = !_onlyVacant);
-                    },
-                    onClearSearch: () {
-                      _searchController.clear();
-                      setState(() => _searchQuery = '');
-                    },
+                    child: _MapSearchHeader(
+                      city: widget.city,
+                      totalPropertyCount: properties.length,
+                      visiblePropertyCount: filteredProperties.length,
+                      searchQuery: _searchQuery,
+                      searchController: _searchController,
+                      onlyVacant: _onlyVacant,
+                      onChangeCity: widget.onChangeCity,
+                      onSearchChanged: (value) {
+                        setState(() => _searchQuery = value);
+                      },
+                      onToggleVacant: () {
+                        setState(() => _onlyVacant = !_onlyVacant);
+                      },
+                      onClearSearch: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    ),
                   ),
                 ),
                 Positioned(
                   right: 18,
                   bottom: 26,
-                  child: _MapControlStack(
-                    onZoomIn: () => _zoomBy(0.8),
-                    onZoomOut: () => _zoomBy(-0.8),
-                    onRecenter: () => _fitCameraNow(
-                      cityCenter: cityCenter,
-                      properties: filteredProperties,
+                  child: TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 560),
+                    curve: Curves.easeOutBack,
+                    tween: Tween<double>(begin: 0, end: 1),
+                    builder: (context, t, child) {
+                      return Transform.translate(
+                        offset: Offset((1 - t) * 20, (1 - t) * 30),
+                        child: Opacity(
+                          opacity: t.clamp(0.0, 1.0),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _MapControlStack(
+                      onZoomIn: () => _zoomBy(0.8),
+                      onZoomOut: () => _zoomBy(-0.8),
+                      onRecenter: () => _fitCameraNow(
+                        cityCenter: cityCenter,
+                        properties: filteredProperties,
+                      ),
                     ),
                   ),
                 ),
@@ -443,13 +505,13 @@ class _MapBodyState extends ConsumerState<_MapBody> {
     if (!mounted) return;
 
     if (properties.isEmpty) {
-      widget.mapController.move(cityCenter, 13.5);
+      _animateMapMove(cityCenter, 13.7);
       return;
     }
 
     if (properties.length == 1) {
       final p = properties.first;
-      widget.mapController.move(LatLng(p.lat, p.lng), 16);
+      _animateMapMove(LatLng(p.lat, p.lng), 16.1);
       return;
     }
 
@@ -460,28 +522,57 @@ class _MapBodyState extends ConsumerState<_MapBody> {
     final lngSpan = (bounds.east - bounds.west).abs();
     final maxSpan = latSpan > lngSpan ? latSpan : lngSpan;
 
+    final targetCenter = bounds.center;
+
     if (maxSpan <= 0.008) {
-      widget.mapController.move(bounds.center, 16.2);
+      _animateMapMove(targetCenter, 16.2);
       return;
     }
     if (maxSpan <= 0.02) {
-      widget.mapController.move(bounds.center, 15.4);
+      _animateMapMove(targetCenter, 15.4);
       return;
     }
     if (maxSpan <= 0.05) {
-      widget.mapController.move(bounds.center, 14.6);
+      _animateMapMove(targetCenter, 14.6);
+      return;
+    }
+    if (maxSpan <= 0.12) {
+      _animateMapMove(targetCenter, 13.8);
+      return;
+    }
+    if (maxSpan <= 0.2) {
+      _animateMapMove(targetCenter, 13.0);
+      return;
+    }
+    if (maxSpan <= 0.45) {
+      _animateMapMove(targetCenter, 12.2);
       return;
     }
 
-    widget.mapController.fitCamera(
-      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(64)),
-    );
+    _animateMapMove(targetCenter, 11.4);
   }
 
   void _zoomBy(double delta) {
     final camera = widget.mapController.camera;
     final nextZoom = (camera.zoom + delta).clamp(3.0, 18.5);
-    widget.mapController.move(camera.center, nextZoom);
+    _animateMapMove(camera.center, nextZoom);
+  }
+
+  void _animateMapMove(
+    LatLng targetCenter,
+    double targetZoom, {
+    Duration duration = const Duration(milliseconds: 680),
+  }) {
+    if (!mounted) return;
+
+    final camera = widget.mapController.camera;
+    _cameraStartCenter = camera.center;
+    _cameraTargetCenter = targetCenter;
+    _cameraStartZoom = camera.zoom;
+    _cameraTargetZoom = targetZoom;
+    _cameraController
+      ..duration = duration
+      ..forward(from: 0);
   }
 }
 
@@ -579,23 +670,34 @@ class _MapSearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.black.withValues(alpha: 0.42),
-                Colors.black.withValues(alpha: 0.24),
+                cs.primary.withValues(alpha: dark ? 0.32 : 0.18),
+                cs.secondary.withValues(alpha: dark ? 0.22 : 0.14),
               ],
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.36)),
+            border: Border.all(
+              color: cs.onSurface.withValues(alpha: dark ? 0.2 : 0.12),
+            ),
+            boxShadow: [
+              BoxShadow(
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+                color: cs.primary.withValues(alpha: dark ? 0.22 : 0.12),
+              ),
+            ],
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
@@ -746,15 +848,34 @@ class _MapControlStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.34),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                cs.primary.withValues(alpha: dark ? 0.34 : 0.22),
+                cs.secondary.withValues(alpha: dark ? 0.26 : 0.16),
+              ],
+            ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: cs.onSurface.withValues(alpha: dark ? 0.24 : 0.14),
+            ),
+            boxShadow: [
+              BoxShadow(
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+                color: cs.primary.withValues(alpha: dark ? 0.24 : 0.12),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -812,12 +933,13 @@ class _StatusTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: Colors.white.withValues(alpha: 0.14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        color: cs.secondary.withValues(alpha: 0.22),
+        border: Border.all(color: cs.onSurface.withValues(alpha: 0.2)),
       ),
       child: Text(
         label,
@@ -904,6 +1026,65 @@ class _OwnerCardError extends StatelessWidget {
           Expanded(child: Text(message)),
           TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
+      ),
+    );
+  }
+}
+
+class _LiquidBackdrop extends StatelessWidget {
+  const _LiquidBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Stack(
+      children: [
+        Positioned(
+          top: -60,
+          left: -30,
+          child: _GlowOrb(
+            size: 220,
+            color: cs.primary.withValues(alpha: dark ? 0.16 : 0.1),
+          ),
+        ),
+        Positioned(
+          right: -45,
+          top: 130,
+          child: _GlowOrb(
+            size: 180,
+            color: cs.secondary.withValues(alpha: dark ? 0.14 : 0.09),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GlowOrb extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const _GlowOrb({required this.size, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOut,
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            color,
+            color.withValues(alpha: color.a * 0.18),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.45, 1.0],
+        ),
       ),
     );
   }

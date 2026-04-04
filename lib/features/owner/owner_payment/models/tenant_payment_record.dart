@@ -111,6 +111,8 @@ class TenantPaymentRecord {
     String normalizeMethod(String? raw) {
       final value = (raw ?? '').trim();
       if (value.isEmpty) return 'Cash';
+      if (value.toLowerCase() == 'razorpay') return 'Razorpay';
+      if (value.toLowerCase() == 'upi') return 'UPI';
       if (value.toLowerCase() == 'online') return 'UPI';
       return value;
     }
@@ -187,7 +189,10 @@ class TenantPaymentRecord {
       baseAmount: baseAmount,
       paidAmount: paidAmount,
       remainingAmount: remainingAmount,
-      transactionId: (data['transactionId'] as String?)?.trim(),
+      transactionId:
+          ((data['transactionId'] as String?) ??
+                  (data['razorpayPaymentId'] as String?))
+              ?.trim(),
       notes: (data['notes'] as String?)?.trim(),
       installments: installments,
     );

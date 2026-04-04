@@ -4,15 +4,27 @@ import 'package:rentdone/features/payment/data/models/payment_quote_dto.dart';
 
 class PaymentFunctionsDataSource {
   final FirebaseFunctions _paymentFunctions;
+  final FirebaseFunctions _paymentFunctionsFallback;
   final FirebaseFunctions _quoteFunctions;
+  final FirebaseFunctions _razorpayFallbackFunctions;
 
   PaymentFunctionsDataSource({
     FirebaseFunctions? paymentFunctions,
+    FirebaseFunctions? paymentFunctionsFallback,
     FirebaseFunctions? quoteFunctions,
-  })  : _paymentFunctions = paymentFunctions ??
-            FirebaseFunctions.instanceFor(region: 'us-central1'),
-        _quoteFunctions = quoteFunctions ??
-            FirebaseFunctions.instanceFor(region: 'us-central1');
+    FirebaseFunctions? razorpayFallbackFunctions,
+  }) : _paymentFunctions =
+           paymentFunctions ??
+           FirebaseFunctions.instanceFor(region: 'us-central1'),
+       _paymentFunctionsFallback =
+           paymentFunctionsFallback ??
+           FirebaseFunctions.instanceFor(region: 'asia-south1'),
+       _quoteFunctions =
+           quoteFunctions ??
+           FirebaseFunctions.instanceFor(region: 'us-central1'),
+       _razorpayFallbackFunctions =
+           razorpayFallbackFunctions ??
+           FirebaseFunctions.instanceFor(region: 'asia-south1');
 
   Future<PaymentIntentDto> createPaymentIntent({
     required String leaseId,
@@ -23,7 +35,6 @@ class PaymentFunctionsDataSource {
     int? enteredRentAmountInRupees,
     int? lateFeeAmountInRupees,
   }) async {
-    final callable = _paymentFunctions.httpsCallable('createPaymentIntent');
     final payload = <String, dynamic>{
       'leaseId': leaseId,
       'month': month,
@@ -38,19 +49,12 @@ class PaymentFunctionsDataSource {
       payload['lateFeeAmountInRupees'] = lateFeeAmountInRupees;
     }
 
-    final result = await callable.call(payload);
-
-    final rawData = result.data;
-    if (rawData is! Map) {
-      throw FirebaseFunctionsException(
-        code: 'internal',
-        message: 'createPaymentIntent returned an unexpected payload.',
-      );
-    }
-
-    return PaymentIntentDto.fromMap(
-      Map<String, dynamic>.from(rawData),
+    final result = await _callWithRegionalFallback<Map<dynamic, dynamic>>(
+      functionName: 'createPaymentIntent',
+      payload: payload,
     );
+
+    return PaymentIntentDto.fromMap(Map<String, dynamic>.from(result));
   }
 
   Future<PaymentQuoteDto> quotePayment({
@@ -76,11 +80,59 @@ class PaymentFunctionsDataSource {
     required String gateway,
     required Map<String, dynamic> payload,
   }) async {
-    final callable = _paymentFunctions.httpsCallable('verifyPayment');
+    await _callWithRegionalFallback<dynamic>(
+      functionName: 'verifyPayment',
+      payload: {'paymentId': paymentId, 'gateway': gateway, 'payload': payload},
+    );
+  }
+
+  Future<void> confirmRazorpayPayment({
+    required String paymentId,
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
+    final callable = _razorpayFallbackFunctions.httpsCallable(
+      'confirmRazorpayPayment',
+    );
     await callable.call({
       'paymentId': paymentId,
-      'gateway': gateway,
-      'payload': payload,
+      'razorpayOrderId': razorpayOrderId,
+      'razorpayPaymentId': razorpayPaymentId,
+      'razorpaySignature': razorpaySignature,
     });
+  }
+
+  Future<T> _callWithRegionalFallback<T>({
+    required String functionName,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final callable = _paymentFunctions.httpsCallable(functionName);
+      final result = await callable.call(payload);
+      return result.data as T;
+    } on FirebaseFunctionsException catch (primaryError) {
+      if (!_shouldTryRegionalFallback(primaryError)) {
+        rethrow;
+      }
+      final fallbackCallable = _paymentFunctionsFallback.httpsCallable(
+        functionName,
+      );
+      final fallbackResult = await fallbackCallable.call(payload);
+      return fallbackResult.data as T;
+    }
+  }
+
+  bool _shouldTryRegionalFallback(FirebaseFunctionsException error) {
+    switch (error.code) {
+      case 'unavailable':
+      case 'not-found':
+      case 'failed-precondition':
+      case 'deadline-exceeded':
+      case 'internal':
+        return true;
+      default:
+        return false;
+    }
   }
 }

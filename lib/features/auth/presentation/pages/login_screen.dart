@@ -669,8 +669,20 @@ class _LoginPageState extends ConsumerState<LoginPage>
       );
       if (!mounted) return;
       _navigateByRole(UserRoleX.tryParse(user.role) ?? widget.selectedRole);
-    } catch (_) {
-      // Error state is managed by auth notifier.
+    } catch (error) {
+      if (!mounted) return;
+      final message = error.toString().toLowerCase();
+      if (message.contains('email not verified')) {
+        final verifyUri = Uri(
+          path: '/verify-email-code',
+          queryParameters: {
+            'role': widget.selectedRole.name,
+            'phone': widget.phoneNumber,
+            'email': _emailController.text.trim().toLowerCase(),
+          },
+        );
+        context.go(verifyUri.toString());
+      }
     }
   }
 

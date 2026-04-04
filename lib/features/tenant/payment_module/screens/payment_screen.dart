@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:rentdone/features/payment/domain/services/tenant_payment_calculator.dart';
 import 'package:rentdone/features/tenant/payment_module/models/payment_summary_model.dart';
-import 'package:rentdone/features/tenant/payment_module/services/payment_constants.dart';
 import 'package:rentdone/features/tenant/payment_module/services/payment_providers.dart';
 import 'package:rentdone/features/tenant/payment_module/widgets/payment_widgets.dart';
 
@@ -38,9 +38,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     final rent = summary?.tenant?.rent ?? 0;
     final due = summary?.dueAmount ?? 0;
-    final fee = due * PaymentConstants.gatewayFeePercent;
-    final gst = fee * PaymentConstants.gstOnFeePercent;
-    final totalPayable = due + fee + gst;
+    final quote = TenantPaymentCalculator.calculate(
+      rentAmount: due.ceil(),
+      paymentMethod: TenantPaymentMethod.netbanking,
+    );
+    final fee = quote.convenienceFee.toDouble();
+    final gstOnFee = quote.gstOnConvenienceFee.toDouble();
+    final totalPayable = quote.totalPayable.toDouble();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Rent Payment')),
@@ -108,8 +112,16 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   ),
                   const SizedBox(height: 10),
                   PaymentLineItem(label: 'Due', value: _inr(due)),
-                  PaymentLineItem(label: 'Gateway Fee (2%)', value: _inr(fee)),
-                  PaymentLineItem(label: 'GST (18% on fee)', value: _inr(gst)),
+                  PaymentLineItem(
+                    label:
+                        'Convenience Fee (${(quote.feePercentUsed * 100).toStringAsFixed(2)}%)',
+                    value: _inr(fee),
+                  ),
+                  PaymentLineItem(
+                    label:
+                        'GST on Fee (${(quote.gstPercentUsed * 100).toStringAsFixed(0)}%)',
+                    value: _inr(gstOnFee),
+                  ),
                   const Divider(),
                   PaymentLineItem(
                     label: 'Total Payable',

@@ -5,17 +5,14 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:rentdone/core/ads/admob_config.dart';
-import 'package:rentdone/core/ads/rewarded_ad_service.dart';
+import 'package:rentdone/shared/widgets/profile_picture_avatar.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
+import 'package:rentdone/features/payment/presentation/providers/payment_dashboard_provider.dart';
 import 'package:rentdone/features/payment/presentation/providers/transaction_history_provider.dart';
 import 'package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
-import 'package:rentdone/features/tenant/presentation/widgets/credit_card_offer_widget.dart';
 import 'package:rentdone/features/tenant/presentation/widgets/native_ad_widget.dart';
 
 class TenantDashboardScreen extends ConsumerStatefulWidget {
@@ -29,7 +26,6 @@ class TenantDashboardScreen extends ConsumerStatefulWidget {
 class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
     with TickerProviderStateMixin {
   late final AnimationController _heroController;
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   @override
   void initState() {
@@ -45,137 +41,6 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
             .loadInitial(actor: TransactionActor.tenant),
       );
     });
-    unawaited(RewardedAdService.instance.preload());
-  }
-
-  Future<void> _logAdEvent(String name, {String? placement}) async {
-    try {
-      await _analytics.logEvent(
-        name: name,
-        parameters: <String, Object>{
-          'screen': 'tenant_dashboard',
-          if (placement != null) 'placement': placement,
-        },
-      );
-    } catch (_) {}
-  }
-
-  Future<void> _openCreditCardOffer() async {
-    await _logAdEvent('credit_offer_click', placement: 'below_active_dues');
-
-    if (!AdMobConfig.isAffiliateEnabled) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Offer is currently unavailable. Please try again later.'),
-        ),
-      );
-      return;
-    }
-
-    final uri = Uri.tryParse(AdMobConfig.affiliateCreditCardUrl);
-    if (uri == null) return;
-
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open offer at this moment.')),
-      );
-    }
-  }
-
-  Future<void> _handlePayNowWithRewards() async {
-    if (!mounted) return;
-    final rootContext = this.context;
-
-    await _logAdEvent('pay_now_cta_opened', placement: 'active_dues_card');
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Save on your payment',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Use credit card or watch an ad to unlock up to Rs 10 promo on checkout.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.credit_card_rounded),
-                  title: const Text('Apply Credit Card'),
-                  subtitle: const Text('Open trusted fintech partner offer'),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    await _openCreditCardOffer();
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.ondemand_video_rounded),
-                  title: const Text('Watch Ad'),
-                  subtitle: const Text('Unlock reward promo and continue'),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    await _logAdEvent(
-                      'rewarded_ad_requested',
-                      placement: 'pay_now_modal',
-                    );
-                    final rewarded = await RewardedAdService.instance
-                        .showRewardedAd(
-                      onRewardEarned: () async {
-                        await _logAdEvent(
-                          'rewarded_ad_earned',
-                          placement: 'pay_now_modal',
-                        );
-                      },
-                    );
-
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(rootContext).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          rewarded
-                              ? 'Reward unlocked. Complete payment to claim eligible promo.'
-                              : 'No ad available right now. Continuing to payment.',
-                        ),
-                      ),
-                    );
-                    GoRouter.of(rootContext).push('/tenant/payments');
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.arrow_forward_ios_rounded),
-                  title: const Text('Skip'),
-                  subtitle: const Text('Continue to payment directly'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    GoRouter.of(rootContext).push('/tenant/payments');
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -221,6 +86,15 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
         final monthPaymentAsync = ref.watch(
           currentMonthPaymentProvider(summary.tenantId),
         );
+        final paymentDashboardState = ref
+            .watch(paymentDashboardProvider)
+            .asData
+            ?.value;
+        final currentDueAmount =
+            paymentDashboardState?.due?.totalPayable ??
+            monthPaymentAsync.asData?.value?.amount ??
+            summary.dueAmount;
+        final shouldShowDashboardNativeAd = currentDueAmount > 0;
 
         final quickActionItems = <_QuickActionItem>[
           _QuickActionItem(
@@ -258,6 +132,20 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
             accentColor: OwnerDashboardColors.brandPrimary(context),
             onTap: () => context.push('/tenant/profile'),
           ),
+          _QuickActionItem(
+            icon: Icons.notifications_active_outlined,
+            title: 'Notifications',
+            subtitle: 'Cheaper nearby rent alerts',
+            accentColor: OwnerDashboardColors.brandPrimary(context),
+            onTap: () => context.push('/tenant/notifications'),
+          ),
+          _QuickActionItem(
+            icon: Icons.workspace_premium_outlined,
+            title: 'Remove Ads',
+            subtitle: 'Rs 29/mo or Rs 49/2 months',
+            accentColor: OwnerDashboardColors.brandPrimaryHover(context),
+            onTap: () => context.push('/tenant/subscription'),
+          ),
         ];
 
         return _CommandCenterScaffold(
@@ -273,6 +161,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                       .read(transactionHistoryProvider.notifier)
                       .loadInitial(actor: TransactionActor.tenant, force: true);
                   await ref.read(tenantDashboardProvider.future);
+                  ref.invalidate(paymentDashboardProvider);
                 },
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -305,7 +194,10 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                     const SizedBox(height: 28),
                     monthPaymentAsync.when(
                       data: (payment) => _ActiveDuesCard(
-                        dueAmount: payment?.amount ?? summary.dueAmount,
+                        dueAmount:
+                            paymentDashboardState?.due?.totalPayable ??
+                            payment?.amount ??
+                            summary.dueAmount,
                         isAmountRefreshing: false,
                         onPayNow: () {
                           unawaited(
@@ -313,27 +205,32 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                                 .read(transactionHistoryProvider.notifier)
                                 .loadInitial(actor: TransactionActor.tenant),
                           );
-                          unawaited(_handlePayNowWithRewards());
+                          context.push('/tenant/payments');
                         },
                       ),
                       loading: () => _ActiveDuesCard(
-                        dueAmount: summary.dueAmount,
+                        dueAmount:
+                            paymentDashboardState?.due?.totalPayable ??
+                            summary.dueAmount,
                         isAmountRefreshing: true,
-                        onPayNow: () => unawaited(_handlePayNowWithRewards()),
+                        onPayNow: () => context.push('/tenant/payments'),
                       ),
                       error: (_, _) => _ActiveDuesCard(
-                        dueAmount: summary.dueAmount,
+                        dueAmount:
+                            paymentDashboardState?.due?.totalPayable ??
+                            summary.dueAmount,
                         isAmountRefreshing: false,
-                        onPayNow: () => unawaited(_handlePayNowWithRewards()),
+                        onPayNow: () => context.push('/tenant/payments'),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    CreditCardOfferWidget(
-                      onApplyNow: () => unawaited(_openCreditCardOffer()),
-                    ),
-                    const SizedBox(height: 10),
-                    const NativeAdWidget(),
-                    const SizedBox(height: 20),
+                    if (shouldShowDashboardNativeAd) ...[
+                      const SizedBox(height: 14),
+                      const NativeAdWidget(
+                        placementKey: 'tenant_dashboard_after_dues',
+                      ),
+                      const SizedBox(height: 20),
+                    ] else
+                      const SizedBox(height: 20),
                     _FinancialMetricsRow(summary: summary),
                     const SizedBox(height: 28),
                     _SectionTitle(title: 'Quick Actions'),
@@ -566,28 +463,21 @@ class _TopBar extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(999),
             onTap: () => context.push('/tenant/profile'),
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: OwnerDashboardColors.brandPrimary(context),
-                border: Border.all(
-                  color: OwnerDashboardColors.brandPrimary(
-                    context,
-                  ).withValues(alpha: 0.2),
-                ),
+            child: CircularProfileAvatar(
+              radius: 16,
+              photoUrl: summary.profileImageUrl,
+              email: summary.tenantEmail,
+              showBorder: true,
+              border: Border.all(
+                color: OwnerDashboardColors.brandPrimary(
+                  context,
+                ).withValues(alpha: 0.28),
+                width: 1.2,
               ),
-              child: Center(
-                child: Text(
-                  'C',
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              backgroundColor: OwnerDashboardColors.brandPrimary(
+                context,
+              ).withValues(alpha: 0.12),
+              iconColor: OwnerDashboardColors.brandPrimary(context),
             ),
           ),
         ),

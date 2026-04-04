@@ -3,6 +3,7 @@ import 'package:rentdone/features/payment/domain/entities/transaction_record.dar
 
 class TransactionRecordDto {
   final String id;
+  final String transactionId;
   final String paymentId;
   final String leaseId;
   final String tenantId;
@@ -20,6 +21,7 @@ class TransactionRecordDto {
 
   const TransactionRecordDto({
     required this.id,
+    required this.transactionId,
     required this.paymentId,
     required this.leaseId,
     required this.tenantId,
@@ -46,9 +48,23 @@ class TransactionRecordDto {
       return DateTime.fromMillisecondsSinceEpoch(0);
     }
 
+    String readString(dynamic value) {
+      return (value is String ? value : '').trim();
+    }
+
+    final mappedPaymentId = readString(data['paymentId']).isNotEmpty
+        ? readString(data['paymentId'])
+        : id;
+    final mappedTransactionId = readString(data['transactionId']).isNotEmpty
+        ? readString(data['transactionId'])
+        : (readString(data['razorpayPaymentId']).isNotEmpty
+              ? readString(data['razorpayPaymentId'])
+              : mappedPaymentId);
+
     return TransactionRecordDto(
       id: id,
-      paymentId: (data['paymentId'] as String?) ?? id,
+      transactionId: mappedTransactionId,
+      paymentId: mappedPaymentId,
       leaseId:
           (data['leaseId'] as String?) ?? (data['propertyId'] as String?) ?? '',
       tenantId: (data['tenantId'] as String?) ?? '',
@@ -77,7 +93,7 @@ class TransactionRecordDto {
 
   TransactionRecord toEntity() {
     return TransactionRecord(
-      transactionId: id,
+      transactionId: transactionId,
       paymentId: paymentId,
       leaseId: leaseId,
       tenantId: tenantId,

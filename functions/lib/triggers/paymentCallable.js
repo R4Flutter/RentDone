@@ -302,8 +302,18 @@ exports.verifyPayment = (0, https_1.onCall)({
     const ownerId = asString(paymentData.ownerId);
     const tenantId = asString(paymentData.tenantId);
     const baseAmount = asInt(paymentData.baseAmount ?? paymentData.amount);
+    const existingStatus = asString(paymentData.status).toLowerCase();
+    const existingTransactionId = asString(paymentData.transactionId);
     if (uid !== ownerId && uid !== tenantId) {
         throw new https_1.HttpsError("permission-denied", "unauthorized");
+    }
+    if (existingStatus === "paid" && existingTransactionId === razorpayPaymentId) {
+        return {
+            paymentId,
+            status: "paid",
+            paidAmount: baseAmount,
+            remainingAmount: 0,
+        };
     }
     const razorpaySecret = asString(process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET);
     if (!razorpaySecret) {
@@ -323,16 +333,26 @@ exports.verifyPayment = (0, https_1.onCall)({
         });
         throw new https_1.HttpsError("permission-denied", "invalid-signature");
     }
+    const paidAt = firebase_1.Timestamp.now();
+    const paidDate = paidAt.toDate();
+    const receiptNumber = `RCP-${paidDate.getFullYear()}${String(paidDate.getMonth() + 1).padStart(2, "0")}-${paymentId.slice(-6).toUpperCase()}`;
     await paymentRef.update({
         status: "paid",
         method: "razorpay",
         paidAmount: baseAmount,
         remainingAmount: 0,
         transactionId: razorpayPaymentId,
+        razorpayPaymentId,
         razorpayOrderId,
         razorpaySignature,
-        completedAt: firebase_1.FieldValue.serverTimestamp(),
-        updatedAt: firebase_1.FieldValue.serverTimestamp(),
+        date: paidAt,
+        paymentDate: paidAt,
+        paidAt,
+        completedAt: paidAt,
+        month: paidDate.getMonth() + 1,
+        year: paidDate.getFullYear(),
+        receiptNumber,
+        updatedAt: paidAt,
     });
     await logPaymentEvent("PAYMENT_VERIFY_SUCCESS", {
         paymentId,

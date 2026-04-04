@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -30,8 +32,8 @@ Future<void> main() async {
   // Initialize Firebase (single responsibility)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Optional local Functions emulator mode for Spark/testing environments.
-  await _initializeFunctionsEmulatorIfEnabled();
+  // Optional local Firebase emulator mode for Spark/testing environments.
+  await _initializeFirebaseEmulatorsIfEnabled();
 
   // Initialize Crashlytics for error tracking
   await _initializeCrashlytics();
@@ -65,23 +67,66 @@ Future<void> _initializeAdMob() async {
   }
 }
 
-Future<void> _initializeFunctionsEmulatorIfEnabled() async {
+Future<void> _initializeFirebaseEmulatorsIfEnabled() async {
+  const emulatorHost = String.fromEnvironment(
+    'FIREBASE_EMULATOR_HOST',
+    defaultValue: '127.0.0.1',
+  );
+
   const useFunctionsEmulator = bool.fromEnvironment(
     'USE_FUNCTIONS_EMULATOR',
     defaultValue: false,
   );
-  if (!useFunctionsEmulator) {
-    return;
-  }
 
-  const host = String.fromEnvironment(
-    'FUNCTIONS_EMULATOR_HOST',
-    defaultValue: '127.0.0.1',
+  const useAuthEmulator = bool.fromEnvironment(
+    'USE_AUTH_EMULATOR',
+    defaultValue: false,
   );
+
+  const useFirestoreEmulator = bool.fromEnvironment(
+    'USE_FIRESTORE_EMULATOR',
+    defaultValue: false,
+  );
+
+  final host = String.fromEnvironment(
+    'FUNCTIONS_EMULATOR_HOST',
+    defaultValue: emulatorHost,
+  );
+
   const port = int.fromEnvironment(
     'FUNCTIONS_EMULATOR_PORT',
     defaultValue: 5001,
   );
+
+  const authPort = int.fromEnvironment(
+    'AUTH_EMULATOR_PORT',
+    defaultValue: 9099,
+  );
+
+  const firestorePort = int.fromEnvironment(
+    'FIRESTORE_EMULATOR_PORT',
+    defaultValue: 8080,
+  );
+
+  if (useAuthEmulator) {
+    await FirebaseAuth.instance.useAuthEmulator(host, authPort);
+    AppLogger.warning(
+      'Using Firebase Auth emulator at $host:$authPort',
+      tag: 'main',
+    );
+  }
+
+  if (useFirestoreEmulator) {
+    FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);
+    AppLogger.warning(
+      'Using Firestore emulator at $host:$firestorePort',
+      tag: 'main',
+    );
+  }
+
+  if (!useFunctionsEmulator) {
+    return;
+  }
 
   FirebaseFunctions.instance.useFunctionsEmulator(host, port);
   AppLogger.warning(

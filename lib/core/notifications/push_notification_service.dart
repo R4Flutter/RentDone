@@ -13,6 +13,7 @@ const String _typeRentDue = 'RENT_DUE';
 const String _typeRentDueReminder = 'RENT_DUE_REMINDER';
 const String _typePaymentReceived = 'PAYMENT_RECEIVED';
 const String _typePaymentUpdated = 'PAYMENT_UPDATED';
+const String _typeCheaperPropertyAlert = 'CHEAPER_PROPERTY_ALERT';
 const String _notificationsEnabledField = 'notificationsEnabled';
 
 @pragma('vm:entry-point')
@@ -296,6 +297,41 @@ class PushNotificationService {
     final isTenantReminder =
         type == _typeRentDueReminder || targetRole == 'tenant';
 
+    if (type == _typeCheaperPropertyAlert) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: Text(
+              message.notification?.title ?? 'Cheaper Property Nearby',
+            ),
+            content: Text(
+              message.notification?.body ??
+                  'A cheaper property is available near your area.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Later'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  if (actionRoute.isNotEmpty) {
+                    context.go(actionRoute);
+                    return;
+                  }
+                  context.go('/tenant/city');
+                },
+                child: const Text('View Map'),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
     if (!isTenantReminder && tenantId.isEmpty) return;
 
     await showDialog<void>(
@@ -405,6 +441,15 @@ class PushNotificationService {
         return;
       }
       context.goNamed('ownerPayments', queryParameters: {'status': 'unpaid'});
+      return;
+    }
+
+    if (type == _typeCheaperPropertyAlert) {
+      if (actionRoute.isNotEmpty) {
+        context.go(actionRoute);
+        return;
+      }
+      context.go('/tenant/city');
       return;
     }
 
