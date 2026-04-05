@@ -185,15 +185,15 @@ context.push('/razorpay-checkout', extra: {
 ### Step 4: Configure Razorpay Keys
 ```bash
 # Add to .env or similar
-RAZORPAY_KEY=rzp_live_xxxxxxxxxxxxx
-RAZORPAY_SECRET=xxxxxxxxxxxxx  # Backend only
+RAZORPAY_KEY=
+RAZORPAY_SECRET=
 ```
 
 Or set in code:
 ```dart
 const key = String.fromEnvironment(
   'RAZORPAY_KEY',
-  defaultValue: 'rzp_test_1234567890123',
+  defaultValue: '',
 );
 ```
 

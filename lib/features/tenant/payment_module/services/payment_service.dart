@@ -145,27 +145,9 @@ class PaymentService {
     required String tenantId,
     required double amount,
   }) async {
-    final tenant = await fetchTenant(tenantId);
-    if (tenant == null) {
-      throw StateError('Tenant not found.');
-    }
-
-    final paymentId = _uuid.v4();
-
-    await _firestore
-        .collection(PaymentConstants.paymentsCollection)
-        .doc(paymentId)
-        .set({
-          'paymentId': paymentId,
-          'tenantId': tenantId,
-          'ownerId': tenant.ownerId,
-          'amount': amount,
-          'method': PaymentMethodType.cash.dbValue,
-          'status': PaymentStatusType.pending.dbValue,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-
-    return paymentId;
+    throw UnsupportedError(
+      'Legacy local payment writes are disabled. Use callable-backed payment intents.',
+    );
   }
 
   Future<String> createRazorpayPendingPayment({
@@ -173,62 +155,18 @@ class PaymentService {
     required double rentAmount,
     required double totalAmount,
   }) async {
-    final tenant = await fetchTenant(tenantId);
-    if (tenant == null) {
-      throw StateError('Tenant not found.');
-    }
-
-    if (rentAmount <= 0 || totalAmount <= 0) {
-      throw StateError('Payment amount must be greater than zero.');
-    }
-    if (totalAmount < rentAmount) {
-      throw StateError('Total amount cannot be lower than rent amount.');
-    }
-
-    final paymentId = _uuid.v4();
-
-    await _firestore
-        .collection(PaymentConstants.paymentsCollection)
-        .doc(paymentId)
-        .set({
-          'paymentId': paymentId,
-          'tenantId': tenantId,
-          'ownerId': tenant.ownerId,
-          'amount': rentAmount,
-          'totalAmount': totalAmount,
-          'method': PaymentMethodType.razorpay.dbValue,
-          'status': PaymentStatusType.pending.dbValue,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-    return paymentId;
+    throw UnsupportedError(
+      'Legacy local payment writes are disabled. Use callable-backed payment intents.',
+    );
   }
 
   Future<void> confirmOwnerCashPayment({
     required String paymentId,
     required String ownerId,
   }) async {
-    final ref = _firestore
-        .collection(PaymentConstants.paymentsCollection)
-        .doc(paymentId);
-    final snap = await ref.get();
-
-    if (!snap.exists) {
-      throw StateError('Payment record not found.');
-    }
-
-    final data = snap.data() ?? <String, dynamic>{};
-    final paymentOwner = (data['ownerId'] ?? '').toString().trim();
-
-    if (paymentOwner != ownerId.trim()) {
-      throw StateError('Only the linked owner can confirm this payment.');
-    }
-
-    await ref.update({
-      'status': PaymentStatusType.success.dbValue,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    throw UnsupportedError(
+      'Legacy local payment writes are disabled. Use callable-backed payment intents.',
+    );
   }
 
   Future<void> recordRazorpaySuccessPayment({
@@ -239,26 +177,9 @@ class PaymentService {
     required String razorpayOrderId,
     required String razorpayPaymentId,
   }) async {
-    final tenant = await fetchTenant(tenantId);
-    if (tenant == null) {
-      throw StateError('Tenant not found.');
-    }
-
-    await _firestore
-        .collection(PaymentConstants.paymentsCollection)
-        .doc(paymentId)
-        .set({
-          'paymentId': paymentId,
-          'tenantId': tenantId,
-          'ownerId': tenant.ownerId,
-          'amount': rentAmount,
-          'totalAmount': totalAmount,
-          'method': PaymentMethodType.razorpay.dbValue,
-          'status': PaymentStatusType.success.dbValue,
-          'razorpayOrderId': razorpayOrderId,
-          'razorpayPaymentId': razorpayPaymentId,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+    throw UnsupportedError(
+      'Legacy local payment writes are disabled. Use callable-backed payment intents.',
+    );
   }
 
   Future<void> recordRazorpayFailedPayment({
@@ -267,24 +188,9 @@ class PaymentService {
     required double amount,
     String? errorMessage,
   }) async {
-    final tenant = await fetchTenant(tenantId);
-    if (tenant == null) {
-      throw StateError('Tenant not found.');
-    }
-
-    await _firestore
-        .collection(PaymentConstants.paymentsCollection)
-        .doc(paymentId)
-        .set({
-          'paymentId': paymentId,
-          'tenantId': tenantId,
-          'ownerId': tenant.ownerId,
-          'amount': amount,
-          'method': PaymentMethodType.razorpay.dbValue,
-          'status': PaymentStatusType.failed.dbValue,
-          'errorMessage': (errorMessage ?? '').trim(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+    throw UnsupportedError(
+      'Legacy local payment writes are disabled. Use callable-backed payment intents.',
+    );
   }
 
   Future<double> _sumSuccessfulPaymentsForCurrentMonth(String tenantId) async {

@@ -8,12 +8,12 @@ This project now includes backend hardening in Cloud Functions for:
 - Payment ownership validation before verify/order/confirm actions
 - Razorpay amount tamper prevention (server amount is source of truth)
 
-## 1) Set required Firebase runtime config
+## 1) Set required environment variables
 
-```bash
-firebase functions:config:set security.enforce_app_check="true"
-firebase functions:config:set security.allowed_origin="https://your-app-domain.com"
-```
+Set these in the deployment environment (not in source control):
+
+- `SECURITY_ENFORCE_APP_CHECK=true`
+- `SECURITY_ALLOWED_ORIGIN=https://your-app-domain.com`
 
 If you have multiple web origins, deploy with a reverse proxy for one canonical origin,
 or set `security.allowed_origin="*"` temporarily while rolling out.
@@ -21,8 +21,9 @@ or set `security.allowed_origin="*"` temporarily while rolling out.
 ## 2) Keep payment/webhook secrets only on server
 
 ```bash
-firebase functions:config:set razorpay.key_id="..." razorpay.key_secret="..." razorpay.webhook_secret="..."
-firebase functions:config:set cashfree.app_id="..." cashfree.secret_key="..." cashfree.webhook_secret="..."
+firebase functions:secrets:set RAZORPAY_KEY
+firebase functions:secrets:set RAZORPAY_SECRET
+firebase functions:secrets:set RAZORPAY_WEBHOOK_SECRET
 ```
 
 Use Firebase Storage security rules and Firestore rules for upload access control.
@@ -38,7 +39,7 @@ Never place these secrets in Flutter app code, `.env` files committed to git, or
 Rollout path:
 
 1. Enable App Check in apps and verify tokens are being sent.
-2. Keep `security.enforce_app_check="false"` for a short transition if needed.
+2. Keep `SECURITY_ENFORCE_APP_CHECK=false` for a short transition if needed.
 3. Switch to `"true"` in production.
 
 ## 4) Deploy rules and functions

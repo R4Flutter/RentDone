@@ -135,6 +135,7 @@ exports.sendRentDueReminders = (0, scheduler_1.onSchedule)({
             dateKey,
             error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
     }
 });
 //# sourceMappingURL=rentReminderScheduler.js.map

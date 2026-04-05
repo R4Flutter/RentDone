@@ -86,6 +86,7 @@ const cleanupInvalidTokens = async (tokenRefs, invalidTokens) => {
             deleted,
             error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
     }
 };
 exports.cleanupInvalidTokens = cleanupInvalidTokens;
@@ -105,6 +106,7 @@ const touchDeviceTokenUsage = async (userId, rawToken) => {
             tokenId: id,
             error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
     }
 };
 exports.touchDeviceTokenUsage = touchDeviceTokenUsage;

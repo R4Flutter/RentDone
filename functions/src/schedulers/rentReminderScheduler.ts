@@ -159,6 +159,7 @@ export const sendRentDueReminders = onSchedule(
         dateKey,
         error: error instanceof Error ? error.message : String(error),
       });
+      throw error;
     }
   },
 );

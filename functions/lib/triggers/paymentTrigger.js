@@ -105,6 +105,7 @@ exports.onPaymentCreated = (0, firestore_1.onDocumentCreated)({
             paymentId,
             error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
     }
 });
 //# sourceMappingURL=paymentTrigger.js.map

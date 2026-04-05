@@ -157,12 +157,19 @@ class TenantFirestoreService {
           query = query.orderBy('createdAt', descending: true);
       }
 
-      // Pagination - load more docs than needed and skip on client
-      final offset = (page - 1) * limit;
-      final docs = await query.limit(limit + offset).get();
+      var cursorQuery = query.limit(limit);
+      QuerySnapshot<Map<String, dynamic>> currentPageSnapshot =
+          await cursorQuery.get();
 
-      // Skip offset docs and take limit docs
-      final paginatedDocs = docs.docs.skip(offset).take(limit).toList();
+      var currentPage = 1;
+      while (currentPage < page && currentPageSnapshot.docs.isNotEmpty) {
+        final lastDoc = currentPageSnapshot.docs.last;
+        cursorQuery = query.startAfterDocument(lastDoc).limit(limit);
+        currentPageSnapshot = await cursorQuery.get();
+        currentPage += 1;
+      }
+
+      final paginatedDocs = currentPageSnapshot.docs;
 
       return paginatedDocs.map((doc) => TenantDTO.fromMap(doc.data())).toList();
     } catch (e) {

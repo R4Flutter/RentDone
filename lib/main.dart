@@ -67,14 +67,11 @@ Future<void> main() async {
 Future<void> _initializeAdMob() async {
   try {
     if (!AdMobConfig.isSupportedPlatform) return;
+    AdMobConfig.enforceProductionGuardrails();
     await MobileAds.instance.initialize();
     AppLogger.info('AdMob initialized', tag: 'main');
   } catch (e, st) {
-    AppLogger.error(
-      'Failed to initialize AdMob: $e',
-      error: e,
-      stackTrace: st,
-    );
+    AppLogger.error('Failed to initialize AdMob: $e', error: e, stackTrace: st);
   }
 }
 

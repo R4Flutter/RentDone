@@ -15,7 +15,15 @@ service cloud.firestore {
     }
 
     function currentRole() {
-      return request.auth.token.role;
+      return (request.auth.token.role is string && request.auth.token.role != '')
+        ? request.auth.token.role
+        : (
+          userDoc(currentUid()).exists
+          && ('role' in userDoc(currentUid()).data)
+          && userDoc(currentUid()).data.role is string
+            ? userDoc(currentUid()).data.role
+            : null
+        );
     }
 
     function isOwner() {
@@ -68,6 +76,43 @@ service cloud.firestore {
       return (('uid' in resource.data) && request.resource.data.uid == resource.data.uid)
         || (!('uid' in resource.data)
           && request.resource.data.uid == currentUid());
+    }
+
+    function safeUserProfileFieldsOnly(data) {
+      return data.keys().hasOnly([
+        'uid',
+        'role',
+        'name',
+        'email',
+        'phone',
+        'photoUrl',
+        'createdAt',
+        'updatedAt',
+        'notifications',
+        'notificationsEnabled',
+        'darkMode',
+        'fcmToken',
+        'fcmTokenUpdatedAt',
+      ]);
+    }
+
+    function safePublicProfileFieldsOnly(data) {
+      return data.keys().hasOnly([
+        'name',
+        'phone_optional',
+        'rating',
+        'profileImage',
+        'updatedAt',
+      ]);
+    }
+
+    function publicProfileShapeIsValid(data) {
+      return safePublicProfileFieldsOnly(data)
+        && (!('name' in data) || data.name is string)
+        && (!('phone_optional' in data) || data.phone_optional is string)
+        && (!('rating' in data) || data.rating is number)
+        && (!('profileImage' in data) || data.profileImage is string)
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
     function notificationsShapeIsValid(data) {
@@ -124,6 +169,12 @@ service cloud.firestore {
     function ownerCanCreateTenant(uid) {
       return ownerPaymentStatus(uid) != 'pending'
         && ownerCurrentTenantCount(uid) < ownerTenantLimit(uid);
+    }
+
+    function isTenantOfOwner(ownerId) {
+      return isTenant()
+        && exists(/databases/$(database)/documents/tenants/$(currentUid()))
+        && get(/databases/$(database)/documents/tenants/$(currentUid())).data.ownerId == ownerId;
     }
 
     function tenantOwnerImmutableFieldsUnchanged() {
@@ -223,24 +274,22 @@ service cloud.firestore {
     // ===== FIRESTORE RULES =====
 
     match /users/{userId} {
-      allow read: if isAuthenticated() && (
-        userId == currentUid()
-        || (isTenant() && ('role' in resource.data) && resource.data.role == 'owner')
-      );
-
-      allow list: if isAuthenticated() &&
-        request.query.limit <= 1;
+      allow get: if isAuthenticated() && userId == currentUid();
+      allow list: if false;
 
       allow create: if isAuthenticated()
         && userId == currentUid()
         && request.resource.data.uid == currentUid()
         && roleIsValid(request.resource.data.role)
+        && safeUserProfileFieldsOnly(request.resource.data)
         && notificationsShapeIsValid(request.resource.data);
 
       allow update: if isAuthenticated()
         && userId == currentUid()
+        && roleIsValid(request.resource.data.role)
         && userUidUnchanged()
         && userRoleUnchanged()
+        && safeUserProfileFieldsOnly(request.resource.data)
         && notificationsShapeIsValid(request.resource.data);
 
       allow delete: if false;
@@ -263,6 +312,17 @@ service cloud.firestore {
       match /notificationSnoozes/{snoozeId} {
         allow read, create, update, delete: if isAuthenticated() && userId == currentUid();
       }
+    }
+
+    match /publicProfiles/{userId} {
+      allow get: if isAuthenticated();
+      allow list: if false;
+
+      allow create, update: if isAuthenticated()
+        && userId == currentUid()
+        && publicProfileShapeIsValid(request.resource.data);
+
+      allow delete: if false;
     }
 
     match /ownerPaymentProfiles/{ownerId} {
@@ -340,6 +400,7 @@ service cloud.firestore {
           isOwner()
           && isVerified()
           && request.resource.data.ownerId == currentUid()
+          && ownerCanCreateTenant(currentUid())
           && ownerOwnsProperty(request.resource.data.propertyId)
         )
         || (tenantCanSelfCreateProfile(tenantId) && isVerified());

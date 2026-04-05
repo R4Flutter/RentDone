@@ -125,6 +125,8 @@ exports.sendTenantCheaperPropertyAlerts = (0, scheduler_1.onSchedule)({
             .get();
         let processed = 0;
         let sentCount = 0;
+        const failedTenantIds = [];
+        let firstTenantError = null;
         for (const tenantDoc of tenantsSnapshot.docs) {
             let eventId = null;
             let eventReserved = false;
@@ -240,6 +242,10 @@ exports.sendTenantCheaperPropertyAlerts = (0, scheduler_1.onSchedule)({
                         ? tenantError.message
                         : String(tenantError),
                 });
+                failedTenantIds.push(tenantDoc.id);
+                if (!firstTenantError) {
+                    firstTenantError = tenantError;
+                }
                 if (eventReserved && eventId) {
                     await (0, notificationService_1.updateNotificationEventStatus)(eventId, "failed", {
                         lifecycleState: "failed",
@@ -250,6 +256,17 @@ exports.sendTenantCheaperPropertyAlerts = (0, scheduler_1.onSchedule)({
                     });
                 }
             }
+        }
+        if (failedTenantIds.length > 0) {
+            (0, logger_1.logError)("sendTenantCheaperPropertyAlerts completed with tenant failures", {
+                dateBucket,
+                failedTenantCount: failedTenantIds.length,
+                failedTenantIds: failedTenantIds.slice(0, 20),
+            });
+            if (firstTenantError instanceof Error) {
+                throw firstTenantError;
+            }
+            throw new Error("tenant-cheaper-property-alerts-partial-failure");
         }
         (0, logger_1.logInfo)("sendTenantCheaperPropertyAlerts completed", {
             dateBucket,
@@ -262,6 +279,7 @@ exports.sendTenantCheaperPropertyAlerts = (0, scheduler_1.onSchedule)({
             dateBucket,
             error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
     }
 });
 //# sourceMappingURL=tenantCheaperPropertyAlertScheduler.js.map

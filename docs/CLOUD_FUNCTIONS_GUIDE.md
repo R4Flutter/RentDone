@@ -63,10 +63,13 @@ ADMIN_EMAIL=admin@rentdone.com
 
 ```bash
 # Store in Firebase Secret Manager
-firebase functions:config:set credentials.api_key="..."
+firebase functions:secrets:set GRAVATAR_API_KEY
 
 # Use in functions
-const apiKey = functions.config().credentials.api_key;
+const apiKey = process.env.GRAVATAR_API_KEY;
+if (!apiKey) {
+  throw new Error('Missing GRAVATAR_API_KEY');
+}
 ```
 
 ### 2. Function Configuration

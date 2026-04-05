@@ -25,19 +25,25 @@ payment due date.
 - Idempotent: only one successful reminder is stored per payment due day
 - Retry: automatic retry for temporary WhatsApp API failures (429/5xx)
 
-### Required Firebase Runtime Config
+### Required Function Environment Variables
 
-Set these before deploying:
+Set these in your deployment environment (for Firebase, use Function Secrets for secrets and environment variables for non-secret flags).
 
-```bash
-firebase functions:config:set whatsapp.token="<META_TOKEN>" whatsapp.phone_number_id="<PHONE_NUMBER_ID>" whatsapp.business_name="RentDone"
-```
-
-Optional production settings:
+Secret values:
 
 ```bash
-firebase functions:config:set whatsapp.enabled="true" whatsapp.api_version="v21.0" whatsapp.max_retries="3" whatsapp.template_name="<TEMPLATE_NAME>" whatsapp.template_language="en"
+firebase functions:secrets:set WHATSAPP_TOKEN
 ```
+
+Non-secret runtime settings (set via your deployment environment):
+
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `WHATSAPP_BUSINESS_NAME`
+- `WHATSAPP_API_VERSION`
+- `WHATSAPP_MAX_RETRIES`
+- `WHATSAPP_TEMPLATE_NAME`
+- `WHATSAPP_TEMPLATE_LANGUAGE`
+- `WHATSAPP_ENABLED`
 
 If `whatsapp.template_name` is set, reminders use WhatsApp Template messages
 (recommended for production). Otherwise, plain text messages are sent.
@@ -88,16 +94,14 @@ firebase deploy --only functions
 
 ## Razorpay Setup (App + Backend)
 
-This project is preconfigured with Razorpay test Key ID fallback:
+For secure deployments, use Firebase Function Secrets as the single source of truth.
 
-- `rzp_test_SWZErkO7aPAnNO`
-
-For secure deployments, always set backend secrets and optional app override.
-
-### 1) Configure Cloud Functions runtime config
+### 1) Configure Cloud Functions secrets
 
 ```bash
-firebase functions:config:set razorpay.key_id="rzp_test_SWZErkO7aPAnNO" razorpay.key_secret="<YOUR_RAZORPAY_KEY_SECRET>" razorpay.webhook_secret="<YOUR_RAZORPAY_WEBHOOK_SECRET>"
+firebase functions:secrets:set RAZORPAY_KEY
+firebase functions:secrets:set RAZORPAY_SECRET
+firebase functions:secrets:set RAZORPAY_WEBHOOK_SECRET
 ```
 
 ### 2) Deploy functions
@@ -109,19 +113,19 @@ firebase deploy --only functions
 ### 3) Run Flutter app with explicit key (recommended)
 
 ```bash
-flutter run --dart-define=RAZORPAY_KEY=rzp_test_SWZErkO7aPAnNO
+flutter run --dart-define=RAZORPAY_KEY=<YOUR_RAZORPAY_KEY>
 ```
 
 ### 4) Razorpay Dashboard webhook
 
 - URL: `https://<YOUR_REGION>-<YOUR_PROJECT>.cloudfunctions.net/razorpayWebhook`
-- Secret: use the same value as `razorpay.webhook_secret`
+- Secret: use the same value as `RAZORPAY_WEBHOOK_SECRET`
 
 ### 5) Production switch checklist
 
-- Replace test Key ID with live Key ID.
-- Replace key secret and webhook secret with live values.
-- Keep secrets only in Firebase config / environment, never hardcode secrets in app.
+- Keep secrets only in Firebase Secrets and deployment environment variables.
+- Never commit `.env` files or secret values to this repository.
+- Verify staging before promoting to production.
 
 ## Local Emulator Mode (No Blaze Required)
 
@@ -136,7 +140,7 @@ firebase emulators:start --only functions,firestore,auth
 ### 2) Run Flutter app in Functions emulator mode
 
 ```bash
-flutter run --dart-define=USE_FUNCTIONS_EMULATOR=true --dart-define=FUNCTIONS_EMULATOR_HOST=127.0.0.1 --dart-define=FUNCTIONS_EMULATOR_PORT=5001 --dart-define=RAZORPAY_KEY=rzp_test_SWZErkO7aPAnNO
+flutter run --dart-define=USE_FUNCTIONS_EMULATOR=true --dart-define=FUNCTIONS_EMULATOR_HOST=127.0.0.1 --dart-define=FUNCTIONS_EMULATOR_PORT=5001 --dart-define=RAZORPAY_KEY=<YOUR_RAZORPAY_KEY>
 ```
 
 For Android Emulator, use `FUNCTIONS_EMULATOR_HOST=10.0.2.2`.

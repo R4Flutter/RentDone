@@ -37,6 +37,18 @@ migrate_working_dir/
 node_modules/
 functions/.firebase/
 
+# Environment files
+.env
+.env.*
+functions/.env
+functions/.env.*
+
+# Android release signing secrets
+android/key.properties
+*.jks
+*.keystore
+upload-keystore.jks
+
 # Symbolication related
 app.*.symbols
 

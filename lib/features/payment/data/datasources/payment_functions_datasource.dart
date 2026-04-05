@@ -4,26 +4,16 @@ import 'package:rentdone/features/payment/data/models/payment_quote_dto.dart';
 
 class PaymentFunctionsDataSource {
   final FirebaseFunctions _paymentFunctions;
-  final FirebaseFunctions _paymentFunctionsFallback;
   final FirebaseFunctions _quoteFunctions;
-  final FirebaseFunctions _razorpayFallbackFunctions;
 
   PaymentFunctionsDataSource({
     FirebaseFunctions? paymentFunctions,
-    FirebaseFunctions? paymentFunctionsFallback,
     FirebaseFunctions? quoteFunctions,
-    FirebaseFunctions? razorpayFallbackFunctions,
   }) : _paymentFunctions =
            paymentFunctions ??
-           FirebaseFunctions.instanceFor(region: 'us-central1'),
-       _paymentFunctionsFallback =
-           paymentFunctionsFallback ??
            FirebaseFunctions.instanceFor(region: 'asia-south1'),
        _quoteFunctions =
            quoteFunctions ??
-           FirebaseFunctions.instanceFor(region: 'us-central1'),
-       _razorpayFallbackFunctions =
-           razorpayFallbackFunctions ??
            FirebaseFunctions.instanceFor(region: 'asia-south1');
 
   Future<PaymentIntentDto> createPaymentIntent({
@@ -92,9 +82,7 @@ class PaymentFunctionsDataSource {
     required String razorpayPaymentId,
     required String razorpaySignature,
   }) async {
-    final callable = _razorpayFallbackFunctions.httpsCallable(
-      'confirmRazorpayPayment',
-    );
+    final callable = _paymentFunctions.httpsCallable('confirmRazorpayPayment');
     await callable.call({
       'paymentId': paymentId,
       'razorpayOrderId': razorpayOrderId,
@@ -107,32 +95,8 @@ class PaymentFunctionsDataSource {
     required String functionName,
     required Map<String, dynamic> payload,
   }) async {
-    try {
-      final callable = _paymentFunctions.httpsCallable(functionName);
-      final result = await callable.call(payload);
-      return result.data as T;
-    } on FirebaseFunctionsException catch (primaryError) {
-      if (!_shouldTryRegionalFallback(primaryError)) {
-        rethrow;
-      }
-      final fallbackCallable = _paymentFunctionsFallback.httpsCallable(
-        functionName,
-      );
-      final fallbackResult = await fallbackCallable.call(payload);
-      return fallbackResult.data as T;
-    }
-  }
-
-  bool _shouldTryRegionalFallback(FirebaseFunctionsException error) {
-    switch (error.code) {
-      case 'unavailable':
-      case 'not-found':
-      case 'failed-precondition':
-      case 'deadline-exceeded':
-      case 'internal':
-        return true;
-      default:
-        return false;
-    }
+    final callable = _paymentFunctions.httpsCallable(functionName);
+    final result = await callable.call(payload);
+    return result.data as T;
   }
 }

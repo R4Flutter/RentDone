@@ -1,0 +1,61 @@
+name: Android Release Guard
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+      - release/**
+
+jobs:
+  android-release-validation:
+    name: Validate Production AdMob and Build
+    runs-on: ubuntu-latest
+    env:
+      ADMOB_APP_ID_PRODUCTION: ${{ secrets.ADMOB_APP_ID_PRODUCTION }}
+      ADMOB_APP_ID_TEST: ${{ vars.ADMOB_APP_ID_TEST }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate AdMob secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${ADMOB_APP_ID_PRODUCTION:-}" ]]; then
+            echo "ADMOB_APP_ID_PRODUCTION secret is required"
+            exit 1
+          fi
+
+          if [[ "${ADMOB_APP_ID_PRODUCTION}" == "ca-app-pub-3940256099942544~3347511713" ]]; then
+            echo "Production AdMob App ID must not be the Google test app ID"
+            exit 1
+          fi
+
+          if ! [[ "${ADMOB_APP_ID_PRODUCTION}" =~ ^ca-app-pub-[0-9]{16}~[0-9]{10}$ ]]; then
+            echo "ADMOB_APP_ID_PRODUCTION format is invalid"
+            exit 1
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build production release AAB
+        run: |
+          flutter build appbundle \
+            --flavor production \
+            --release \
+            --dart-define=ADMOB_APP_ID=${ADMOB_APP_ID_PRODUCTION}

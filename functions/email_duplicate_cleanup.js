@@ -18,9 +18,8 @@ function parseBool(value, fallback = false) {
 }
 
 function getSecurityConfig() {
-  const cfg = functions.config().security || {};
   return {
-    enforceAppCheck: parseBool(cfg.enforce_app_check, true),
+    enforceAppCheck: parseBool(process.env.SECURITY_ENFORCE_APP_CHECK, true),
   };
 }
 

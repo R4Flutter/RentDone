@@ -8,17 +8,60 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "lint": "echo \"No lint script configured\"",
+    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "test:ci": "jest --coverage --runInBand",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "npm run build && firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "lint:fix": "npm run lint -- --fix"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",
-    "firebase-functions": "^6.0.1"
+    "firebase-functions": "^6.0.1",
+    "rentdone-functions": "file:"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.19.10",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-promise": "^7.2.1",
+    "firebase-functions-test": "^3.4.1",
+    "globals": "^16.4.0",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
     "typescript": "^5.9.2",
-    "@types/node": "^20.19.10"
+    "typescript-eslint": "^8.46.1"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "globals": {
+      "ts-jest": {
+        "diagnostics": {
+          "ignoreCodes": [
+            151002
+          ]
+        }
+      }
+    },
+    "roots": [
+      "<rootDir>/tests"
+    ],
+    "collectCoverageFrom": [
+      "src/security/criticalGuards.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
   }
 }

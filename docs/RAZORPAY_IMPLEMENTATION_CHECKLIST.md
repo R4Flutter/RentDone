@@ -88,8 +88,8 @@ firebase_auth: ^4.9.0
 
 ### Environment Variables
 ```bash
-RAZORPAY_KEY=rzp_test_1234567890123  # Test initially
-RAZORPAY_SECRET=xxxxx                # Backend only
+RAZORPAY_KEY=
+RAZORPAY_SECRET=
 ```
 
 ### Router Configuration

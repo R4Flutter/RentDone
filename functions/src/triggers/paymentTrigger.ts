@@ -122,6 +122,7 @@ export const onPaymentCreated = onDocumentCreated(
         paymentId,
         error: error instanceof Error ? error.message : String(error),
       });
+      throw error;
     }
   },
 );

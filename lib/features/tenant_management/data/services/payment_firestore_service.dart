@@ -250,16 +250,28 @@ class PaymentFirestoreService {
     required int page,
   }) async {
     try {
-      final offset = (page - 1) * limit;
       List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
       try {
-        final result = await _firestore
+        final baseQuery = _firestore
             .collection('payments')
             .where('tenantId', isEqualTo: tenantId)
-            .orderBy('createdAt', descending: true)
-            .limit(limit + offset)
+            .orderBy('createdAt', descending: true);
+
+        QuerySnapshot<Map<String, dynamic>> currentSnapshot = await baseQuery
+            .limit(limit)
             .get();
-        docs = result.docs;
+        var currentPage = 1;
+
+        while (currentPage < page && currentSnapshot.docs.isNotEmpty) {
+          final lastDoc = currentSnapshot.docs.last;
+          currentSnapshot = await baseQuery
+              .startAfterDocument(lastDoc)
+              .limit(limit)
+              .get();
+          currentPage += 1;
+        }
+
+        docs = currentSnapshot.docs;
       } on FirebaseException catch (error) {
         if (error.code != 'failed-precondition') rethrow;
 
@@ -267,7 +279,7 @@ class PaymentFirestoreService {
         final fallback = await _firestore
             .collection('payments')
             .where('tenantId', isEqualTo: tenantId)
-            .limit((limit + offset) * 8)
+            .limit((limit * page) * 8)
             .get();
 
         final sorted = [...fallback.docs]
@@ -286,13 +298,11 @@ class PaymentFirestoreService {
             return b.id.compareTo(a.id);
           });
 
-        docs = sorted.take(limit + offset).toList();
+        final start = (page - 1) * limit;
+        docs = sorted.skip(start).take(limit).toList();
       }
 
-      final paginatedDocs = docs.skip(offset).take(limit).toList();
-      return paginatedDocs
-          .map((doc) => PaymentDTO.fromMap(doc.data()))
-          .toList();
+      return docs.map((doc) => PaymentDTO.fromMap(doc.data())).toList();
     } catch (e) {
       rethrow;
     }

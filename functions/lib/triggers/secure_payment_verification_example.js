@@ -19,6 +19,7 @@ const asInt = (value) => {
 exports.verifyPaymentSecureExample = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
+    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
 }, async (request) => {
     const callerUid = request.auth?.uid;
     if (!callerUid) {

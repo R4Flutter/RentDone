@@ -174,7 +174,9 @@ class OwnerSubscriptionService {
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
+    region: 'asia-south1',
+  );
 
   /// Ensure owner subscription profile exists
   Future<void> ensureOwnerSubscriptionDoc({
@@ -182,38 +184,7 @@ class OwnerSubscriptionService {
     required String email,
   }) async {
     final callable = _functions.httpsCallable('ensureOwnerSubscriptionProfile');
-
-    try {
-      await callable.call(<String, dynamic>{
-        'ownerId': ownerId,
-        'email': email,
-      });
-      return;
-    } on FirebaseFunctionsException catch (e) {
-      if (e.code != 'unimplemented' && e.code != 'not-found') {
-        rethrow;
-      }
-    }
-
-    // Fallback: create profile locally
-    final ownerRef = _firestore.collection('owners').doc(ownerId);
-    final ownerDoc = await ownerRef.get();
-    final existing = ownerDoc.data() ?? <String, dynamic>{};
-
-    await ownerRef.set({
-      'ownerId': ownerId,
-      'email': email.isNotEmpty ? email : (existing['email'] as String? ?? ''),
-      'subscriptionPlan': (existing['subscriptionPlan'] as String? ?? 'free')
-          .toLowerCase(),
-      'paymentStatus': (existing['paymentStatus'] as String? ?? 'active')
-          .toLowerCase(),
-      'tenantLimit': (existing['tenantLimit'] as num?)?.toInt() ?? 2,
-      'currentTenantCount':
-          (existing['currentTenantCount'] as num?)?.toInt() ?? 0,
-      if (!ownerDoc.exists)
-        'subscriptionStartDate': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await callable.call(<String, dynamic>{'ownerId': ownerId, 'email': email});
   }
 
   /// Get owner subscription data
@@ -222,59 +193,18 @@ class OwnerSubscriptionService {
     required String email,
   }) async {
     final callable = _functions.httpsCallable('getOwnerSubscriptionSnapshot');
-
-    try {
-      final result = await callable.call(<String, dynamic>{
-        'ownerId': ownerId,
-        'email': email,
-      });
-      final data = Map<String, dynamic>.from(result.data as Map);
-      return OwnerSubscriptionData.fromMap(data);
-    } on FirebaseFunctionsException catch (e) {
-      if (e.code != 'unimplemented' && e.code != 'not-found') {
-        rethrow;
-      }
-    }
-
-    // Fallback: read from Firestore
-    await ensureOwnerSubscriptionDoc(ownerId: ownerId, email: email);
-    final doc = await _firestore.collection('owners').doc(ownerId).get();
-    final data =
-        doc.data() ??
-        <String, dynamic>{
-          'ownerId': ownerId,
-          'email': email,
-          'subscriptionPlan': 'free',
-          'paymentStatus': 'active',
-          'tenantLimit': freePlanConfig.tenantLimit,
-          'currentTenantCount': 0,
-        };
+    final result = await callable.call(<String, dynamic>{
+      'ownerId': ownerId,
+      'email': email,
+    });
+    final data = Map<String, dynamic>.from(result.data as Map);
     return OwnerSubscriptionData.fromMap(data);
   }
 
   /// Activate free plan for owner
   Future<void> activateFreePlan({required String ownerId}) async {
     final callable = _functions.httpsCallable('activateOwnerFreeSubscription');
-
-    try {
-      await callable.call(<String, dynamic>{'ownerId': ownerId});
-      return;
-    } on FirebaseFunctionsException catch (e) {
-      if (e.code != 'unimplemented' && e.code != 'not-found') {
-        rethrow;
-      }
-    }
-
-    // Fallback: activate locally
-    await _firestore.collection('owners').doc(ownerId).set({
-      'ownerId': ownerId,
-      'subscriptionPlan': 'free',
-      'paymentStatus': 'active',
-      'tenantLimit': freePlanConfig.tenantLimit,
-      'subscriptionStartDate': FieldValue.serverTimestamp(),
-      'subscriptionExpiry': null,
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await callable.call(<String, dynamic>{'ownerId': ownerId});
   }
 
   /// Create payment intent for subscription
@@ -288,37 +218,17 @@ class OwnerSubscriptionService {
     final callable = _functions.httpsCallable(
       'createOwnerSubscriptionPaymentIntent',
     );
-
-    try {
-      final result = await callable.call(<String, dynamic>{
-        'planCode': plan.code,
-      });
-      final data = Map<String, dynamic>.from(result.data as Map);
-      return OwnerSubscriptionPaymentIntent.fromMap(data);
-    } on FirebaseFunctionsException catch (e) {
-      if (e.code == 'unimplemented' || e.code == 'not-found') {
-        throw StateError(
-          'Subscription payment backend not configured. Ensure Cloud Functions are deployed.',
-        );
-      }
-      rethrow;
-    }
+    final result = await callable.call(<String, dynamic>{
+      'planCode': plan.code,
+    });
+    final data = Map<String, dynamic>.from(result.data as Map);
+    return OwnerSubscriptionPaymentIntent.fromMap(data);
   }
 
   /// Verify subscription payment
   Future<void> verifySubscriptionPayment({required String paymentId}) async {
     final callable = _functions.httpsCallable('verifyOwnerSubscriptionPayment');
-
-    try {
-      await callable.call(<String, dynamic>{'paymentId': paymentId});
-    } on FirebaseFunctionsException catch (e) {
-      if (e.code == 'unimplemented' || e.code == 'not-found') {
-        throw StateError(
-          'Payment verification backend not configured. Ensure Cloud Functions are deployed.',
-        );
-      }
-      rethrow;
-    }
+    await callable.call(<String, dynamic>{'paymentId': paymentId});
   }
 
   /// Get active tenant count

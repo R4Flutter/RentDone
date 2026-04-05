@@ -54,6 +54,7 @@ const updateNotificationEventStatus = async (eventKey, status, payload) => {
             status,
             error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
     }
 };
 exports.updateNotificationEventStatus = updateNotificationEventStatus;
@@ -169,6 +170,7 @@ const trackNotificationAnalytics = async (input) => {
             eventId: input.eventId,
             error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
     }
 };
 exports.trackNotificationAnalytics = trackNotificationAnalytics;

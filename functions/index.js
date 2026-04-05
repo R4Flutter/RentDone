@@ -15,17 +15,16 @@ function parseBool(value, fallback = false) {
 }
 
 function getSecurityConfig() {
-  const cfg = functions.config().security || {};
   return {
     enforceAppCheck: parseBool(
-      cfg.enforce_app_check,
+      process.env.SECURITY_ENFORCE_APP_CHECK,
       true,
     ),
     allowedOrigin: String(
-      cfg.allowed_origin || process.env.SECURITY_ALLOWED_ORIGIN || '',
+      process.env.SECURITY_ALLOWED_ORIGIN || '',
     ).trim(),
     enforcePublicCallableAppCheck: parseBool(
-      cfg.enforce_public_callable_app_check,
+      process.env.SECURITY_ENFORCE_PUBLIC_CALLABLE_APP_CHECK,
       false,
     ),
   };
@@ -491,60 +490,51 @@ async function recordSecuritySignal({
 }
 
 function getRazorpayConfig() {
-  const cfg = functions.config().razorpay || {};
-  const normalizedMode = String(cfg.mode || process.env.RAZORPAY_MODE || 'test')
+  const normalizedMode = String(process.env.RAZORPAY_MODE || 'test')
     .trim()
     .toLowerCase();
   const mode = normalizedMode === 'live' ? 'live' : 'test';
 
   const configuredGenericKeyId = String(
-    cfg.key_id || process.env.RAZORPAY_KEY_ID || '',
+    process.env.RAZORPAY_KEY || process.env.RAZORPAY_KEY_ID || '',
   ).trim();
 
   const keyId = mode === 'live'
     ? String(
-        cfg.live_key_id ||
-            process.env.RAZORPAY_LIVE_KEY_ID ||
+        process.env.RAZORPAY_LIVE_KEY_ID ||
             (configuredGenericKeyId.startsWith('rzp_live_')
               ? configuredGenericKeyId
               : ''),
       ).trim()
     : String(
-        cfg.test_key_id ||
-            process.env.RAZORPAY_TEST_KEY_ID ||
+        process.env.RAZORPAY_TEST_KEY_ID ||
             (configuredGenericKeyId.startsWith('rzp_test_')
               ? configuredGenericKeyId
-              : 'rzp_test_SWZErkO7aPAnNO'),
+              : ''),
       ).trim();
 
   const keySecret = mode === 'live'
     ? String(
-        cfg.live_key_secret ||
-            process.env.RAZORPAY_LIVE_KEY_SECRET ||
-            cfg.key_secret ||
+        process.env.RAZORPAY_LIVE_KEY_SECRET ||
+            process.env.RAZORPAY_SECRET ||
             process.env.RAZORPAY_KEY_SECRET ||
             '',
       ).trim()
     : String(
-        cfg.test_key_secret ||
-            process.env.RAZORPAY_TEST_KEY_SECRET ||
-            cfg.key_secret ||
+        process.env.RAZORPAY_TEST_KEY_SECRET ||
+            process.env.RAZORPAY_SECRET ||
             process.env.RAZORPAY_KEY_SECRET ||
             '',
       ).trim();
 
   const webhookSecret = mode === 'live'
     ? String(
-        cfg.live_webhook_secret ||
-            process.env.RAZORPAY_LIVE_WEBHOOK_SECRET ||
-            cfg.webhook_secret ||
+        process.env.RAZORPAY_LIVE_WEBHOOK_SECRET ||
             process.env.RAZORPAY_WEBHOOK_SECRET ||
             '',
       ).trim()
     : String(
-        cfg.test_webhook_secret ||
-            process.env.RAZORPAY_TEST_WEBHOOK_SECRET ||
-            cfg.webhook_secret ||
+        process.env.RAZORPAY_TEST_WEBHOOK_SECRET ||
             process.env.RAZORPAY_WEBHOOK_SECRET ||
             '',
       ).trim();
@@ -625,10 +615,9 @@ async function createRazorpayOrderForPayment({
 }
 
 function getStripeConfig() {
-  const cfg = functions.config().stripe || {};
   return {
-    secretKey: cfg.secret_key,
-    webhookSecret: cfg.webhook_secret,
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   };
 }
 
@@ -649,11 +638,10 @@ function percentToBps(value) {
 }
 
 function defaultPaymentFeeConfig() {
-  const cfg = functions.config().payment_fee || {};
-  const gstPercent = parsePercent(cfg.gst_percent, 18);
-  const defaultGatewayPercent = parsePercent(cfg.default_gateway_percent, 2);
+  const gstPercent = parsePercent(process.env.PAYMENT_FEE_GST_PERCENT, 18);
+  const defaultGatewayPercent = parsePercent(process.env.PAYMENT_FEE_DEFAULT_GATEWAY_PERCENT, 2);
   const defaultGatewayCostPercent = parsePercent(
-    cfg.default_gateway_cost_percent,
+    process.env.PAYMENT_FEE_DEFAULT_GATEWAY_COST_PERCENT,
     defaultGatewayPercent,
   );
 
@@ -662,10 +650,10 @@ function defaultPaymentFeeConfig() {
     defaultGatewayPercent,
     defaultGatewayCostPercent,
     gatewayPercents: {
-      razorpay: parsePercent(cfg.razorpay_percent, defaultGatewayPercent),
+      razorpay: parsePercent(process.env.PAYMENT_FEE_RAZORPAY_PERCENT, defaultGatewayPercent),
     },
     gatewayCostPercents: {
-      razorpay: parsePercent(cfg.razorpay_cost_percent, defaultGatewayCostPercent),
+      razorpay: parsePercent(process.env.PAYMENT_FEE_RAZORPAY_COST_PERCENT, defaultGatewayCostPercent),
     },
   };
 }
@@ -802,16 +790,15 @@ async function incrementFeeAnalytics({
 }
 
 function getWhatsAppConfig() {
-  const cfg = functions.config().whatsapp || {};
   return {
-    token: cfg.token,
-    phoneNumberId: cfg.phone_number_id,
-    businessName: cfg.business_name || 'RentDone',
-    apiVersion: cfg.api_version || 'v21.0',
-    templateName: cfg.template_name || null,
-    templateLanguage: cfg.template_language || 'en',
-    maxRetries: Number(cfg.max_retries || 3),
-    remindersEnabled: cfg.enabled !== 'false',
+    token: process.env.WHATSAPP_TOKEN,
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+    businessName: process.env.WHATSAPP_BUSINESS_NAME || 'RentDone',
+    apiVersion: process.env.WHATSAPP_API_VERSION || 'v21.0',
+    templateName: process.env.WHATSAPP_TEMPLATE_NAME || null,
+    templateLanguage: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en',
+    maxRetries: Number(process.env.WHATSAPP_MAX_RETRIES || 3),
+    remindersEnabled: String(process.env.WHATSAPP_ENABLED || 'true').trim().toLowerCase() !== 'false',
   };
 }
 

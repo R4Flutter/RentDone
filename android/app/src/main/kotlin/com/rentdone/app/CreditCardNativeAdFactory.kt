@@ -1,4 +1,4 @@
-package com.example.rentdone
+package com.rentdone.app
 
 import android.content.Context
 import android.view.LayoutInflater

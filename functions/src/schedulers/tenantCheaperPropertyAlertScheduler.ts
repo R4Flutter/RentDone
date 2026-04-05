@@ -19,7 +19,7 @@ const MIN_SAVINGS_RUPEES = 100;
 const asString = (value: unknown): string => String(value ?? "").trim();
 const asInt = (value: unknown): number => {
   const parsed = Number(value ?? 0);
-  if (!Number.isFinite(parsed)) return 0;
+  if (!Number.isFinite(parsed)) {return 0;}
   return Math.trunc(parsed);
 };
 
@@ -50,10 +50,10 @@ const estimatePropertyRent = (data: FirebaseFirestore.DocumentData): number => {
   const roomsRaw = Array.isArray(data.rooms) ? data.rooms : [];
   let best = Number.MAX_SAFE_INTEGER;
   for (const room of roomsRaw) {
-    if (!room || typeof room !== "object") continue;
+    if (!room || typeof room !== "object") {continue;}
     const map = room as Record<string, unknown>;
     const occupied = map.isOccupied === true;
-    if (occupied) continue;
+    if (occupied) {continue;}
 
     const roomRent = asInt(
       map.rentAmount ?? map.monthlyRent ?? map.pricePerMonth ?? map.price,
@@ -68,21 +68,21 @@ const estimatePropertyRent = (data: FirebaseFirestore.DocumentData): number => {
 
 const getVacantRooms = (data: FirebaseFirestore.DocumentData): number => {
   const directVacant = asInt(data.vacantRooms);
-  if (directVacant > 0) return directVacant;
+  if (directVacant > 0) {return directVacant;}
 
   const totalRooms = asInt(data.totalRooms);
   const roomsRaw = Array.isArray(data.rooms) ? data.rooms : [];
   if (roomsRaw.length > 0) {
     let occupied = 0;
     for (const room of roomsRaw) {
-      if (!room || typeof room !== "object") continue;
+      if (!room || typeof room !== "object") {continue;}
       const map = room as Record<string, unknown>;
-      if (map.isOccupied === true) occupied += 1;
+      if (map.isOccupied === true) {occupied += 1;}
     }
     return Math.max(0, roomsRaw.length - occupied);
   }
 
-  if (totalRooms <= 0) return 0;
+  if (totalRooms <= 0) {return 0;}
   return totalRooms;
 };
 
@@ -102,14 +102,14 @@ const findCheaperCandidate = async (
   for (const doc of snapshot.docs) {
     const data = doc.data();
     const vacantRooms = getVacantRooms(data);
-    if (vacantRooms <= 0) continue;
+    if (vacantRooms <= 0) {continue;}
 
     const rent = estimatePropertyRent(data);
-    if (rent <= 0) continue;
-    if (rent >= tenantRent) continue;
+    if (rent <= 0) {continue;}
+    if (rent >= tenantRent) {continue;}
 
     const savings = tenantRent - rent;
-    if (savings < MIN_SAVINGS_RUPEES) continue;
+    if (savings < MIN_SAVINGS_RUPEES) {continue;}
 
     if (!best || rent < best.rent) {
       best = { rent, propertyId: doc.id };
@@ -148,6 +148,8 @@ export const sendTenantCheaperPropertyAlerts = onSchedule(
 
       let processed = 0;
       let sentCount = 0;
+      const failedTenantIds: string[] = [];
+      let firstTenantError: unknown = null;
 
       for (const tenantDoc of tenantsSnapshot.docs) {
         let eventId: string | null = null;
@@ -158,12 +160,12 @@ export const sendTenantCheaperPropertyAlerts = onSchedule(
           const tenantUserId = asString(tenant.authUid) || tenantId;
           const tenantRent = asInt(tenant.rentAmount ?? tenant.monthlyRent);
 
-          if (!tenantUserId || tenantRent <= 0) continue;
+          if (!tenantUserId || tenantRent <= 0) {continue;}
 
           const cityRaw =
             tenant.city ?? tenant.currentCity ?? tenant.propertyCity ?? "";
           const cityKey = normalizeCityKey(tenant.cityKey ?? cityRaw);
-          if (!cityKey) continue;
+          if (!cityKey) {continue;}
 
           const city = asString(
             tenant.city ?? tenant.currentCity ?? tenant.propertyCity ?? cityKey,
@@ -171,15 +173,15 @@ export const sendTenantCheaperPropertyAlerts = onSchedule(
 
           // 1) Validate candidate_property_found
           const candidate = await findCheaperCandidate(cityKey, tenantRent);
-          if (!candidate) continue;
+          if (!candidate) {continue;}
 
           // 2) Validate notifications_enabled
           const notificationsEnabled = await isNotificationsEnabled(tenantUserId);
-          if (!notificationsEnabled) continue;
+          if (!notificationsEnabled) {continue;}
 
           // 3) Validate has_valid_token
           const tokenBundle = await getUserDeviceTokens(tenantUserId);
-          if (tokenBundle.tokens.length === 0) continue;
+          if (tokenBundle.tokens.length === 0) {continue;}
 
           // 4) Reserve event only after all non-mutating validations pass
           eventId = `cheaper_property_${tenantId}_${dateBucket}`;
@@ -195,7 +197,7 @@ export const sendTenantCheaperPropertyAlerts = onSchedule(
             propertyId: candidate.propertyId,
             validatedAt: FieldValue.serverTimestamp(),
           });
-          if (!reserved) continue;
+          if (!reserved) {continue;}
           eventReserved = true;
 
           // 5) Enforce and consume rate-limit only after reservation success
@@ -282,6 +284,11 @@ export const sendTenantCheaperPropertyAlerts = onSchedule(
                 : String(tenantError),
           });
 
+          failedTenantIds.push(tenantDoc.id);
+          if (!firstTenantError) {
+            firstTenantError = tenantError;
+          }
+
           if (eventReserved && eventId) {
             await updateNotificationEventStatus(eventId, "failed", {
               lifecycleState: "failed",
@@ -295,6 +302,19 @@ export const sendTenantCheaperPropertyAlerts = onSchedule(
         }
       }
 
+      if (failedTenantIds.length > 0) {
+        logError("sendTenantCheaperPropertyAlerts completed with tenant failures", {
+          dateBucket,
+          failedTenantCount: failedTenantIds.length,
+          failedTenantIds: failedTenantIds.slice(0, 20),
+        });
+
+        if (firstTenantError instanceof Error) {
+          throw firstTenantError;
+        }
+        throw new Error("tenant-cheaper-property-alerts-partial-failure");
+      }
+
       logInfo("sendTenantCheaperPropertyAlerts completed", {
         dateBucket,
         processed,
@@ -305,6 +325,7 @@ export const sendTenantCheaperPropertyAlerts = onSchedule(
         dateBucket,
         error: error instanceof Error ? error.message : String(error),
       });
+      throw error;
     }
   },
 );
