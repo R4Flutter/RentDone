@@ -234,7 +234,7 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && userId == currentUid()
         && request.resource.data.uid == currentUid()
-        && request.resource.data.role == 'tenant'
+        && roleIsValid(request.resource.data.role)
         && notificationsShapeIsValid(request.resource.data);
 
       allow update: if isAuthenticated()

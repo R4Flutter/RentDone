@@ -35,10 +35,7 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return user;
     } catch (error) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: _cleanErrorMessage(error),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: error.toString());
       rethrow;
     }
   }
@@ -51,9 +48,8 @@ class AuthNotifier extends Notifier<AuthState> {
     final role = _validatedRole();
     final normalizedPhone = _validatePhone(phone);
 
-    final emailText = email.trim().toLowerCase();
-    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-    if (emailText.isEmpty || !emailRegex.hasMatch(emailText)) {
+    final emailText = email.trim();
+    if (emailText.isEmpty || !emailText.contains('@')) {
       final message = 'Enter a valid email address.';
       state = state.copyWith(errorMessage: message);
       throw StateError(message);
@@ -85,20 +81,9 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return user;
     } catch (error) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: _cleanErrorMessage(error),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: error.toString());
       rethrow;
     }
-  }
-
-  String _cleanErrorMessage(Object error) {
-    final text = error.toString().replaceFirst('Exception: ', '').trim();
-    if (text.startsWith('StateError:')) {
-      return text.replaceFirst('StateError:', '').trim();
-    }
-    return text.isEmpty ? 'Authentication failed. Please try again.' : text;
   }
 
   UserRole _validatedRole() {
@@ -112,38 +97,23 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   String _validatePhone(String phone) {
-    final normalized = _normalizeIndianPhone(phone);
-    if (normalized == null) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10 || digits.length > 15) {
       const message = 'Enter a valid phone number.';
       state = state.copyWith(errorMessage: message);
       throw StateError(message);
     }
-    return normalized;
+    return digits;
   }
 
   String _normalizeOptionalPhone(String phone) {
     final digits = phone.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return '';
-    final normalized = _normalizeIndianPhone(phone);
-    if (normalized == null) {
+    if (digits.length < 10 || digits.length > 15) {
       const message = 'Enter a valid phone number.';
       state = state.copyWith(errorMessage: message);
       throw StateError(message);
     }
-    return normalized;
-  }
-
-  String? _normalizeIndianPhone(String value) {
-    final digits = value.replaceAll(RegExp(r'\D'), '');
-    if (digits.length == 10 && RegExp(r'^[6-9]\d{9}$').hasMatch(digits)) {
-      return digits;
-    }
-    if (digits.length == 12 && digits.startsWith('91')) {
-      final local = digits.substring(2);
-      if (RegExp(r'^[6-9]\d{9}$').hasMatch(local)) {
-        return local;
-      }
-    }
-    return null;
+    return digits;
   }
 }

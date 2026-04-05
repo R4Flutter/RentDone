@@ -26,36 +26,43 @@ enum ConnectivityStatus {
 /// }
 /// ```
 final connectivityProvider =
-    StateNotifierProvider<ConnectivityNotifier, ConnectivityStatus>((ref) {
-  return ConnectivityNotifier();
-});
+    NotifierProvider<ConnectivityNotifier, ConnectivityStatus>(
+      ConnectivityNotifier.new,
+    );
 
-/// StateNotifier that listens to the device's connectivity changes.
-class ConnectivityNotifier extends StateNotifier<ConnectivityStatus> {
-  ConnectivityNotifier() : super(ConnectivityStatus.unknown) {
+/// Notifier that listens to the device's connectivity changes.
+class ConnectivityNotifier extends Notifier<ConnectivityStatus> {
+  @override
+  ConnectivityStatus build() {
+    ref.onDispose(() {
+      _isDisposed = true;
+      _subscription?.cancel();
+    });
     _init();
+    return ConnectivityStatus.unknown;
   }
 
   final Connectivity _connectivity = Connectivity();
   StreamSubscription<List<ConnectivityResult>>? _subscription;
+  var _isDisposed = false;
 
   void _init() {
     // Get initial status
     _connectivity.checkConnectivity().then(_handleResults).catchError((_) {
-      if (mounted) state = ConnectivityStatus.unknown;
+      if (!_isDisposed) state = ConnectivityStatus.unknown;
     });
 
     // Listen for changes
     _subscription = _connectivity.onConnectivityChanged.listen(
       _handleResults,
       onError: (_) {
-        if (mounted) state = ConnectivityStatus.unknown;
+        if (!_isDisposed) state = ConnectivityStatus.unknown;
       },
     );
   }
 
   void _handleResults(List<ConnectivityResult> results) {
-    if (!mounted) return;
+    if (_isDisposed) return;
 
     final hasConnection = results.any(
       (r) => r != ConnectivityResult.none,
@@ -72,11 +79,5 @@ class ConnectivityNotifier extends StateNotifier<ConnectivityStatus> {
         tag: 'ConnectivityNotifier',
       );
     }
-  }
-
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
   }
 }

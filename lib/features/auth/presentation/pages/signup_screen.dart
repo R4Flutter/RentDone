@@ -1,13 +1,13 @@
 import 'dart:ui';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/core/constants/user_role.dart';
-import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
 
-class SignupPage extends ConsumerStatefulWidget {
+class SignupPage extends StatefulWidget {
   const SignupPage({
     super.key,
     required this.selectedRole,
@@ -18,10 +18,10 @@ class SignupPage extends ConsumerStatefulWidget {
   final String phoneNumber;
 
   @override
-  ConsumerState<SignupPage> createState() => _SignupPageState();
+  State<SignupPage> createState() => _SignupPageState();
 }
 
-class _SignupPageState extends ConsumerState<SignupPage>
+class _SignupPageState extends State<SignupPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailController;
@@ -44,13 +44,6 @@ class _SignupPageState extends ConsumerState<SignupPage>
       vsync: this,
       duration: const Duration(seconds: 16),
     )..repeat(reverse: true);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final notifier = ref.read(authProvider.notifier);
-      notifier.setSelectedRole(widget.selectedRole);
-      notifier.setMode(registerMode: true);
-    });
   }
 
   @override
@@ -502,35 +495,44 @@ class _SignupPageState extends ConsumerState<SignupPage>
     });
 
     try {
-      final notifier = ref.read(authProvider.notifier);
-      await notifier.continueWithEmail(
-        phone: widget.phoneNumber,
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+      final user = credential.user;
+      if (user == null) {
+        throw FirebaseAuthException(code: 'unknown', message: 'Signup failed.');
+      }
+
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'userId': user.uid,
+        'email': _emailController.text.trim(),
+        'phoneNumber': widget.phoneNumber,
+        'phone': widget.phoneNumber,
+        'role': 'owner',
+        'notifications': {'rent_due': true, 'payment_received': true},
+        'createdAt': FieldValue.serverTimestamp(),
+        'tenantScore': 0,
+      }, SetOptions(merge: true));
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Account created. Verification link sent. Check inbox/spam and verify your email to continue.',
-          ),
-        ),
-      );
-
-      final verifyUri = Uri(
-        path: '/verify-email-code',
-        queryParameters: {
-          'role': widget.selectedRole.name,
-          'phone': widget.phoneNumber,
-          'email': _emailController.text.trim().toLowerCase(),
-        },
-      );
-      context.go(verifyUri.toString());
-    } catch (error) {
+      context.goNamed('ownerDashboard');
+    } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       setState(() {
-        _authError = _friendlyError(error);
+        _authError = _mapAuthError(error);
+      });
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _authError =
+            error.message ?? 'Could not create account. Please try again.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _authError = 'Could not create account. Please try again.';
       });
     } finally {
       if (mounted) {
@@ -541,11 +543,18 @@ class _SignupPageState extends ConsumerState<SignupPage>
     }
   }
 
-  String _friendlyError(Object error) {
-    final raw = error.toString().replaceFirst('Exception: ', '').trim();
-    if (raw.isEmpty) {
-      return 'Could not create account. Please try again.';
+  String _mapAuthError(FirebaseAuthException error) {
+    switch (error.code) {
+      case 'email-already-in-use':
+        return 'This email is already in use.';
+      case 'invalid-email':
+        return 'Enter a valid email address.';
+      case 'weak-password':
+        return 'Password is too weak. Use at least 6 characters.';
+      case 'network-request-failed':
+        return 'Network error. Check your connection and try again.';
+      default:
+        return error.message ?? 'Could not create account. Please try again.';
     }
-    return raw;
   }
 }

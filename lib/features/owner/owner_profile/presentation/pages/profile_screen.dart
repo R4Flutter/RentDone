@@ -588,16 +588,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildLocationCard(
     BuildContext context,
     OwnerSettingsState settings,
-    OwnerSettingsNotifier notifier,
+    OwnerSettingsNotifier _notifier,
   ) {
     final isDark = OwnerDashboardColors.isDark(context);
-    final brand = OwnerDashboardColors.brandPrimary(context);
     final locationForeground = isDark ? AppColors.white : AppColors.cFF0F172A;
-    final error = (settings.errorMessage ?? '').toLowerCase();
-    final showLocationSettings = error.contains('service is disabled');
-    final showAppSettings =
-        error.contains('permission denied') ||
-        error.contains('permanently denied');
 
     return _glassCard(
       child: Column(
@@ -605,49 +599,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         children: [
           _cardTitle(context, 'Location'),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: isDark
-                      ? brand.withValues(alpha: 0.24)
-                      : AppColors.cFFFFFFFF.withValues(alpha: 0.78),
-                  foregroundColor: locationForeground,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                    side: BorderSide(
-                      color: isDark
-                          ? brand.withValues(alpha: 0.5)
-                          : OwnerDashboardColors.border(context),
-                    ),
-                  ),
-                ),
-                onPressed: settings.isFetchingLocation
-                    ? null
-                    : () => notifier.captureCurrentLocation(),
-                icon: settings.isFetchingLocation
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: locationForeground,
-                        ),
-                      )
-                    : const Icon(Icons.gps_fixed_rounded),
-                label: Text(
-                  settings.isFetchingLocation
-                      ? 'Capturing...'
-                      : 'Capture Location',
-                ),
-              ),
-            ],
+          Text(
+            'Location access is disabled for this release. Use business address fields for property/office location updates.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: locationForeground.withValues(alpha: 0.86),
+            ),
           ),
           const SizedBox(height: 16),
           _infoBlock(
@@ -672,25 +628,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: const Color(0xFFFCA5A5)),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (showLocationSettings)
-                  OutlinedButton.icon(
-                    onPressed: () => notifier.openLocationSettings(),
-                    icon: const Icon(Icons.settings),
-                    label: const Text('Open Location Settings'),
-                  ),
-                if (showAppSettings)
-                  OutlinedButton.icon(
-                    onPressed: () => notifier.openAppSettings(),
-                    icon: const Icon(Icons.app_settings_alt),
-                    label: const Text('Open App Settings'),
-                  ),
-              ],
             ),
           ],
         ],

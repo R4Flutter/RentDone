@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:rentdone/features/owner/owner_settings/di/owner_settings_di.dart';
 import 'package:rentdone/features/owner/owner_settings/domain/entities/owner_settings.dart';
 
@@ -251,102 +249,6 @@ class OwnerSettingsNotifier extends Notifier<OwnerSettingsState> {
   );
   void setDarkMode(bool value) =>
       _update(state.copyWith(darkMode: value), persist: true);
-
-  Future<void> captureCurrentLocation() async {
-    state = state.copyWith(isFetchingLocation: true, clearError: true);
-
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw StateError('Location service is disabled on this device.');
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied) {
-        throw StateError(
-          'Location permission denied. Please allow location access.',
-        );
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw StateError(
-          'Location permission is permanently denied. Enable it from app settings.',
-        );
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-
-      String resolvedAddress = '';
-      try {
-        final placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          final place = placemarks.first;
-          final addressParts = <String>[
-            place.street ?? '',
-            place.subLocality ?? '',
-            place.locality ?? '',
-            place.administrativeArea ?? '',
-            place.postalCode ?? '',
-            place.country ?? '',
-          ].where((value) => value.trim().isNotEmpty).toList();
-          resolvedAddress = addressParts.join(', ');
-        }
-      } catch (_) {}
-
-      if (resolvedAddress.isEmpty) {
-        resolvedAddress =
-            '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
-      }
-
-      state = state.copyWith(
-        isFetchingLocation: false,
-        locationAddress: resolvedAddress,
-        locationLatitude: position.latitude,
-        locationLongitude: position.longitude,
-        clearError: true,
-      );
-
-      await _persistState();
-    } catch (error) {
-      state = state.copyWith(
-        isFetchingLocation: false,
-        errorMessage: _friendlyLocationError(error),
-      );
-    }
-  }
-
-  String _friendlyLocationError(Object error) {
-    final raw = error.toString();
-    if (error is StateError) {
-      return error.message;
-    }
-    if (raw.startsWith('Bad state: ')) {
-      return raw.replaceFirst('Bad state: ', '');
-    }
-    return raw;
-  }
-
-  Future<void> openLocationSettings() async {
-    final opened = await Geolocator.openLocationSettings();
-    if (!opened) {
-      await Geolocator.openAppSettings();
-    }
-  }
-
-  Future<void> openAppSettings() async {
-    await Geolocator.openAppSettings();
-  }
 
   void _update(OwnerSettingsState next, {required bool persist}) {
     state = next.copyWith(clearError: true);

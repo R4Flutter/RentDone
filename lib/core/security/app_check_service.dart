@@ -1,4 +1,5 @@
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/foundation.dart';
 import 'package:rentdone/core/logging/app_logger.dart';
 
 /// Service that activates Firebase App Check for production builds.
@@ -10,9 +11,12 @@ class AppCheckService {
   static Future<void> activate() async {
     try {
       await FirebaseAppCheck.instance.activate(
-        // For Android, use the Play Integrity provider (default).
-        // For iOS, use DeviceCheck or App Attest (default).
-        // No custom provider needed for basic usage.
+        androidProvider: kDebugMode
+            ? AndroidProvider.debug
+            : AndroidProvider.playIntegrity,
+        appleProvider: kDebugMode
+            ? AppleProvider.debug
+            : AppleProvider.deviceCheck,
       );
       AppLogger.info('Firebase App Check activated', tag: 'AppCheckService');
     } catch (e, st) {

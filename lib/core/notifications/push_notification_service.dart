@@ -42,6 +42,11 @@ class PushNotificationService {
 
   bool _initialized = false;
 
+  bool _isCurrentAuthenticatedUid(String uid) {
+    final currentUid = _auth.currentUser?.uid;
+    return currentUid != null && currentUid == uid;
+  }
+
   String _tokenDocId(String token) {
     return sha256.convert(token.codeUnits).toString();
   }
@@ -57,8 +62,14 @@ class PushNotificationService {
       if (user == null) {
         return;
       }
+      if (!_isCurrentAuthenticatedUid(user.uid)) {
+        return;
+      }
       try {
         final enabled = await isNotificationsEnabled(uid: user.uid);
+        if (!_isCurrentAuthenticatedUid(user.uid)) {
+          return;
+        }
         if (!enabled) {
           await _clearServerTokens(uid: user.uid);
           await _messaging.setAutoInitEnabled(false);
@@ -115,6 +126,9 @@ class PushNotificationService {
   Future<bool> isNotificationsEnabled({String? uid}) async {
     final resolvedUid = uid ?? _auth.currentUser?.uid;
     if (resolvedUid == null || resolvedUid.isEmpty) {
+      return true;
+    }
+    if (!_isCurrentAuthenticatedUid(resolvedUid)) {
       return true;
     }
 
@@ -183,12 +197,15 @@ class PushNotificationService {
   }
 
   Future<void> _syncCurrentToken({required String uid}) async {
+    if (!_isCurrentAuthenticatedUid(uid)) return;
     final token = await _messaging.getToken();
+    if (!_isCurrentAuthenticatedUid(uid)) return;
     if (token == null || token.trim().isEmpty) return;
     await _saveToken(uid: uid, token: token.trim());
   }
 
   Future<void> _saveToken({required String uid, required String token}) async {
+    if (!_isCurrentAuthenticatedUid(uid)) return;
     final userRef = _firestore.collection('users').doc(uid);
     final tokenRef = userRef.collection('deviceTokens').doc(_tokenDocId(token));
     try {
@@ -221,6 +238,7 @@ class PushNotificationService {
     required String uid,
     required String token,
   }) async {
+    if (!_isCurrentAuthenticatedUid(uid)) return;
     final userRef = _firestore.collection('users').doc(uid);
     try {
       final userDoc = await userRef.get();
