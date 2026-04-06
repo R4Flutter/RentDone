@@ -6,6 +6,7 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 import 'package:rentdone/features/owner/owner_tenants/data/services/tenant_trust_service.dart';
 import 'package:rentdone/features/owner/owner_tenants/domain/models/tenant_trust.dart';
 import 'package:rentdone/features/owner/owner_tenants/domain/utils/phone_normalizer.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantTrustScoreScreen extends StatelessWidget {
   const TenantTrustScoreScreen({super.key});
@@ -526,7 +527,7 @@ class _LoadingCard extends StatelessWidget {
           SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(
+            child: AppLoadingIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
                 OwnerDashboardColors.brandPrimary(context),

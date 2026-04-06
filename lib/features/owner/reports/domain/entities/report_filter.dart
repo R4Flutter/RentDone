@@ -1,8 +1,4 @@
-enum ReportFilterType {
-  thisMonth,
-  thisYear,
-  custom,
-}
+enum ReportFilterType { thisMonth, thisYear, custom }
 
 class ReportFilter {
   const ReportFilter({

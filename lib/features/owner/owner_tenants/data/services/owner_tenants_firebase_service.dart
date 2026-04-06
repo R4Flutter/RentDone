@@ -112,16 +112,32 @@ class OwnerTenantsFirebaseService {
 
     for (final variant in variants) {
       queryFutures.add(
-        _db.collection('tenants').where('phoneHash', isEqualTo: _hashPhone(variant)).limit(10).get(),
+        _db
+            .collection('tenants')
+            .where('phoneHash', isEqualTo: _hashPhone(variant))
+            .limit(10)
+            .get(),
       );
       queryFutures.add(
-        _db.collection('tenants').where('phone', isEqualTo: variant).limit(10).get(),
+        _db
+            .collection('tenants')
+            .where('phone', isEqualTo: variant)
+            .limit(10)
+            .get(),
       );
       queryFutures.add(
-        _db.collection('tenants').where('phoneNumber', isEqualTo: variant).limit(10).get(),
+        _db
+            .collection('tenants')
+            .where('phoneNumber', isEqualTo: variant)
+            .limit(10)
+            .get(),
       );
       queryFutures.add(
-        _db.collection('tenants').where('normalizedPhone', isEqualTo: variant).limit(10).get(),
+        _db
+            .collection('tenants')
+            .where('normalizedPhone', isEqualTo: variant)
+            .limit(10)
+            .get(),
       );
     }
 
@@ -236,7 +252,8 @@ class OwnerTenantsFirebaseService {
     final normalized = _normalizePhone(rawInput);
     if (normalized.isEmpty) return <String>{};
 
-    if (normalized.length == 10 && RegExp(r'^[6-9]\d{9}$').hasMatch(normalized)) {
+    if (normalized.length == 10 &&
+        RegExp(r'^[6-9]\d{9}$').hasMatch(normalized)) {
       return <String>{normalized, '91$normalized', '+91$normalized'};
     }
 

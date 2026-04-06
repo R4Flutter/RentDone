@@ -136,7 +136,6 @@ class OwnerSubscriptionData {
 class OwnerSubscriptionPaymentIntent {
   final String paymentId;
   final String orderId;
-  final String paymentSessionId;
   final String keyId;
   final int amountInPaise;
   final String currency;
@@ -146,7 +145,6 @@ class OwnerSubscriptionPaymentIntent {
   const OwnerSubscriptionPaymentIntent({
     required this.paymentId,
     required this.orderId,
-    required this.paymentSessionId,
     required this.keyId,
     required this.amountInPaise,
     required this.currency,
@@ -156,9 +154,11 @@ class OwnerSubscriptionPaymentIntent {
 
   factory OwnerSubscriptionPaymentIntent.fromMap(Map<String, dynamic> map) {
     return OwnerSubscriptionPaymentIntent(
-      paymentId: (map['paymentId'] as String?) ?? '',
+      paymentId:
+          (map['paymentId'] as String?) ??
+          (map['subscriptionPaymentId'] as String?) ??
+          '',
       orderId: (map['orderId'] as String?) ?? '',
-      paymentSessionId: (map['paymentSessionId'] as String?) ?? '',
       keyId: (map['keyId'] as String?) ?? '',
       amountInPaise: (map['amountInPaise'] as num?)?.toInt() ?? 0,
       currency: (map['currency'] as String?) ?? 'INR',
@@ -170,10 +170,7 @@ class OwnerSubscriptionPaymentIntent {
 
 /// Service for managing owner subscriptions
 class OwnerSubscriptionService {
-  OwnerSubscriptionService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
-
-  final FirebaseFirestore _firestore;
+  OwnerSubscriptionService();
   final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
     region: 'asia-south1',
   );
@@ -226,9 +223,25 @@ class OwnerSubscriptionService {
   }
 
   /// Verify subscription payment
-  Future<void> verifySubscriptionPayment({required String paymentId}) async {
+  Future<void> verifySubscriptionPayment({
+    required String paymentId,
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
     final callable = _functions.httpsCallable('verifyOwnerSubscriptionPayment');
-    await callable.call(<String, dynamic>{'paymentId': paymentId});
+    await callable.call(<String, dynamic>{
+      'subscriptionPaymentId': paymentId,
+      'paymentId': paymentId,
+      'razorpayOrderId': razorpayOrderId,
+      'razorpayPaymentId': razorpayPaymentId,
+      'razorpaySignature': razorpaySignature,
+      'payload': {
+        'orderId': razorpayOrderId,
+        'paymentId': razorpayPaymentId,
+        'signature': razorpaySignature,
+      },
+    });
   }
 
   /// Get active tenant count

@@ -7,7 +7,7 @@ import 'app_config.dart';
 
 class AppConfigService {
   AppConfigService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 

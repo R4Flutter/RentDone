@@ -8,19 +8,18 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint:fix": "npm run lint -- --fix",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "test:ci": "jest --coverage --runInBand",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "npm run build && firebase deploy --only functions",
-    "logs": "firebase functions:log",
-    "lint:fix": "npm run lint -- --fix"
+    "logs": "firebase functions:log"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",
-    "firebase-functions": "^6.0.1",
-    "rentdone-functions": "file:"
+    "firebase-functions": "^6.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -32,10 +31,10 @@
     "eslint-plugin-promise": "^7.2.1",
     "firebase-functions-test": "^3.4.1",
     "globals": "^16.4.0",
-    "jest": "^30.3.0",
-    "ts-jest": "^29.4.9",
-    "typescript": "^5.9.2",
-    "typescript-eslint": "^8.46.1"
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
+    "typescript-eslint": "^8.46.1",
+    "typescript": "^5.9.2"
   },
   "jest": {
     "preset": "ts-jest",

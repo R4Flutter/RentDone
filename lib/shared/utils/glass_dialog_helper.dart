@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rentdone/shared/design/glassmorphism.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 /// Helper for showing glassmorphic dialogs throughout the app
 class GlassDialogHelper {
@@ -58,7 +59,7 @@ class GlassDialogHelper {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 16),
-            const CircularProgressIndicator(),
+            const AppLoadingIndicator(),
             const SizedBox(height: 16),
             Text(
               message,
@@ -205,4 +206,3 @@ class GlassDialogHelper {
     );
   }
 }
-

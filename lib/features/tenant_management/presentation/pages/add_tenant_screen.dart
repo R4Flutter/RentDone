@@ -10,6 +10,7 @@ import 'package:rentdone/features/tenant_management/domain/usecases/validators.d
 import 'package:rentdone/features/tenant_management/presentation/providers/tenant_providers.dart';
 import 'package:rentdone/features/tenant_management/data/services/firebase_tenant_storage_service.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class AddTenantScreen extends ConsumerStatefulWidget {
   final String propertyId;
@@ -645,7 +646,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                       ? SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(
+                          child: AppLoadingIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
                               scheme.onPrimary,

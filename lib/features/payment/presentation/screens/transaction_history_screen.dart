@@ -27,6 +27,7 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 import 'package:rentdone/shared/widgets/controlled_banner_ad.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rentdone/features/payment/data/gateways/tenant_razorpay_gateway_adapter.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TransactionHistoryScreen extends ConsumerStatefulWidget {
   final TransactionActor actor;
@@ -328,7 +329,7 @@ class _TransactionHistoryScreenState
               ],
               const SizedBox(height: 16),
               if (showInitialLoader)
-                const Center(child: CircularProgressIndicator())
+                const Center(child: AppLoadingIndicator())
               else if (data.transactions.isEmpty)
                 const _TransactionEmptyState()
               else
@@ -336,7 +337,7 @@ class _TransactionHistoryScreenState
               if (data.isLoadingMore)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: AppLoadingIndicator()),
                 ),
             ],
           ),
@@ -2108,9 +2109,7 @@ class _LoadMoreTile extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 24),
         child: Center(
-          child: CircularProgressIndicator(
-            color: _PaymentScreenTheme.brand(context),
-          ),
+          child: AppLoadingIndicator(color: _PaymentScreenTheme.brand(context)),
         ),
       );
     }
@@ -2991,7 +2990,7 @@ class _TenantPaymentHeroState extends ConsumerState<_TenantPaymentHero>
                             const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(
+                              child: AppLoadingIndicator(
                                 strokeWidth: 2,
                                 color: AppColors.white,
                               ),
@@ -3181,7 +3180,7 @@ class _TenantPaymentHeroState extends ConsumerState<_TenantPaymentHero>
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(
+                                  child: AppLoadingIndicator(
                                     strokeWidth: 2,
                                     color: AppColors.white,
                                   ),
@@ -3411,7 +3410,7 @@ class _RazorpayPayButton extends StatelessWidget {
                 const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(
+                  child: AppLoadingIndicator(
                     strokeWidth: 2,
                     color: AppColors.white,
                   ),
@@ -3748,7 +3747,7 @@ class _TenantPaymentTrustFlowSheetState
               SizedBox(
                 width: 108,
                 height: 108,
-                child: CircularProgressIndicator(
+                child: AppLoadingIndicator(
                   strokeWidth: 3,
                   color: _PaymentScreenTheme.brand(context),
                   backgroundColor: _PaymentScreenTheme.brand(

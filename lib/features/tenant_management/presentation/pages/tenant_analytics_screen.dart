@@ -5,6 +5,7 @@ import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/tenant_management/presentation/providers/tenant_providers.dart';
 import 'package:rentdone/features/tenant_management/presentation/providers/payment_providers.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 /// Tenant Analytics Dashboard
 /// Shows comprehensive statistics about tenants and payments
@@ -114,7 +115,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                         color: scheme.onSurface.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Center(child: CircularProgressIndicator()),
+                      child: const Center(child: AppLoadingIndicator()),
                     ),
                   ),
                 ),
@@ -167,7 +168,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                     color: scheme.onSurface.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(child: CircularProgressIndicator()),
+                  child: const Center(child: AppLoadingIndicator()),
                 ),
                 error: (error, stack) =>
                     _buildErrorCard('Error loading payment analytics'),
@@ -220,7 +221,7 @@ class TenantAnalyticsScreen extends ConsumerWidget {
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: AppLoadingIndicator()),
                 error: (error, stack) =>
                     _buildErrorCard('Error loading pending payments'),
               ),

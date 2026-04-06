@@ -13,6 +13,15 @@ import 'package:rentdone/features/auth/domain/entities/auth_user.dart';
 class AuthFirebaseService {
   AuthFirebaseService(this._auth, this._firestore, this._googleSignIn);
 
+  static const int _minPasswordLength = 12;
+  static const Duration _passwordResetCooldown = Duration(seconds: 60);
+  static const String _googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue: '',
+  );
+  static final Map<String, DateTime> _lastPasswordResetByEmail =
+      <String, DateTime>{};
+
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
   final GoogleSignIn _googleSignIn;
@@ -207,15 +216,27 @@ class AuthFirebaseService {
     required String phone,
   }) async {
     try {
+      final normalizedPassword = password.trim();
+      if (normalizedPassword.length < _minPasswordLength) {
+        throw const AuthException(
+          message: 'Password must be at least 12 characters.',
+        );
+      }
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
-        password: password,
+        password: normalizedPassword,
       );
       final user = credential.user;
       if (user == null) {
         throw const AuthException(
           message: 'Account creation failed. Please try again.',
         );
+      }
+
+      // Trigger email verification for all email/password signups.
+      if (!user.emailVerified) {
+        await user.sendEmailVerification();
       }
 
       return _upsertAndMapUser(
@@ -260,9 +281,9 @@ class AuthFirebaseService {
         throw const AuthException(message: 'Current password is required.');
       }
 
-      if (newPasswordText.length < 6) {
+      if (newPasswordText.length < _minPasswordLength) {
         throw const AuthException(
-          message: 'New password must be at least 6 characters.',
+          message: 'New password must be at least 12 characters.',
         );
       }
 
@@ -298,9 +319,10 @@ class AuthFirebaseService {
 
   Future<void> sendPasswordResetCode({String? email}) async {
     try {
-      final resolvedEmail = (email ?? _auth.currentUser?.email ?? '')
+      final currentUserEmail = (_auth.currentUser?.email ?? '')
           .trim()
           .toLowerCase();
+      final resolvedEmail = (email ?? currentUserEmail).trim().toLowerCase();
 
       if (resolvedEmail.isEmpty) {
         throw const AuthException(
@@ -315,7 +337,29 @@ class AuthFirebaseService {
         throw const AuthException(message: 'Please enter a valid email.');
       }
 
+      // Prevent authenticated users from requesting reset links for other emails.
+      if (currentUserEmail.isNotEmpty && resolvedEmail != currentUserEmail) {
+        throw const AuthException(
+          message:
+              'Password reset is allowed only for your signed-in account email.',
+        );
+      }
+
+      final lastRequestedAt = _lastPasswordResetByEmail[resolvedEmail];
+      if (lastRequestedAt != null) {
+        final elapsed = DateTime.now().difference(lastRequestedAt);
+        if (elapsed < _passwordResetCooldown) {
+          final waitSeconds = (_passwordResetCooldown - elapsed).inSeconds
+              .clamp(1, 999);
+          throw AuthException(
+            message:
+                'Please wait $waitSeconds seconds before requesting another reset email.',
+          );
+        }
+      }
+
       await _auth.sendPasswordResetEmail(email: resolvedEmail);
+      _lastPasswordResetByEmail[resolvedEmail] = DateTime.now();
     } on AuthException {
       rethrow;
     } on FirebaseAuthException catch (error) {
@@ -438,10 +482,12 @@ class AuthFirebaseService {
 
   Future<void> _initializeGoogleSignInIfNeeded() async {
     if (_googleInitialized) return;
-    await _googleSignIn.initialize(
-      serverClientId:
-          '35844123331-ut1le47rn4bc62ev8q1461m8bhboikrd.apps.googleusercontent.com',
-    );
+    final hasClientId = _googleServerClientId.trim().isNotEmpty;
+    if (hasClientId) {
+      await _googleSignIn.initialize(serverClientId: _googleServerClientId);
+    } else {
+      await _googleSignIn.initialize();
+    }
     _googleInitialized = true;
   }
 
@@ -469,14 +515,17 @@ class AuthFirebaseService {
         );
       case 'wrong-password':
       case 'invalid-credential':
-        return const AuthException(message: 'Invalid email or password.');
       case 'user-not-found':
-        return const AuthException(message: 'No account found for this email.');
+      case 'invalid-login-credentials':
+        return const AuthException(message: 'Invalid email or password.');
       case 'email-already-in-use':
-        return const AuthException(message: 'Email is already in use.');
+        return const AuthException(
+          message:
+              'Unable to create account with those credentials. Try signing in instead.',
+        );
       case 'weak-password':
         return const AuthException(
-          message: 'Password is too weak. Use at least 6 characters.',
+          message: 'Password is too weak. Use at least 12 characters.',
         );
       case 'invalid-email':
         return const AuthException(message: 'Please enter a valid email.');

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 import 'package:rentdone/features/owner/owner_dashboard/data/models/dashboard_payment_dto.dart';
 import 'package:rentdone/features/owner/owner_dashboard/data/models/dashboard_property_dto.dart';
 import 'package:rentdone/features/owner/owner_dashboard/data/models/dashboard_tenant_dto.dart';
@@ -41,8 +41,8 @@ class DashboardFirebaseService {
     return _firestore
         .collection('properties')
         .where('ownerId', isEqualTo: ownerId)
-      .orderBy('createdAt', descending: true)
-      .limit(_dashboardPropertiesLimit)
+        .orderBy('createdAt', descending: true)
+        .limit(_dashboardPropertiesLimit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
@@ -71,7 +71,7 @@ class DashboardFirebaseService {
       // For network errors, rethrow to be handled upstream
       rethrow;
     } catch (e) {
-      debugPrint('Error fetching payments: $e');
+      AppLogger.error('Error fetching payments', error: e, tag: 'DashboardService');
       rethrow;
     }
   }
@@ -87,8 +87,8 @@ class DashboardFirebaseService {
     return _firestore
         .collection('payments')
         .where('ownerId', isEqualTo: ownerId)
-      .orderBy('createdAt', descending: true)
-      .limit(_dashboardPaymentsLimit)
+        .orderBy('createdAt', descending: true)
+        .limit(_dashboardPaymentsLimit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
@@ -96,7 +96,7 @@ class DashboardFirebaseService {
               .toList(),
         )
         .handleError((error) {
-          debugPrint('Error in watchPayments stream: $error');
+          AppLogger.error('Error in watchPayments stream', error: error, tag: 'DashboardService');
           // Log error and return empty list as fallback
           return <DashboardPaymentDto>[];
         });
@@ -118,7 +118,7 @@ class DashboardFirebaseService {
       if (e.code == 'permission-denied') return 0;
       rethrow;
     } catch (e) {
-      debugPrint('Error fetching tenant count: $e');
+      AppLogger.error('Error fetching tenant count', error: e, tag: 'DashboardService');
       return 0;
     }
   }
@@ -142,7 +142,7 @@ class DashboardFirebaseService {
               0;
         })
         .handleError((error) {
-          debugPrint('Error in watchTenantCount stream: $error');
+          AppLogger.error('Error in watchTenantCount stream', error: error, tag: 'DashboardService');
           return 0;
         });
   }
@@ -163,7 +163,7 @@ class DashboardFirebaseService {
         .snapshots()
         .map((snapshot) => snapshot.docs.map(AppMessageDto.fromDoc).toList())
         .handleError((error) {
-          debugPrint('Error in watchRecentMessages stream: $error');
+          AppLogger.error('Error in watchRecentMessages stream', error: error, tag: 'DashboardService');
           return <AppMessageDto>[];
         });
   }
@@ -187,7 +187,7 @@ class DashboardFirebaseService {
               .toList(),
         )
         .handleError((error) {
-          debugPrint('Error in watchTenantActivity stream: $error');
+          AppLogger.error('Error in watchTenantActivity stream', error: error, tag: 'DashboardService');
           return <DashboardTenantDto>[];
         });
   }

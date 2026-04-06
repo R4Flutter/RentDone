@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class PaymentCard extends StatelessWidget {
   const PaymentCard({
@@ -101,7 +102,7 @@ class PaymentPrimaryButton extends StatelessWidget {
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: AppLoadingIndicator(strokeWidth: 2),
               )
             : Text(label),
       ),
@@ -137,7 +138,7 @@ class PaymentSecondaryButton extends StatelessWidget {
             ? const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: AppLoadingIndicator(strokeWidth: 2),
               )
             : Text(label),
       ),

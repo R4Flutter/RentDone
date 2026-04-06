@@ -286,8 +286,8 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                                         hint: 'e.g., Mumbai',
                                         validator: (v) =>
                                             v?.trim().isEmpty ?? true
-                                                ? 'Required'
-                                                : null,
+                                            ? 'Required'
+                                            : null,
                                       ),
                                       const SizedBox(height: 16),
                                       Row(
@@ -304,7 +304,8 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                                                   ),
                                               validator: (v) {
                                                 final t = v?.trim() ?? '';
-                                                if (t.isEmpty) return 'Required';
+                                                if (t.isEmpty)
+                                                  return 'Required';
                                                 final d = double.tryParse(t);
                                                 if (d == null) {
                                                   return 'Invalid latitude';
@@ -329,7 +330,8 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                                                   ),
                                               validator: (v) {
                                                 final t = v?.trim() ?? '';
-                                                if (t.isEmpty) return 'Required';
+                                                if (t.isEmpty)
+                                                  return 'Required';
                                                 final d = double.tryParse(t);
                                                 if (d == null) {
                                                   return 'Invalid longitude';

@@ -23,10 +23,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
     required ReportFilter filter,
     String? propertyId,
   }) {
-    return _service.getReportData(
-      filter: filter,
-      propertyId: propertyId,
-    );
+    return _service.getReportData(filter: filter, propertyId: propertyId);
   }
 
   @override

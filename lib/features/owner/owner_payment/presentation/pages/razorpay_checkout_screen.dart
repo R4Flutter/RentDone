@@ -10,6 +10,7 @@ import 'package:rentdone/features/owner/owner_payment/data/services/owner_razorp
 import 'package:rentdone/features/owner/owner_payment/data/services/razorpay_service.dart';
 import 'package:rentdone/features/owner/owner_payment/domain/exceptions/payment_exceptions.dart';
 import 'package:rentdone/features/owner/owner_payment/models/payment_state.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/payment_processing_overlay.dart';
 import 'package:rentdone/shared/widgets/back_handler.dart';
 
@@ -132,7 +133,7 @@ class _RazorpayCheckoutScreenState
     _paymentStateSubscription = razorpayService.paymentStateStream.listen((
       state,
     ) {
-      debugPrint('💰 Payment State: $state');
+      AppLogger.debug('Payment State: $state', tag: 'RazorpayCheckout');
 
       switch (state) {
         case PaymentState.idle:
@@ -271,14 +272,14 @@ class _RazorpayCheckoutScreenState
     try {
       final paymentIntent = _activeIntent;
       if (paymentIntent == null) {
-        debugPrint('❌ No active payment intent found for verification');
+        AppLogger.warning('No active payment intent found for verification', tag: 'RazorpayCheckout');
         return false;
       }
 
       if (response.transactionId.trim().isEmpty ||
           response.orderId.trim().isEmpty ||
           response.signature.trim().isEmpty) {
-        debugPrint('❌ Invalid Razorpay callback payload for verification');
+        AppLogger.warning('Invalid Razorpay callback payload for verification', tag: 'RazorpayCheckout');
         return false;
       }
 
@@ -290,15 +291,15 @@ class _RazorpayCheckoutScreenState
         signature: response.signature,
       );
 
-      debugPrint('✅ Payment verified and finalized via backend');
+      AppLogger.info('Payment verified and finalized via backend', tag: 'RazorpayCheckout');
       _verificationFailureMessage = null;
       return true;
     } on FirebaseFunctionsException catch (e) {
       _verificationFailureMessage = _friendlyFunctionsError(e);
-      debugPrint('❌ Verification error: ${e.code} ${e.message}');
+      AppLogger.error('Verification error: ${e.code}', error: e, tag: 'RazorpayCheckout');
       return false;
     } catch (e) {
-      debugPrint('❌ Error verifying payment: $e');
+      AppLogger.error('Error verifying payment', error: e, tag: 'RazorpayCheckout');
       _verificationFailureMessage =
           'Payment was successful, but verification failed. Please contact support with your transaction ID.';
       return false;

@@ -64,9 +64,7 @@ class ConnectivityNotifier extends Notifier<ConnectivityStatus> {
   void _handleResults(List<ConnectivityResult> results) {
     if (_isDisposed) return;
 
-    final hasConnection = results.any(
-      (r) => r != ConnectivityResult.none,
-    );
+    final hasConnection = results.any((r) => r != ConnectivityResult.none);
 
     final newStatus = hasConnection
         ? ConnectivityStatus.connected

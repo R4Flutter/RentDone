@@ -4,6 +4,7 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 import 'package:rentdone/features/owner/owner_payment/models/tenant_payment_record.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/payment_status_badge.dart';
 import 'package:rentdone/shared/utils/glass_dialog_helper.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 typedef PaymentStatusCallback =
     Future<void> Function(
@@ -191,7 +192,7 @@ class _PaymentHistoryCardState extends State<PaymentHistoryCard> {
                   const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: AppLoadingIndicator(strokeWidth: 2),
                   )
                 else
                   Icon(

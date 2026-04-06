@@ -29,9 +29,7 @@ class OfflineAwareBanner extends ConsumerWidget {
           height: isOffline ? null : 0,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: isDark
-                ? const Color(0xFF92400E)
-                : const Color(0xFFFBBF24),
+            color: isDark ? const Color(0xFF92400E) : const Color(0xFFFBBF24),
           ),
           child: isOffline
               ? SafeArea(

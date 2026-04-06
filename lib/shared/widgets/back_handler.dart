@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 
 enum BackHandlerMode { normal, rootConfirmExit, sensitive }
 
@@ -106,7 +107,7 @@ class _BackHandlerState extends State<BackHandler> {
 
         case BackHandlerMode.rootConfirmExit:
           if (canPop) {
-            debugPrint('[BackHandler] rootConfirmExit: local navigator pop');
+            AppLogger.debug('rootConfirmExit: local navigator pop', tag: 'BackHandler');
             await navigator.maybePop();
             break;
           }
@@ -115,14 +116,12 @@ class _BackHandlerState extends State<BackHandler> {
           // root navigator still has pages to pop.
           final rootNavigator = Navigator.of(context, rootNavigator: true);
           if (rootNavigator.canPop()) {
-            debugPrint('[BackHandler] rootConfirmExit: root navigator pop');
+            AppLogger.debug('rootConfirmExit: root navigator pop', tag: 'BackHandler');
             await rootNavigator.maybePop();
             break;
           }
 
-          debugPrint(
-            '[BackHandler] rootConfirmExit: at app root, prompting exit',
-          );
+          AppLogger.debug('rootConfirmExit: at app root, prompting exit', tag: 'BackHandler');
 
           final shouldExit = await _showLiquidConfirmationDialog(
             title: widget.dialogTitle ?? 'Exit App',
@@ -133,9 +132,7 @@ class _BackHandlerState extends State<BackHandler> {
           if (!shouldExit) break;
 
           widget.onRootExitConfirmed?.call();
-          debugPrint(
-            '[BackHandler] rootConfirmExit: exit confirmed, closing app',
-          );
+          AppLogger.debug('rootConfirmExit: exit confirmed, closing app', tag: 'BackHandler');
           await SystemNavigator.pop();
           break;
 

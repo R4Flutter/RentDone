@@ -3,6 +3,7 @@ import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_tenants/di/owner_tenants_di.dart';
 import 'package:rentdone/features/owner/owner_tenants/domain/entities/tenant_trust_lookup.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantTrustSearchScreen extends ConsumerStatefulWidget {
   const TenantTrustSearchScreen({super.key});
@@ -102,7 +103,7 @@ class _TenantTrustSearchScreenState
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoadingIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.search),
                 label: const Text('Search'),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/providers/tenant_payment_history_provider.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/tenant_card.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class OwnerPaymentTenantListScreen extends ConsumerWidget {
   const OwnerPaymentTenantListScreen({
@@ -36,7 +37,7 @@ class OwnerPaymentTenantListScreen extends ConsumerWidget {
           ref.invalidate(ownerPropertyTenantsProvider(propertyId));
         },
         child: tenantsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: AppLoadingIndicator()),
           error: (error, _) => _TenantListError(
             message: error.toString(),
             onRetry: () =>

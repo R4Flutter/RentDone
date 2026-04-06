@@ -83,9 +83,7 @@ class _RentDoneAppState extends ConsumerState<RentDoneApp> {
               1.0,
             ), // prevents font scaling bugs
           ),
-          child: OfflineAwareBanner(
-            child: child ?? const SizedBox.shrink(),
-          ),
+          child: OfflineAwareBanner(child: child ?? const SizedBox.shrink()),
         );
       },
     );

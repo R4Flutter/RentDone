@@ -2,15 +2,137 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/owner/owner_subscription/presentation/providers/subscription_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
-class OwnerSubscriptionScreen extends ConsumerWidget {
+class OwnerSubscriptionScreen extends ConsumerStatefulWidget {
   const OwnerSubscriptionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OwnerSubscriptionScreen> createState() =>
+      _OwnerSubscriptionScreenState();
+}
+
+class _OwnerSubscriptionScreenState
+    extends ConsumerState<OwnerSubscriptionScreen> {
+  late final Razorpay _razorpay;
+  bool _isProcessing = false;
+  OwnerSubscriptionPaymentIntent? _activeIntent;
+  SubscriptionPlanConfig? _activePlan;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  void _setProcessing(bool value) {
+    if (!mounted) return;
+    setState(() {
+      _isProcessing = value;
+      if (!value) {
+        _activeIntent = null;
+        _activePlan = null;
+      }
+    });
+  }
+
+  String _friendlyError(Object error) {
+    final raw = error.toString().replaceFirst('Exception: ', '').trim();
+    if (raw.isEmpty) return 'Something went wrong. Please try again.';
+    return raw;
+  }
+
+  Future<void> _onPaymentSuccess(PaymentSuccessResponse response) async {
+    final intent = _activeIntent;
+    if (intent == null) {
+      _setProcessing(false);
+      return;
+    }
+
+    final orderId = (response.orderId ?? intent.orderId).trim();
+    final paymentId = (response.paymentId ?? '').trim();
+    final signature = (response.signature ?? '').trim();
+
+    if (orderId.isEmpty || paymentId.isEmpty || signature.isEmpty) {
+      _setProcessing(false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Incomplete payment response from Razorpay.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await ref
+          .read(ownerSubscriptionServiceProvider)
+          .verifySubscriptionPayment(
+            paymentId: intent.paymentId,
+            razorpayOrderId: orderId,
+            razorpayPaymentId: paymentId,
+            razorpaySignature: signature,
+          );
+
+      ref.invalidate(subscriptionProvider);
+      ref.invalidate(tenantListProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_activePlan?.title ?? 'Subscription'} activated successfully.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Verification failed: ${_friendlyError(error)}'),
+        ),
+      );
+    } finally {
+      _setProcessing(false);
+    }
+  }
+
+  void _onPaymentError(PaymentFailureResponse response) {
+    _setProcessing(false);
+    if (!mounted) return;
+    final message = (response.message ?? 'Payment failed').trim();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message.isEmpty ? 'Payment failed.' : message)),
+    );
+  }
+
+  void _onExternalWallet(ExternalWalletResponse response) {
+    _setProcessing(false);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'External wallet selected: ${response.walletName ?? 'wallet'}',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = OwnerDashboardColors.isDark(context);
     final subscriptionAsync = ref.watch(subscriptionProvider);
 
@@ -56,7 +178,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                     child: subscriptionAsync.when(
                       loading: () => const Padding(
                         padding: EdgeInsets.only(top: 100),
-                        child: Center(child: CircularProgressIndicator()),
+                        child: Center(child: AppLoadingIndicator()),
                       ),
                       error: (error, _) =>
                           _errorCard(context, error.toString()),
@@ -86,6 +208,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                                           plan: freePlanConfig,
                                           currentPlanCode:
                                               subscription.subscriptionPlan,
+                                          isBusy: _isProcessing,
                                           onSelect: () => _selectPlan(
                                             context,
                                             ref,
@@ -100,6 +223,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                                           plan: basicPlanConfig,
                                           currentPlanCode:
                                               subscription.subscriptionPlan,
+                                          isBusy: _isProcessing,
                                           onSelect: () => _selectPlan(
                                             context,
                                             ref,
@@ -114,6 +238,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                                           plan: proPlanConfig,
                                           currentPlanCode:
                                               subscription.subscriptionPlan,
+                                          isBusy: _isProcessing,
                                           onSelect: () => _selectPlan(
                                             context,
                                             ref,
@@ -132,6 +257,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                                       plan: freePlanConfig,
                                       currentPlanCode:
                                           subscription.subscriptionPlan,
+                                      isBusy: _isProcessing,
                                       onSelect: () => _selectPlan(
                                         context,
                                         ref,
@@ -144,6 +270,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                                       plan: basicPlanConfig,
                                       currentPlanCode:
                                           subscription.subscriptionPlan,
+                                      isBusy: _isProcessing,
                                       onSelect: () => _selectPlan(
                                         context,
                                         ref,
@@ -156,6 +283,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                                       plan: proPlanConfig,
                                       currentPlanCode:
                                           subscription.subscriptionPlan,
+                                      isBusy: _isProcessing,
                                       onSelect: () => _selectPlan(
                                         context,
                                         ref,
@@ -313,6 +441,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
     BuildContext context, {
     required SubscriptionPlanConfig plan,
     required String currentPlanCode,
+    required bool isBusy,
     required VoidCallback onSelect,
   }) {
     final theme = Theme.of(context);
@@ -380,7 +509,7 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                 width: double.infinity,
                 height: 40,
                 child: FilledButton(
-                  onPressed: isCurrent ? null : onSelect,
+                  onPressed: (isCurrent || isBusy) ? null : onSelect,
                   style: FilledButton.styleFrom(
                     backgroundColor: brandHover,
                     disabledBackgroundColor: brandHover.withValues(alpha: 0.45),
@@ -388,7 +517,11 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Text(isCurrent ? 'Current Plan' : 'Select Plan'),
+                  child: Text(
+                    isCurrent
+                        ? 'Current Plan'
+                        : (isBusy ? 'Processing...' : 'Select Plan'),
+                  ),
                 ),
               ),
             ],
@@ -403,6 +536,8 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
     WidgetRef ref,
     SubscriptionPlanConfig plan,
   ) async {
+    if (_isProcessing) return;
+
     final service = ref.read(ownerSubscriptionServiceProvider);
     final auth = ref.read(firebaseAuthProvider);
     final ownerId = auth.currentUser?.uid;
@@ -416,12 +551,15 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
     }
 
     try {
+      _setProcessing(true);
+
       if (plan.code == 'free') {
         await service.activateFreePlan(ownerId: ownerId);
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Free plan activated successfully.')),
         );
+        _setProcessing(false);
       } else {
         await service.ensureOwnerSubscriptionDoc(
           ownerId: ownerId,
@@ -430,21 +568,33 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
         final intent = await service.createSubscriptionPaymentIntent(
           plan: plan,
         );
+        _activeIntent = intent;
+        _activePlan = plan;
+
+        _razorpay.open({
+          'key': intent.keyId,
+          'order_id': intent.orderId,
+          'amount': intent.amountInPaise,
+          'currency': intent.currency,
+          'name': 'RentDone',
+          'description': '${plan.title} Subscription',
+          'prefill': {'email': email},
+          'notes': {
+            'subscriptionPaymentId': intent.paymentId,
+            'planCode': plan.code,
+          },
+        });
+
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Payment intent created. Order: ${intent.orderId}. Continue in payment flow.',
-            ),
-          ),
-        );
       }
       ref.invalidate(subscriptionProvider);
+      ref.invalidate(tenantListProvider);
     } catch (error) {
+      _setProcessing(false);
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(_friendlyError(error))));
     }
   }
 

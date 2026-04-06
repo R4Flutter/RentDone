@@ -11,6 +11,7 @@ import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_room_details.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
 import 'package:rentdone/features/tenant/presentation/widgets/tenant_glass.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantProfileScreen extends ConsumerStatefulWidget {
   final bool isSetupMode;
@@ -67,9 +68,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
 
     return summaryAsync.when(
       loading: () => _profileScaffold(
-        Center(
-          child: CircularProgressIndicator(color: _ProfileTheme.brand(context)),
-        ),
+        Center(child: AppLoadingIndicator(color: _ProfileTheme.brand(context))),
       ),
       error: (e, _) => _profileScaffold(
         Center(
@@ -89,7 +88,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(
+                    AppLoadingIndicator(
                       strokeWidth: 2.5,
                       color: _ProfileTheme.brand(context),
                     ),
@@ -210,6 +209,30 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                       )
                       .animate(delay: const Duration(milliseconds: 190))
                       .fadeIn(duration: const Duration(milliseconds: 300)),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push('/tenant/privacy-policy'),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: _ProfileTheme.brand(
+                          context,
+                        ).withValues(alpha: 0.35),
+                      ),
+                      foregroundColor: _ProfileTheme.textPrimary(context),
+                      backgroundColor: TenantGlassTheme.elevated(
+                        context,
+                      ).withValues(alpha: 0.84),
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.privacy_tip_outlined),
+                    label: const Text(
+                      'Privacy Policy',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                   const SizedBox(height: 18),
                   OutlinedButton.icon(
                     onPressed: _logout,
@@ -1078,7 +1101,7 @@ class _EditablePersonalDetailsCard extends StatelessWidget {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoadingIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save_rounded),
                 label: Text(isSaving ? 'Saving...' : 'Save Profile'),
@@ -1325,7 +1348,7 @@ class _EditablePropertyAllocationCard extends StatelessWidget {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoadingIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.home_work_rounded),
                 label: Text(isSaving ? 'Saving...' : 'Save Property'),
@@ -1358,7 +1381,7 @@ class _TrustScoreRing extends StatelessWidget {
             SizedBox(
               width: 82,
               height: 82,
-              child: CircularProgressIndicator(
+              child: AppLoadingIndicator(
                 value: value,
                 strokeWidth: 7,
                 backgroundColor: TenantGlassTheme.elevated(

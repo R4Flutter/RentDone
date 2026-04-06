@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:rentdone/core/errors/app_exception.dart';
@@ -103,8 +102,10 @@ class ErrorHandler {
     }
 
     // Network
-    final networkException =
-        NetworkErrorHandler.tryWrap(error, stackTrace: stackTrace);
+    final networkException = NetworkErrorHandler.tryWrap(
+      error,
+      stackTrace: stackTrace,
+    );
     if (networkException != null) return networkException;
 
     // StateError (often thrown by repos for "not found" etc.)
@@ -176,9 +177,7 @@ class ErrorHandler {
         backgroundColor: _colorForCode(ex.code, isDark),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
     );

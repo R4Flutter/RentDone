@@ -56,23 +56,48 @@ class PaymentIntentDto {
   }
 
   factory PaymentIntentDto.fromMap(Map<String, dynamic> data) {
-    final source = data['data'] is Map ? Map<String, dynamic>.from(data['data'] as Map) : data;
+    final source = data['data'] is Map
+        ? Map<String, dynamic>.from(data['data'] as Map)
+        : data;
     return PaymentIntentDto(
       paymentId: (source['paymentId'] ?? source['payment_id'] ?? '').toString(),
       gateway: (source['gateway'] ?? 'razorpay').toString(),
-      amount: _asInt(source['amount'] ?? source['amountInPaise'] ?? source['amount_in_paise'] ?? source['totalPayableInPaise'] ?? source['total_payable_in_paise']),
-      rentAmountInPaise: _asInt(source['rentAmountInPaise'] ?? source['rent_amount_in_paise']),
-      convenienceFeeInPaise: _asInt(source['convenienceFeeInPaise'] ?? source['convenience_fee_in_paise']),
-      totalPayableInPaise: _asInt(source['totalPayableInPaise'] ?? source['total_payable_in_paise']),
-      estimatedGatewayCostInPaise: _asInt(source['estimatedGatewayCostInPaise'] ?? source['estimated_gateway_cost_in_paise']),
-      gatewayPercent: _asDouble(source['gatewayPercent'] ?? source['gateway_percent']),
+      amount: _asInt(
+        source['amount'] ??
+            source['amountInPaise'] ??
+            source['amount_in_paise'] ??
+            source['totalPayableInPaise'] ??
+            source['total_payable_in_paise'],
+      ),
+      rentAmountInPaise: _asInt(
+        source['rentAmountInPaise'] ?? source['rent_amount_in_paise'],
+      ),
+      convenienceFeeInPaise: _asInt(
+        source['convenienceFeeInPaise'] ?? source['convenience_fee_in_paise'],
+      ),
+      totalPayableInPaise: _asInt(
+        source['totalPayableInPaise'] ?? source['total_payable_in_paise'],
+      ),
+      estimatedGatewayCostInPaise: _asInt(
+        source['estimatedGatewayCostInPaise'] ??
+            source['estimated_gateway_cost_in_paise'],
+      ),
+      gatewayPercent: _asDouble(
+        source['gatewayPercent'] ?? source['gateway_percent'],
+      ),
       gstPercent: _asDouble(source['gstPercent'] ?? source['gst_percent']),
       currency: (source['currency'] ?? 'INR').toString(),
-      idempotencyKey: (source['idempotencyKey'] ?? source['idempotency_key'] ?? '').toString(),
+      idempotencyKey:
+          (source['idempotencyKey'] ?? source['idempotency_key'] ?? '')
+              .toString(),
       orderId: _asNullableString(source['orderId'] ?? source['order_id']),
-      clientSecret: _asNullableString(source['clientSecret'] ?? source['client_secret']),
+      clientSecret: _asNullableString(
+        source['clientSecret'] ?? source['client_secret'],
+      ),
       keyId: _asNullableString(source['keyId'] ?? source['key_id']),
-      paymentSessionId: _asNullableString(source['paymentSessionId'] ?? source['payment_session_id']),
+      paymentSessionId: _asNullableString(
+        source['paymentSessionId'] ?? source['payment_session_id'],
+      ),
     );
   }
 

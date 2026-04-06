@@ -15,6 +15,11 @@ describe('firestore rules anti-enumeration guardrails', () => {
     expect(rules).toContain('allow get: if isAuthenticated() && userId == currentUid();');
   });
 
+  it('enforces tenant-only role assignment on users create', () => {
+    expect(rules).toContain('allow create: if isAuthenticated()');
+    expect(rules).toContain("&& request.resource.data.role == 'tenant'");
+  });
+
   it('defines publicProfiles collection with authenticated reads', () => {
     expect(rules).toContain('match /publicProfiles/{userId}');
     expect(rules).toContain('allow get: if isAuthenticated();');

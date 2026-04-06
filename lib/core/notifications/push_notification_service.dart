@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:crypto/crypto.dart';
@@ -78,8 +79,7 @@ class PushNotificationService {
 
         await _syncCurrentToken(uid: user.uid);
       } catch (error, stackTrace) {
-        debugPrint('Push token sync failed on auth change: $error');
-        debugPrint('$stackTrace');
+        AppLogger.error('Push token sync failed on auth change', error: error, stackTrace: stackTrace, tag: 'PushNotifications');
       }
     });
 
@@ -93,15 +93,14 @@ class PushNotificationService {
         }
         await _saveToken(uid: uid, token: token.trim());
       } catch (error, stackTrace) {
-        debugPrint('Push token refresh sync failed: $error');
-        debugPrint('$stackTrace');
+        AppLogger.error('Push token refresh sync failed', error: error, stackTrace: stackTrace, tag: 'PushNotifications');
       }
     });
 
     _foregroundSubscription = FirebaseMessaging.onMessage.listen((
       message,
     ) async {
-      debugPrint('Foreground FCM: ${message.messageId} ${message.data}');
+      AppLogger.debug('Foreground FCM: ${message.messageId}', tag: 'PushNotifications');
       await _showForegroundNotification(message);
     });
 
@@ -252,7 +251,7 @@ class PushNotificationService {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } on FirebaseException catch (error) {
-      debugPrint('Legacy token fallback skipped: ${error.code}');
+      AppLogger.debug('Legacy token fallback skipped: ${error.code}', tag: 'PushNotifications');
     }
   }
 
@@ -269,7 +268,7 @@ class PushNotificationService {
         await batch.commit();
       }
     } on FirebaseException catch (error) {
-      debugPrint('Device token cleanup skipped: ${error.code}');
+      AppLogger.debug('Device token cleanup skipped: ${error.code}', tag: 'PushNotifications');
     }
 
     try {
@@ -278,7 +277,7 @@ class PushNotificationService {
         'fcmTokenUpdatedAt': FieldValue.delete(),
       }, SetOptions(merge: true));
     } on FirebaseException catch (error) {
-      debugPrint('Legacy token cleanup skipped: ${error.code}');
+      AppLogger.debug('Legacy token cleanup skipped: ${error.code}', tag: 'PushNotifications');
     }
 
     _lastKnownToken = null;
@@ -417,7 +416,7 @@ class PushNotificationService {
           }, SetOptions(merge: true));
     } on FirebaseException catch (error) {
       // Snooze is optional UX; ignore permission issues without crashing.
-      debugPrint('Snooze save skipped: ${error.code}');
+      AppLogger.debug('Snooze save skipped: ${error.code}', tag: 'PushNotifications');
     }
   }
 

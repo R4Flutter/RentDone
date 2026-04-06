@@ -1,13 +1,14 @@
 import 'dart:ui';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/core/constants/user_role.dart';
+import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
-class SignupPage extends StatefulWidget {
+class SignupPage extends ConsumerStatefulWidget {
   const SignupPage({
     super.key,
     required this.selectedRole,
@@ -18,10 +19,10 @@ class SignupPage extends StatefulWidget {
   final String phoneNumber;
 
   @override
-  State<SignupPage> createState() => _SignupPageState();
+  ConsumerState<SignupPage> createState() => _SignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage>
+class _SignupPageState extends ConsumerState<SignupPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailController;
@@ -31,7 +32,6 @@ class _SignupPageState extends State<SignupPage>
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isLoading = false;
   String? _authError;
 
   @override
@@ -44,6 +44,13 @@ class _SignupPageState extends State<SignupPage>
       vsync: this,
       duration: const Duration(seconds: 16),
     )..repeat(reverse: true);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final notifier = ref.read(authProvider.notifier);
+      notifier.setSelectedRole(widget.selectedRole);
+      notifier.setMode(registerMode: true);
+    });
   }
 
   @override
@@ -59,6 +66,7 @@ class _SignupPageState extends State<SignupPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = OwnerDashboardColors.isDark(context);
+    final authState = ref.watch(authProvider);
 
     return Scaffold(
       backgroundColor: OwnerDashboardColors.pageBackground(context),
@@ -108,7 +116,7 @@ class _SignupPageState extends State<SignupPage>
                           Row(
                             children: [
                               IconButton(
-                                onPressed: _isLoading
+                                onPressed: authState.isLoading
                                     ? null
                                     : () => context.goNamed('roleSelection'),
                                 icon: Icon(
@@ -135,7 +143,7 @@ class _SignupPageState extends State<SignupPage>
                           const SizedBox(height: 10),
                           _brandBlock(theme, isDark),
                           const SizedBox(height: 18),
-                          _formCard(theme, isDark),
+                          _formCard(theme, isDark, authState.isLoading),
                         ],
                       ),
                     ),
@@ -218,7 +226,7 @@ class _SignupPageState extends State<SignupPage>
     );
   }
 
-  Widget _formCard(ThemeData theme, bool isDark) {
+  Widget _formCard(ThemeData theme, bool isDark, bool isLoading) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
       child: BackdropFilter(
@@ -307,7 +315,7 @@ class _SignupPageState extends State<SignupPage>
                   obscureText: _obscureConfirmPassword,
                   validator: _validateConfirmPassword,
                   onFieldSubmitted: (_) {
-                    if (!_isLoading) _onSignupPressed();
+                    if (!isLoading) _onSignupPressed();
                   },
                   suffix: IconButton(
                     onPressed: () {
@@ -345,24 +353,59 @@ class _SignupPageState extends State<SignupPage>
                           ? AppColors.white
                           : AppColors.cFF0F172A,
                     ),
-                    onPressed: _isLoading ? null : _onSignupPressed,
-                    icon: _isLoading
+                    onPressed: isLoading ? null : _onSignupPressed,
+                    icon: isLoading
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: AppLoadingIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.person_add_alt_1_rounded),
                     label: Text(
-                      _isLoading ? 'Creating Account...' : 'Create Account',
+                      isLoading ? 'Creating Account...' : 'Create Account',
                       style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: isLoading ? null : _onGoogleSignupPressed,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: OwnerDashboardColors.brandPrimary(
+                          context,
+                        ).withValues(alpha: 0.5),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text(
+                          'G',
+                          style: TextStyle(
+                            color: Color(0xFF4285F4),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Sign up with Google',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 10),
                 Center(
                   child: TextButton(
-                    onPressed: _isLoading
+                    onPressed: isLoading
                         ? null
                         : () => context.go(
                             '/login?role=${widget.selectedRole.name}&phone=${widget.phoneNumber}',
@@ -472,7 +515,7 @@ class _SignupPageState extends State<SignupPage>
   String? _validatePassword(String? input) {
     final value = input ?? '';
     if (value.isEmpty) return 'Password is required';
-    if (value.length < 6) return 'Password must be at least 6 characters';
+    if (value.length < 12) return 'Password must be at least 12 characters';
     return null;
   }
 
@@ -486,75 +529,83 @@ class _SignupPageState extends State<SignupPage>
   }
 
   Future<void> _onSignupPressed() async {
+    if (widget.selectedRole == UserRole.owner) {
+      setState(() {
+        _authError =
+            'Owner accounts are provisioned by support. Please sign in with an existing owner account.';
+      });
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
-    if (_isLoading) return;
+    final authState = ref.read(authProvider);
+    if (authState.isLoading) return;
 
     setState(() {
-      _isLoading = true;
       _authError = null;
     });
 
     try {
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
+      final user = await ref
+          .read(authProvider.notifier)
+          .continueWithEmail(
             email: _emailController.text.trim(),
             password: _passwordController.text,
+            phone: widget.phoneNumber,
           );
-      final user = credential.user;
-      if (user == null) {
-        throw FirebaseAuthException(code: 'unknown', message: 'Signup failed.');
-      }
-
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'userId': user.uid,
-        'email': _emailController.text.trim(),
-        'phoneNumber': widget.phoneNumber,
-        'phone': widget.phoneNumber,
-        'role': 'owner',
-        'notifications': {'rent_due': true, 'payment_received': true},
-        'createdAt': FieldValue.serverTimestamp(),
-        'tenantScore': 0,
-      }, SetOptions(merge: true));
 
       if (!mounted) return;
-      context.goNamed('ownerDashboard');
-    } on FirebaseAuthException catch (error) {
+      _navigateByRole(UserRoleX.tryParse(user.role) ?? widget.selectedRole);
+    } catch (error) {
       if (!mounted) return;
       setState(() {
-        _authError = _mapAuthError(error);
+        _authError = _normalizeErrorMessage(error);
       });
-    } on FirebaseException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _authError =
-            error.message ?? 'Could not create account. Please try again.';
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _authError = 'Could not create account. Please try again.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 
-  String _mapAuthError(FirebaseAuthException error) {
-    switch (error.code) {
-      case 'email-already-in-use':
-        return 'This email is already in use.';
-      case 'invalid-email':
-        return 'Enter a valid email address.';
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'network-request-failed':
-        return 'Network error. Check your connection and try again.';
-      default:
-        return error.message ?? 'Could not create account. Please try again.';
+  Future<void> _onGoogleSignupPressed() async {
+    if (widget.selectedRole == UserRole.owner) {
+      setState(() {
+        _authError =
+            'Owner accounts are provisioned by support. Please sign in with an existing owner account.';
+      });
+      return;
     }
+
+    final authState = ref.read(authProvider);
+    if (authState.isLoading) return;
+
+    setState(() => _authError = null);
+
+    try {
+      final user = await ref
+          .read(authProvider.notifier)
+          .continueWithGoogle(phone: widget.phoneNumber);
+      if (!mounted) return;
+      _navigateByRole(UserRoleX.tryParse(user.role) ?? widget.selectedRole);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _authError = _normalizeErrorMessage(error));
+    }
+  }
+
+  String _normalizeErrorMessage(Object error) {
+    final raw = error.toString();
+    if (raw.startsWith('Bad state: ')) {
+      return raw.substring('Bad state: '.length).trim();
+    }
+    if (raw.startsWith('Exception: ')) {
+      return raw.substring('Exception: '.length).trim();
+    }
+    return raw;
+  }
+
+  void _navigateByRole(UserRole role) {
+    if (role == UserRole.owner) {
+      context.goNamed('ownerDashboard');
+      return;
+    }
+    context.goNamed('tenantDashboard');
   }
 }

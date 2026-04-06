@@ -59,3 +59,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Cloud Functions compiled output
+functions/lib/
+
+# Firebase Emulator logs and data
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
+pubsub-debug.log
+.firebase/
+
+# Dart code generation (if ever added)
+*.g.dart
+*.freezed.dart

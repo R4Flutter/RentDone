@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/providers/owner_tenants_provider.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/ui_models/tenant_model.dart';
 import 'package:rentdone/shared/widgets/profile_picture_avatar.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class ManageTenantsScreen extends ConsumerStatefulWidget {
   const ManageTenantsScreen({super.key});
@@ -125,13 +126,12 @@ class _ManageTenantsScreenState extends ConsumerState<ManageTenantsScreen> {
                   const SizedBox(height: 10),
                   Expanded(
                     child: tenantsAsync.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                      loading: () => const Center(child: AppLoadingIndicator()),
                       error: (e, _) => Center(child: Text('Error: $e')),
                       data: (tenants) {
                         return propertiesAsync.when(
                           loading: () =>
-                              const Center(child: CircularProgressIndicator()),
+                              const Center(child: AppLoadingIndicator()),
                           error: (e, _) =>
                               Center(child: Text('Property load error: $e')),
                           data: (properties) {

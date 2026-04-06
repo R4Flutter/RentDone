@@ -56,15 +56,18 @@ const ABUSE_LIMITS = {
 const asString = (value) => String(value ?? "").trim();
 const asInt = (value) => {
     const parsed = Number(value ?? 0);
-    if (!Number.isFinite(parsed))
+    if (!Number.isFinite(parsed)) {
         return 0;
+    }
     return Math.trunc(parsed);
 };
 const clampInt = (value, min, max) => {
-    if (value < min)
+    if (value < min) {
         return min;
-    if (value > max)
+    }
+    if (value > max) {
         return max;
+    }
     return value;
 };
 const actorRoleFromToken = (request) => {
@@ -118,8 +121,8 @@ const buildPaymentQuote = (amountInRupees) => {
 };
 const hashValue = (value) => (0, node_crypto_1.createHash)("sha256").update(value).digest("hex");
 const getRazorpayCredentialsOrThrow = () => {
-    const keyId = asString(process.env.RAZORPAY_KEY_ID);
-    const keySecret = asString(process.env.RAZORPAY_KEY_SECRET);
+    const keyId = asString(process.env.RAZORPAY_KEY);
+    const keySecret = asString(process.env.RAZORPAY_SECRET);
     if (!keyId || !keySecret) {
         throw new https_1.HttpsError("failed-precondition", "razorpay-secret-missing");
     }
@@ -129,8 +132,9 @@ const getFirstHopIp = (request) => {
     const forwardedFor = request.rawRequest.headers["x-forwarded-for"];
     if (typeof forwardedFor === "string" && forwardedFor.trim()) {
         const firstHop = forwardedFor.split(",")[0]?.trim();
-        if (firstHop)
+        if (firstHop) {
             return firstHop;
+        }
     }
     const fallbackIp = asString(request.rawRequest.ip);
     return fallbackIp || "unknown";
@@ -389,7 +393,7 @@ const createRentPaymentIntentInternal = async (uid, data) => {
         return {
             paymentId: existingDoc.id,
             orderId: asString(existingData.razorpayOrderId),
-            keyId: asString(process.env.RAZORPAY_KEY_ID),
+            keyId: asString(process.env.RAZORPAY_KEY),
             amountInPaise: asInt(existingData.amountInPaise),
             rentAmountInPaise: asInt(existingData.rentAmountInPaise),
             convenienceFeeInPaise: asInt(existingData.convenienceFeeInPaise),
@@ -507,7 +511,7 @@ const verifyRentPaymentInternal = async (uid, data) => {
     if (uid !== ownerId && uid !== tenantId) {
         throw new https_1.HttpsError("permission-denied", "unauthorized");
     }
-    if (asString(payment.status).toLowerCase() == "paid") {
+    if (asString(payment.status).toLowerCase() === "paid") {
         throw new https_1.HttpsError("already-exists", "already-verified");
     }
     try {
@@ -529,16 +533,21 @@ const verifyRentPaymentInternal = async (uid, data) => {
     }
     catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (msg === "payment-not-found")
+        if (msg === "payment-not-found") {
             throw new https_1.HttpsError("not-found", "payment-not-found");
-        if (msg === "unauthorized")
+        }
+        if (msg === "unauthorized") {
             throw new https_1.HttpsError("permission-denied", "unauthorized");
-        if (msg === "order-mismatch")
+        }
+        if (msg === "order-mismatch") {
             throw new https_1.HttpsError("failed-precondition", "order-mismatch");
-        if (msg === "invalid-signature")
+        }
+        if (msg === "invalid-signature") {
             throw new https_1.HttpsError("permission-denied", "invalid-signature");
-        if (msg.startsWith("payment-not-captured"))
+        }
+        if (msg.startsWith("payment-not-captured")) {
             throw new https_1.HttpsError("failed-precondition", msg);
+        }
         if (msg.startsWith("razorpay-") || msg.startsWith("razorpay-fetch-failed")) {
             throw new https_1.HttpsError("failed-precondition", msg);
         }
@@ -828,7 +837,7 @@ exports.quotePayment = (0, https_1.onCall)({
 exports.createOwnerRazorpayPaymentIntent = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await assertActorRoleOrThrow(request, uid, "owner");
@@ -838,7 +847,7 @@ exports.createOwnerRazorpayPaymentIntent = (0, https_1.onCall)({
 exports.createPaymentIntent = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await enforceAbuseLimit(request, uid, "payment_create");
@@ -847,7 +856,7 @@ exports.createPaymentIntent = (0, https_1.onCall)({
 exports.createPayment = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await enforceAbuseLimit(request, uid, "payment_create");
@@ -865,7 +874,7 @@ exports.createPayment = (0, https_1.onCall)({
 exports.verifyOwnerRazorpayPayment = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await assertActorRoleOrThrow(request, uid, "owner");
@@ -875,7 +884,7 @@ exports.verifyOwnerRazorpayPayment = (0, https_1.onCall)({
 exports.verifyPayment = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await enforceAbuseLimit(request, uid, "payment_verify");
@@ -884,7 +893,7 @@ exports.verifyPayment = (0, https_1.onCall)({
 exports.confirmRazorpayPayment = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await enforceAbuseLimit(request, uid, "payment_verify");
@@ -1043,7 +1052,7 @@ exports.activateOwnerFreeSubscription = (0, https_1.onCall)({
 exports.createOwnerSubscriptionPaymentIntent = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await assertActorRoleOrThrow(request, uid, "owner");
@@ -1065,7 +1074,7 @@ exports.createOwnerSubscriptionPaymentIntent = (0, https_1.onCall)({
             subscriptionPaymentId: existingDoc.id,
             paymentId: existingDoc.id,
             orderId: asString(data.razorpayOrderId),
-            keyId: asString(process.env.RAZORPAY_KEY_ID),
+            keyId: asString(process.env.RAZORPAY_KEY),
             amountInPaise: asInt(data.amountInPaise),
             currency: asString(data.currency || DEFAULT_CURRENCY),
             planCode: plan.code,
@@ -1111,7 +1120,7 @@ exports.createOwnerSubscriptionPaymentIntent = (0, https_1.onCall)({
 exports.verifyOwnerSubscriptionPayment = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await assertActorRoleOrThrow(request, uid, "owner");
@@ -1126,8 +1135,9 @@ exports.verifyOwnerSubscriptionPayment = (0, https_1.onCall)({
     }
     const paymentRef = firebase_1.db.collection(OWNER_SUBSCRIPTION_COLLECTION).doc(subscriptionPaymentId);
     const snap = await paymentRef.get();
-    if (!snap.exists)
+    if (!snap.exists) {
         throw new https_1.HttpsError("not-found", "payment-not-found");
+    }
     const data = snap.data() ?? {};
     const actorUid = asString(data.actorUid);
     const ownerId = asString(data.ownerId);
@@ -1183,7 +1193,7 @@ exports.verifyOwnerSubscriptionPayment = (0, https_1.onCall)({
 exports.createTenantSubscriptionPaymentIntent = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await assertActorRoleOrThrow(request, uid, "tenant");
@@ -1204,7 +1214,7 @@ exports.createTenantSubscriptionPaymentIntent = (0, https_1.onCall)({
         return {
             subscriptionPaymentId: existingDoc.id,
             orderId: asString(data.razorpayOrderId),
-            keyId: asString(process.env.RAZORPAY_KEY_ID),
+            keyId: asString(process.env.RAZORPAY_KEY),
             amountInPaise: asInt(data.amountInPaise),
             currency: asString(data.currency || DEFAULT_CURRENCY),
             planCode: plan.code,
@@ -1251,7 +1261,7 @@ exports.createTenantSubscriptionPaymentIntent = (0, https_1.onCall)({
 exports.verifyTenantSubscriptionPayment = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const uid = requireAuthUid(request);
     await assertActorRoleOrThrow(request, uid, "tenant");
@@ -1266,8 +1276,9 @@ exports.verifyTenantSubscriptionPayment = (0, https_1.onCall)({
     }
     const paymentRef = firebase_1.db.collection(TENANT_SUBSCRIPTION_COLLECTION).doc(subscriptionPaymentId);
     const snap = await paymentRef.get();
-    if (!snap.exists)
+    if (!snap.exists) {
         throw new https_1.HttpsError("not-found", "payment-not-found");
+    }
     const data = snap.data() ?? {};
     const actorUid = asString(data.actorUid);
     const tenantId = asString(data.tenantId);

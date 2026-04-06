@@ -22,7 +22,12 @@ class AppCheckService {
     } catch (e, st) {
       // In case App Check cannot be activated (e.g., during local testing),
       // we log the error but do not crash the app.
-      AppLogger.error('Failed to activate App Check', error: e, stackTrace: st, tag: 'AppCheckService');
+      AppLogger.error(
+        'Failed to activate App Check',
+        error: e,
+        stackTrace: st,
+        tag: 'AppCheckService',
+      );
     }
   }
 }

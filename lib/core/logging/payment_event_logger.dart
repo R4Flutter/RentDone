@@ -3,9 +3,11 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
 class PaymentEventLogger {
-  PaymentEventLogger({FirebaseAnalytics? analytics, FirebaseCrashlytics? crashlytics})
-      : _analytics = analytics ?? FirebaseAnalytics.instance,
-        _crashlytics = crashlytics ?? FirebaseCrashlytics.instance;
+  PaymentEventLogger({
+    FirebaseAnalytics? analytics,
+    FirebaseCrashlytics? crashlytics,
+  }) : _analytics = analytics ?? FirebaseAnalytics.instance,
+       _crashlytics = crashlytics ?? FirebaseCrashlytics.instance;
 
   final FirebaseAnalytics _analytics;
   final FirebaseCrashlytics _crashlytics;

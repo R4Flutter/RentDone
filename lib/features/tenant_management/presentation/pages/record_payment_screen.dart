@@ -8,6 +8,7 @@ import 'package:rentdone/features/tenant_management/presentation/providers/payme
 import 'package:rentdone/features/tenant_management/presentation/providers/tenant_providers.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/core/config/app_config_service.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class RecordPaymentScreen extends ConsumerStatefulWidget {
   final String tenantId;
@@ -476,7 +477,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
                           ? SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(
+                              child: AppLoadingIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   scheme.onPrimary,
@@ -499,7 +500,7 @@ class _RecordPaymentScreenState extends ConsumerState<RecordPaymentScreen> {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppLoadingIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),
     );

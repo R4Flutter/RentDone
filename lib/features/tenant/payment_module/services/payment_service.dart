@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
-import 'package:rentdone/features/tenant/payment_module/models/payment_enums.dart';
 import 'package:rentdone/features/tenant/payment_module/models/payment_record_model.dart';
 import 'package:rentdone/features/tenant/payment_module/models/payment_summary_model.dart';
 import 'package:rentdone/features/tenant/payment_module/models/tenant_model.dart';
@@ -13,7 +11,6 @@ class PaymentService {
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
-  final Uuid _uuid = const Uuid();
 
   DateTime get _monthStart {
     final now = DateTime.now();
@@ -87,6 +84,7 @@ class PaymentService {
   }
 
   Stream<PaymentSummaryModel> watchCurrentMonthSummary(String tenantId) {
+    // ignore: close_sinks – closed via onCancel below
     final controller = StreamController<PaymentSummaryModel>();
 
     TenantModel? tenant;

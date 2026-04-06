@@ -24,6 +24,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
   @override
   Stream<DashboardSummary> watchDashboardSummary() {
+    // ignore: close_sinks – closed via onCancel below
     final controller = StreamController<DashboardSummary>();
 
     List<DashboardPropertyDto> latestProperties = const [];
@@ -74,6 +75,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
   @override
   Stream<List<AppMessage>> watchRecentMessages({int limit = 6}) {
+    // ignore: close_sinks – closed via onCancel below
     final controller = StreamController<List<AppMessage>>();
 
     List<AppMessage> latestMessages = const [];

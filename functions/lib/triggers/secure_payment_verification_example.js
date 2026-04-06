@@ -8,8 +8,9 @@ const REGION = "asia-south1";
 const asString = (value) => String(value ?? "").trim();
 const asInt = (value) => {
     const parsed = Number(value ?? 0);
-    if (!Number.isFinite(parsed))
+    if (!Number.isFinite(parsed)) {
         return 0;
+    }
     return Math.trunc(parsed);
 };
 /**
@@ -19,7 +20,7 @@ const asInt = (value) => {
 exports.verifyPaymentSecureExample = (0, https_1.onCall)({
     region: REGION,
     enforceAppCheck: true,
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY", "RAZORPAY_SECRET"],
 }, async (request) => {
     const callerUid = request.auth?.uid;
     if (!callerUid) {
@@ -48,8 +49,8 @@ exports.verifyPaymentSecureExample = (0, https_1.onCall)({
     if (!storedOrderId || storedOrderId !== razorpayOrderId) {
         throw new https_1.HttpsError("failed-precondition", "order-mismatch");
     }
-    const keyId = asString(process.env.RAZORPAY_KEY_ID);
-    const keySecret = asString(process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET);
+    const keyId = asString(process.env.RAZORPAY_KEY);
+    const keySecret = asString(process.env.RAZORPAY_SECRET);
     if (!keyId || !keySecret) {
         throw new https_1.HttpsError("failed-precondition", "razorpay-secret-missing");
     }

@@ -28,7 +28,9 @@ class TenantPropertyMarker extends StatelessWidget {
             alignment: Alignment.center,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: selected ? theme.colorScheme.primary : theme.colorScheme.surface,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surface,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -74,7 +76,9 @@ class TenantPropertyMarker extends StatelessWidget {
             child: CustomPaint(
               size: const Size(16, 12),
               painter: _TrianglePainter(
-                color: selected ? theme.colorScheme.primary : theme.colorScheme.surface,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surface,
                 borderColor: selected
                     ? theme.colorScheme.primary
                     : theme.colorScheme.primary.withValues(alpha: 0.35),

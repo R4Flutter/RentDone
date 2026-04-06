@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/providers/tenant_payment_history_provider.dart';
 import 'package:rentdone/features/owner/owner_payment/presentation/widgets/property_card.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class PaymentsScreen extends ConsumerStatefulWidget {
   const PaymentsScreen({
@@ -44,7 +45,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             propertiesAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.only(top: 100),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: AppLoadingIndicator()),
               ),
               error: (error, _) => _ErrorState(
                 message: error.toString(),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 /// Animated payment processing overlay with glassmorphism design
 class PaymentProcessingOverlay extends StatefulWidget {
@@ -130,7 +131,7 @@ class _PaymentProcessingOverlayState extends State<PaymentProcessingOverlay>
                                   ),
                                   child: const Padding(
                                     padding: EdgeInsets.all(3),
-                                    child: CircularProgressIndicator(
+                                    child: AppLoadingIndicator(
                                       strokeWidth: 2,
                                       valueColor: AlwaysStoppedAnimation<Color>(
                                         Colors.white,

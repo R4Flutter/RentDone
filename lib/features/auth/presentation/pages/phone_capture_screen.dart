@@ -207,10 +207,36 @@ class _PhoneCapturePageState extends State<PhoneCapturePage>
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Enter your 10-digit Indian mobile number to continue securely.',
+                                  'Enter your 10-digit Indian mobile number to continue.',
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: textSecondary,
                                     height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: brand.withValues(
+                                      alpha: isDark ? 0.20 : 0.12,
+                                    ),
+                                    border: Border.all(
+                                      color: brand.withValues(
+                                        alpha: isDark ? 0.34 : 0.22,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Free mode: no paid SMS OTP is used. Phone format is validated and account security is enforced by email/password or Google sign-in plus email verification.',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: textPrimary,
+                                      height: 1.35,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 24),

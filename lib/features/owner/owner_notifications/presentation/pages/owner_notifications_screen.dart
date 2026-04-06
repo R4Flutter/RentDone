@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/owner/owner_notifications/presentation/providers/owner_notifications_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class OwnerNotificationsScreen extends ConsumerWidget {
   const OwnerNotificationsScreen({super.key});
@@ -14,7 +15,7 @@ class OwnerNotificationsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications & Alerts')),
       body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppLoadingIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (messages) {
           if (messages.isEmpty) {

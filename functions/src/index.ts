@@ -1,5 +1,5 @@
 export { onPaymentCreated } from "./triggers/paymentTrigger";
-export { syncUserRoleToClaims, resyncMyRoleClaim } from "./triggers/userRoleSyncTrigger";
+export { syncUserRoleToClaims, resyncMyRoleClaim, assignUserRole } from "./triggers/userRoleSyncTrigger";
 export { sendRentDueReminders } from "./schedulers/rentReminderScheduler";
 export { sendTenantCheaperPropertyAlerts } from "./schedulers/tenantCheaperPropertyAlertScheduler";
 export { registerDeviceToken, unregisterDeviceToken } from "./triggers/tokenCallable";

@@ -14,6 +14,7 @@ import 'package:rentdone/core/storage/document_cache_service.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_document.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantDocumentsScreen extends ConsumerStatefulWidget {
   const TenantDocumentsScreen({super.key});
@@ -454,8 +455,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen>
     final docsAsync = docsState.documents;
 
     return summaryAsync.when(
-      loading: () =>
-          _buildScaffold(const Center(child: CircularProgressIndicator())),
+      loading: () => _buildScaffold(const Center(child: AppLoadingIndicator())),
       error: (error, _) => _buildScaffold(
         Center(
           child: Text(
@@ -468,9 +468,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen>
         final tenantId = summary.tenantId;
         if (tenantId.isEmpty) {
           _startAutoSyncIfNeeded();
-          return _buildScaffold(
-            const Center(child: CircularProgressIndicator()),
-          );
+          return _buildScaffold(const Center(child: AppLoadingIndicator()));
         }
 
         _stopAutoSync();
@@ -531,7 +529,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen>
                 if (docsAsync.isLoading || docsState.isLoadingMore)
                   const Padding(
                     padding: EdgeInsets.all(20),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: AppLoadingIndicator()),
                   ),
                 if (docsAsync.hasError)
                   Padding(

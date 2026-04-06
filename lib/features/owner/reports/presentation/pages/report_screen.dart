@@ -12,6 +12,7 @@ import 'package:rentdone/features/owner/reports/domain/entities/report_data.dart
 import 'package:rentdone/features/owner/reports/domain/entities/report_filter.dart';
 import 'package:rentdone/features/owner/reports/presentation/providers/report_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -59,7 +60,7 @@ class ReportsScreen extends ConsumerWidget {
                   if (state.isLoading && reportData == null)
                     const Padding(
                       padding: EdgeInsets.only(top: 24),
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Center(child: AppLoadingIndicator()),
                     )
                   else if (state.error != null && reportData == null)
                     _ErrorCard(message: state.error!, onRetry: notifier.reload)
@@ -351,7 +352,7 @@ class _Header extends StatelessWidget {
                     ? const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoadingIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.picture_as_pdf_rounded),
                 label: const Text('Export PDF'),

@@ -15,8 +15,9 @@ const MIN_SAVINGS_RUPEES = 100;
 const asString = (value) => String(value ?? "").trim();
 const asInt = (value) => {
     const parsed = Number(value ?? 0);
-    if (!Number.isFinite(parsed))
+    if (!Number.isFinite(parsed)) {
         return 0;
+    }
     return Math.trunc(parsed);
 };
 const inr = (value) => new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
@@ -40,12 +41,14 @@ const estimatePropertyRent = (data) => {
     const roomsRaw = Array.isArray(data.rooms) ? data.rooms : [];
     let best = Number.MAX_SAFE_INTEGER;
     for (const room of roomsRaw) {
-        if (!room || typeof room !== "object")
+        if (!room || typeof room !== "object") {
             continue;
+        }
         const map = room;
         const occupied = map.isOccupied === true;
-        if (occupied)
+        if (occupied) {
             continue;
+        }
         const roomRent = asInt(map.rentAmount ?? map.monthlyRent ?? map.pricePerMonth ?? map.price);
         if (roomRent > 0 && roomRent < best) {
             best = roomRent;
@@ -55,23 +58,27 @@ const estimatePropertyRent = (data) => {
 };
 const getVacantRooms = (data) => {
     const directVacant = asInt(data.vacantRooms);
-    if (directVacant > 0)
+    if (directVacant > 0) {
         return directVacant;
+    }
     const totalRooms = asInt(data.totalRooms);
     const roomsRaw = Array.isArray(data.rooms) ? data.rooms : [];
     if (roomsRaw.length > 0) {
         let occupied = 0;
         for (const room of roomsRaw) {
-            if (!room || typeof room !== "object")
+            if (!room || typeof room !== "object") {
                 continue;
+            }
             const map = room;
-            if (map.isOccupied === true)
+            if (map.isOccupied === true) {
                 occupied += 1;
+            }
         }
         return Math.max(0, roomsRaw.length - occupied);
     }
-    if (totalRooms <= 0)
+    if (totalRooms <= 0) {
         return 0;
+    }
     return totalRooms;
 };
 const findCheaperCandidate = async (cityKey, tenantRent) => {
@@ -85,16 +92,20 @@ const findCheaperCandidate = async (cityKey, tenantRent) => {
     for (const doc of snapshot.docs) {
         const data = doc.data();
         const vacantRooms = getVacantRooms(data);
-        if (vacantRooms <= 0)
+        if (vacantRooms <= 0) {
             continue;
+        }
         const rent = estimatePropertyRent(data);
-        if (rent <= 0)
+        if (rent <= 0) {
             continue;
-        if (rent >= tenantRent)
+        }
+        if (rent >= tenantRent) {
             continue;
+        }
         const savings = tenantRent - rent;
-        if (savings < MIN_SAVINGS_RUPEES)
+        if (savings < MIN_SAVINGS_RUPEES) {
             continue;
+        }
         if (!best || rent < best.rent) {
             best = { rent, propertyId: doc.id };
         }
@@ -135,25 +146,30 @@ exports.sendTenantCheaperPropertyAlerts = (0, scheduler_1.onSchedule)({
                 const tenantId = tenantDoc.id;
                 const tenantUserId = asString(tenant.authUid) || tenantId;
                 const tenantRent = asInt(tenant.rentAmount ?? tenant.monthlyRent);
-                if (!tenantUserId || tenantRent <= 0)
+                if (!tenantUserId || tenantRent <= 0) {
                     continue;
+                }
                 const cityRaw = tenant.city ?? tenant.currentCity ?? tenant.propertyCity ?? "";
                 const cityKey = (0, cityKey_1.normalizeCityKey)(tenant.cityKey ?? cityRaw);
-                if (!cityKey)
+                if (!cityKey) {
                     continue;
+                }
                 const city = asString(tenant.city ?? tenant.currentCity ?? tenant.propertyCity ?? cityKey);
                 // 1) Validate candidate_property_found
                 const candidate = await findCheaperCandidate(cityKey, tenantRent);
-                if (!candidate)
+                if (!candidate) {
                     continue;
+                }
                 // 2) Validate notifications_enabled
                 const notificationsEnabled = await isNotificationsEnabled(tenantUserId);
-                if (!notificationsEnabled)
+                if (!notificationsEnabled) {
                     continue;
+                }
                 // 3) Validate has_valid_token
                 const tokenBundle = await (0, tokenService_1.getUserDeviceTokens)(tenantUserId);
-                if (tokenBundle.tokens.length === 0)
+                if (tokenBundle.tokens.length === 0) {
                     continue;
+                }
                 // 4) Reserve event only after all non-mutating validations pass
                 eventId = `cheaper_property_${tenantId}_${dateBucket}`;
                 const reserved = await (0, notificationService_1.reserveNotificationEvent)(eventId, {
@@ -168,8 +184,9 @@ exports.sendTenantCheaperPropertyAlerts = (0, scheduler_1.onSchedule)({
                     propertyId: candidate.propertyId,
                     validatedAt: firebase_1.FieldValue.serverTimestamp(),
                 });
-                if (!reserved)
+                if (!reserved) {
                     continue;
+                }
                 eventReserved = true;
                 // 5) Enforce and consume rate-limit only after reservation success
                 const withinRateLimit = await (0, rateLimitService_1.checkAndIncrementRateLimit)(tenantUserId, "CHEAPER_PROPERTY_ALERT");

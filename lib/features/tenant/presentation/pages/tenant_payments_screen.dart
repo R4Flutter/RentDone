@@ -19,6 +19,7 @@ import 'package:rentdone/features/tenant/data/models/tenant_owner_details.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_room_details.dart';
 import 'package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantPaymentsScreen extends ConsumerStatefulWidget {
   const TenantPaymentsScreen({super.key});
@@ -516,7 +517,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     return summaryAsync.when(
       loading: () => _PageScaffold(
         child: Center(
-          child: CircularProgressIndicator(
+          child: AppLoadingIndicator(
             color: OwnerDashboardColors.brandPrimary(context),
           ),
         ),
@@ -751,7 +752,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                       SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(
+                        child: AppLoadingIndicator(
                           strokeWidth: 2.2,
                           color: OwnerDashboardColors.brandPrimary(context),
                         ),

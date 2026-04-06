@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../exceptions/document_upload_exceptions.dart';
@@ -121,7 +121,7 @@ class FirebaseDocumentStorageService {
 
     final sourceBytes = await file.length();
     if (sourceBytes > _maxSourceFileSizeBytes) {
-      throw StorageUploadException(
+      throw const StorageUploadException(
         'File too large. Maximum allowed source size is 12MB.',
       );
     }
@@ -165,15 +165,12 @@ class FirebaseDocumentStorageService {
     final storagePath =
         'images/users/$userId/tenants/$tenantId/documents/${timestamp}_$safeName';
 
-    if (kDebugMode) {
-      debugPrint('--- Firebase Storage Upload Debug ---');
-      debugPrint('Bucket: ${_storage.bucket}');
-      debugPrint('StoragePath: $storagePath');
-      debugPrint('File: ${file.path}');
-      debugPrint('Source Size: ${sourceBytes / 1024} KB');
-      debugPrint('Upload Size: ${uploadBytes / 1024} KB');
-      debugPrint('--------------------------------');
-    }
+    AppLogger.debug(
+      'Storage Upload — Bucket: ${_storage.bucket}, Path: $storagePath, '
+      'Source: ${(sourceBytes / 1024).toStringAsFixed(1)} KB, '
+      'Upload: ${(uploadBytes / 1024).toStringAsFixed(1)} KB',
+      tag: 'StorageService',
+    );
 
     try {
       String downloadUrl;
@@ -191,11 +188,10 @@ class FirebaseDocumentStorageService {
           rethrow;
         }
 
-        if (kDebugMode) {
-          debugPrint(
-            'Primary bucket upload failed (${_storage.bucket}); retrying fallback bucket ${fallbackStorage.bucket}',
-          );
-        }
+        AppLogger.warning(
+          'Primary bucket upload failed (${_storage.bucket}); retrying fallback bucket ${fallbackStorage.bucket}',
+          tag: 'StorageService',
+        );
 
         downloadUrl = await _uploadAndGetUrl(
           storage: fallbackStorage,

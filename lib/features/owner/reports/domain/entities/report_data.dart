@@ -1,8 +1,5 @@
 class ReportPropertyOption {
-  const ReportPropertyOption({
-    required this.id,
-    required this.name,
-  });
+  const ReportPropertyOption({required this.id, required this.name});
 
   final String id;
   final String name;
@@ -73,20 +70,14 @@ class OverdueTenantReport {
 }
 
 class MonthlyCollectionPoint {
-  const MonthlyCollectionPoint({
-    required this.label,
-    required this.amount,
-  });
+  const MonthlyCollectionPoint({required this.label, required this.amount});
 
   final String label;
   final int amount;
 }
 
 class PaymentMethodBreakdown {
-  const PaymentMethodBreakdown({
-    required this.method,
-    required this.amount,
-  });
+  const PaymentMethodBreakdown({required this.method, required this.amount});
 
   final String method;
   final int amount;

@@ -10,6 +10,7 @@ import 'package:rentdone/features/auth/presentation/providers/auth_notifier.dart
 import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
 import 'package:rentdone/features/auth/presentation/providers/auth_state.dart';
 import 'package:rentdone/features/auth/presentation/widgets/forgot_password_dialog.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({
@@ -389,16 +390,31 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   child: TextButton(
                     onPressed: authState.isLoading
                         ? null
-                        : () => context.go(
-                            '/signup?role=${widget.selectedRole.name}&phone=${widget.phoneNumber}',
-                          ),
+                        : () {
+                            if (widget.selectedRole == UserRole.owner) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Owner accounts are provisioned by support. Please sign in or contact support.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            context.go(
+                              '/signup?role=${widget.selectedRole.name}&phone=${widget.phoneNumber}',
+                            );
+                          },
                     style: TextButton.styleFrom(
                       foregroundColor: isDark
                           ? AppTheme.pureWhite
                           : AppColors.black,
                     ),
-                    child: const Text(
-                      'Create account',
+                    child: Text(
+                      widget.selectedRole == UserRole.owner
+                          ? 'Need owner access? Contact support'
+                          : 'Create account',
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -511,7 +527,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
+                        child: AppLoadingIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             AppColors.white,
@@ -640,7 +656,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
   String? _validatePassword(String? input) {
     final value = input ?? '';
     if (value.isEmpty) return 'Password is required';
-    if (value.length < 6) return 'Password must be at least 6 characters';
+    if (value.length < 12) return 'Password must be at least 12 characters';
     return null;
   }
 

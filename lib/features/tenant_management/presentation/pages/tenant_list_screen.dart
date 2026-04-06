@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/tenant_management/presentation/providers/tenant_providers.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantListScreen extends ConsumerStatefulWidget {
   const TenantListScreen({super.key});
@@ -239,7 +240,7 @@ class _TenantListScreenState extends ConsumerState<TenantListScreen> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: AppLoadingIndicator()),
               error: (error, stack) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

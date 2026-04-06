@@ -11,6 +11,7 @@ import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/phone_capture_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/signup_screen.dart';
+import 'package:rentdone/features/auth/presentation/pages/email_verification_screen.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart'
     as owner_add_tenant;
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_screen.dart';
@@ -23,14 +24,15 @@ import 'package:rentdone/features/owner/owner_payment/presentation/pages/tenant_
 import 'package:rentdone/features/owner/owner_profile/presentation/pages/profile_screen.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_bank_details_screen.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/pages/owner_settings_screen.dart';
+import 'package:rentdone/features/owner/owner_settings/presentation/pages/privacy_policy_screen.dart';
 import 'package:rentdone/features/owner/owner_subscription/presentation/pages/owner_subscription_screen.dart';
 import 'package:rentdone/features/owner/owner_support/presentation/pages/support_screen.dart';
 import 'package:rentdone/features/owner/owner_notifications/presentation/pages/owner_notifications_screen.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/pages/manage_tenants_screen.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/pages/tenant_trust_search_screen.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/pages/tenant_trust_score_screen.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/owners_properties/presentation/pages/manage_property_screen.dart';
-import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/reports/presentation/pages/report_screen.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/presentation/screens/transaction_history_screen.dart';
@@ -110,6 +112,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // User is authenticated - check their role
       final uid = firebaseAuth.currentUser!.uid;
+      final currentUser = firebaseAuth.currentUser;
+      final isEmailUser = (currentUser?.email ?? '').trim().isNotEmpty;
+      final isEmailVerified = currentUser?.emailVerified ?? false;
+      final isVerificationPath = path == '/verify-email';
+
+      if (isEmailUser && !isEmailVerified) {
+        if (isVerificationPath) {
+          return null;
+        }
+        return '/verify-email';
+      }
+
+      if (isVerificationPath) {
+        return '/';
+      }
+
       final role = await ref.read(authRepositoryProvider).getUserRole(uid);
 
       // If user has no role yet, only allow /role and /login
@@ -236,6 +254,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      /// 📧 Email Verification Screen
+      GoRoute(
+        path: '/verify-email',
+        name: 'verifyEmail',
+        builder: (context, state) => const EmailVerificationPage(),
+      ),
+
       // ============================================================
       // 🧑‍💼 TENANT ROUTES
       // ============================================================
@@ -272,6 +297,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               final setup = state.uri.queryParameters['setup'] == 'true';
               return TenantProfileScreen(isSetupMode: setup);
             },
+          ),
+          GoRoute(
+            path: '/tenant/privacy-policy',
+            name: 'tenantPrivacyPolicy',
+            builder: (context, state) => const PrivacyPolicyScreen(),
           ),
           GoRoute(
             path: '/tenant/payments',
@@ -586,6 +616,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/owner/settings',
             name: 'ownerSettings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+
+          GoRoute(
+            path: '/owner/privacy-policy',
+            name: 'ownerPrivacyPolicy',
+            builder: (context, state) => const PrivacyPolicyScreen(),
           ),
 
           /// 🏦 Bank Details

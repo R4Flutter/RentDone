@@ -3889,6 +3889,70 @@ exports.togglePayments = functions.region('asia-south1').https.onCall(async (dat
   return { ok: true, paymentsEnabled: enabled };
 });
 
+exports.assignUserRole = functions.region('asia-south1').runWith({ enforceAppCheck: true }).https.onCall(async (data, context) => {
+  assertCallableAuth(context);
+  await assertAdminAccessOrThrow(context.auth.uid);
+
+  const targetUid = String(data?.uid || '').trim();
+  const requestedRole = String(data?.role || '').trim().toLowerCase();
+
+  if (!targetUid) {
+    throw new functions.https.HttpsError('invalid-argument', 'target-uid-required');
+  }
+
+  if (!['owner', 'tenant'].includes(requestedRole)) {
+    throw new functions.https.HttpsError('invalid-argument', 'invalid-user-role');
+  }
+
+  const userRef = db.collection('users').doc(targetUid);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'user-profile-not-found');
+  }
+
+  const previousRole = String(userSnap.data()?.role || '').trim().toLowerCase() || null;
+  if (previousRole === requestedRole) {
+    return {
+      uid: targetUid,
+      role: requestedRole,
+      updated: false,
+    };
+  }
+
+  await userRef.set(
+    {
+      role: requestedRole,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  const userRecord = await admin.auth().getUser(targetUid);
+  const existingClaims = userRecord.customClaims || {};
+  await admin.auth().setCustomUserClaims(targetUid, {
+    ...existingClaims,
+    role: requestedRole,
+  });
+
+  await logAdminAudit({
+    action: 'user_role_assignment',
+    adminId: context.auth.uid,
+    targetId: targetUid,
+    oldValue: previousRole,
+    newValue: requestedRole,
+    reason: 'admin-role-upgrade',
+    meta: {
+      channel: 'assignUserRole',
+    },
+  });
+
+  return {
+    uid: targetUid,
+    role: requestedRole,
+    updated: true,
+  };
+});
+
 exports.deletePayment = functions.region('asia-south1').https.onCall(async (data, context) => {
   assertCallableAuth(context);
   await assertAdminAccessOrThrow(context.auth.uid);

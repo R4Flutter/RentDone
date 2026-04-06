@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_upi_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class OwnerBankDetailsScreen extends ConsumerStatefulWidget {
   const OwnerBankDetailsScreen({super.key});
@@ -314,7 +315,7 @@ class _OwnerBankDetailsScreenState
                     ? const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoadingIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.verified_user_outlined, size: 16),
                 label: Text(ownerUpi.isVerified ? 'Verified' : 'Verify UPI'),

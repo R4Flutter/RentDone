@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
 import 'package:rentdone/features/owner/owner_payment/models/tenant_payment_record.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class AddPaymentPayload {
   const AddPaymentPayload({
@@ -396,7 +397,7 @@ class _AddPaymentFormState extends State<AddPaymentForm> {
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(
+                            child: AppLoadingIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 Colors.white,

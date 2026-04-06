@@ -280,7 +280,7 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && userId == currentUid()
         && request.resource.data.uid == currentUid()
-        && roleIsValid(request.resource.data.role)
+        && request.resource.data.role == 'tenant'
         && safeUserProfileFieldsOnly(request.resource.data)
         && notificationsShapeIsValid(request.resource.data);
 

@@ -96,7 +96,7 @@ Future<void> _initializeFirebaseEmulatorsIfEnabled() async {
     defaultValue: false,
   );
 
-  final host = String.fromEnvironment(
+  const host = String.fromEnvironment(
     'FUNCTIONS_EMULATOR_HOST',
     defaultValue: emulatorHost,
   );

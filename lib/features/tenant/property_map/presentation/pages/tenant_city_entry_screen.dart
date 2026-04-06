@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/core/ads/rewarded_ad_service.dart';
 import 'package:rentdone/features/tenant/property_map/presentation/providers/tenant_map_providers.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantCityEntryScreen extends ConsumerStatefulWidget {
   const TenantCityEntryScreen({super.key, this.initialCity});
@@ -244,7 +245,7 @@ class _TenantCityEntryScreenState extends ConsumerState<TenantCityEntryScreen> {
                                       ? const SizedBox(
                                           width: 16,
                                           height: 16,
-                                          child: CircularProgressIndicator(
+                                          child: AppLoadingIndicator(
                                             strokeWidth: 2,
                                           ),
                                         )

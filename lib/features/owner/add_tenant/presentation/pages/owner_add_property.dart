@@ -15,6 +15,7 @@ import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class AddTenantScreen extends ConsumerStatefulWidget {
   final String? propertyId;
@@ -353,7 +354,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
                     ],
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: AppLoadingIndicator()),
                 error: (err, stk) =>
                     Center(child: Text("Error: ${err.toString()}")),
               ),
@@ -880,7 +881,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (c) => const Center(child: CircularProgressIndicator()),
+        builder: (c) => const Center(child: AppLoadingIndicator()),
       );
 
       // Add tenant to database

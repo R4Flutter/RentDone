@@ -149,7 +149,10 @@ if (isReleaseTaskRequested) {
     }
 }
 
-if (gradle.startParameter.taskNames.any { it.contains("Production", ignoreCase = true) }) {
+if (gradle.startParameter.taskNames.any {
+        it.contains("Production", ignoreCase = true) && it.contains("Release", ignoreCase = true)
+    }
+) {
     val productionId = providers.gradleProperty("ADMOB_APP_ID_PRODUCTION")
         .orElse(providers.environmentVariable("ADMOB_APP_ID_PRODUCTION"))
         .orElse("")

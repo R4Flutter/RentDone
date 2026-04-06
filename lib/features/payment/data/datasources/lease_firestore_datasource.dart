@@ -4,11 +4,10 @@ class LeaseFirestoreDataSource {
   final FirebaseFirestore _firestore;
 
   LeaseFirestoreDataSource({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   Future<Map<String, dynamic>?> getActiveLeaseForTenant(String authUid) async {
-    final tenantDoc =
-        await _firestore.collection('tenants').doc(authUid).get();
+    final tenantDoc = await _firestore.collection('tenants').doc(authUid).get();
 
     if (!tenantDoc.exists) return null;
 

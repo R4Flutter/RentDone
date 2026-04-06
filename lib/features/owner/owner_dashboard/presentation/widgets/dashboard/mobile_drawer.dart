@@ -23,6 +23,7 @@ class OwnerMobileDrawer extends ConsumerWidget {
     SidebarItem('Subscription', Icons.workspace_premium),
     SidebarItem('Tenant Trust Score', Icons.verified_user),
     SidebarItem('Settings', Icons.settings_rounded),
+    SidebarItem('Privacy Policy', Icons.privacy_tip_outlined),
     SidebarItem('Logout', Icons.logout_rounded),
   ];
 
@@ -131,6 +132,9 @@ class OwnerMobileDrawer extends ConsumerWidget {
                                 context.goNamed('ownerSettings');
                                 break;
                               case 9:
+                                context.goNamed('ownerPrivacyPolicy');
+                                break;
+                              case 10:
                                 await ref.read(firebaseAuthProvider).signOut();
                                 if (context.mounted) {
                                   context.go('/login?role=owner');
@@ -163,6 +167,7 @@ class OwnerMobileDrawer extends ConsumerWidget {
     if (location.contains('/owner/subscription')) return 6;
     if (location.contains('/owner/trust-score')) return 7;
     if (location.contains('/owner/settings')) return 8;
+    if (location.contains('/owner/privacy-policy')) return 9;
 
     return 0;
   }

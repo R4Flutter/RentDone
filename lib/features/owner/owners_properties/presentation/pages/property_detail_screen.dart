@@ -7,6 +7,7 @@ import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class PropertyDetailScreen extends ConsumerStatefulWidget {
   final String propertyId;
@@ -117,8 +118,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                   child: propertyAsync.when(
                     data: (property) =>
                         _buildBody(context, ref, theme, property, isDark),
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                    loading: () => const Center(child: AppLoadingIndicator()),
                     error: (e, st) => Center(child: Text('Error: $e')),
                   ),
                 ),

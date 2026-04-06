@@ -72,14 +72,14 @@ class TenantPaymentHistoryFirebaseService {
     final propertiesStream = _firestore
         .collection('properties')
         .where('ownerId', isEqualTo: ownerId)
-      .orderBy('createdAt', descending: true)
-      .limit(_ownerPropertiesStreamLimit)
+        .orderBy('createdAt', descending: true)
+        .limit(_ownerPropertiesStreamLimit)
         .snapshots();
     final tenantsStream = _firestore
         .collection('tenants')
         .where('ownerId', isEqualTo: ownerId)
-      .orderBy('createdAt', descending: true)
-      .limit(_ownerTenantsStreamLimit)
+        .orderBy('createdAt', descending: true)
+        .limit(_ownerTenantsStreamLimit)
         .snapshots();
 
     return Stream<List<OwnerPropertySummary>>.multi((multi) {
@@ -101,21 +101,15 @@ class TenantPaymentHistoryFirebaseService {
         );
       }
 
-      final propertiesSub = propertiesStream.listen(
-        (snapshot) {
-          latestProperties = snapshot;
-          emitIfReady();
-        },
-        onError: multi.addError,
-      );
+      final propertiesSub = propertiesStream.listen((snapshot) {
+        latestProperties = snapshot;
+        emitIfReady();
+      }, onError: multi.addError);
 
-      final tenantsSub = tenantsStream.listen(
-        (snapshot) {
-          latestTenants = snapshot;
-          emitIfReady();
-        },
-        onError: multi.addError,
-      );
+      final tenantsSub = tenantsStream.listen((snapshot) {
+        latestTenants = snapshot;
+        emitIfReady();
+      }, onError: multi.addError);
 
       multi.onCancel = () async {
         await propertiesSub.cancel();
@@ -131,8 +125,8 @@ class TenantPaymentHistoryFirebaseService {
         .collection('tenants')
         .where('ownerId', isEqualTo: ownerId)
         .where('propertyId', isEqualTo: propertyId)
-      .orderBy('createdAt', descending: true)
-      .limit(_propertyTenantsStreamLimit)
+        .orderBy('createdAt', descending: true)
+        .limit(_propertyTenantsStreamLimit)
         .snapshots();
     final propertyStream = propertyRef.snapshots();
 
@@ -157,22 +151,16 @@ class TenantPaymentHistoryFirebaseService {
         );
       }
 
-      final tenantsSub = tenantsStream.listen(
-        (snapshot) {
-          latestTenants = snapshot;
-          emitIfReady();
-        },
-        onError: multi.addError,
-      );
+      final tenantsSub = tenantsStream.listen((snapshot) {
+        latestTenants = snapshot;
+        emitIfReady();
+      }, onError: multi.addError);
 
-      final propertySub = propertyStream.listen(
-        (snapshot) {
-          hasPropertySnapshot = true;
-          latestPropertyData = snapshot.data();
-          emitIfReady();
-        },
-        onError: multi.addError,
-      );
+      final propertySub = propertyStream.listen((snapshot) {
+        hasPropertySnapshot = true;
+        latestPropertyData = snapshot.data();
+        emitIfReady();
+      }, onError: multi.addError);
 
       multi.onCancel = () async {
         await tenantsSub.cancel();
@@ -201,19 +189,23 @@ class TenantPaymentHistoryFirebaseService {
           tenantsByProperty[doc.id] ?? const <Map<String, dynamic>>[];
       final estimatedCollection = linkedTenants.fold<int>(
         0,
-        (total, tenant) => total + ((tenant['rentAmount'] as num?)?.toInt() ?? 0),
+        (total, tenant) =>
+            total + ((tenant['rentAmount'] as num?)?.toInt() ?? 0),
       );
 
       return OwnerPropertySummary(
         id: doc.id,
         name: (data['name'] as String? ?? 'Unnamed Property').trim(),
-        location: ((data['location'] ?? data['address'] ?? '') as String).trim(),
+        location: ((data['location'] ?? data['address'] ?? '') as String)
+            .trim(),
         totalTenants: linkedTenants.length,
         estimatedMonthlyCollection: estimatedCollection,
       );
     }).toList();
 
-    summaries.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    summaries.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
     return summaries;
   }
 
@@ -298,7 +290,7 @@ class TenantPaymentHistoryFirebaseService {
         .collection('payments')
         .where('tenantId', isEqualTo: tenantId)
         .orderBy('date', descending: true)
-      .orderBy(FieldPath.documentId, descending: true);
+        .orderBy(FieldPath.documentId, descending: true);
     if (!isTenantSelf) {
       query = query.where('ownerId', isEqualTo: uid);
     }

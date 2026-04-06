@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 
 /// Helper class for email validation and duplicate detection
 class EmailValidationHelper {
@@ -28,7 +28,7 @@ class EmailValidationHelper {
 
       return querySnapshot.docs.first.id;
     } catch (e) {
-      debugPrint('Error checking email: $e');
+      AppLogger.error('Error checking email', error: e, tag: 'EmailValidation');
       return null;
     }
   }
@@ -70,7 +70,7 @@ class EmailValidationHelper {
 
       return duplicates;
     } catch (e) {
-      debugPrint('Error finding duplicates: $e');
+      AppLogger.error('Error finding duplicate emails', error: e, tag: 'EmailValidation');
       return {};
     }
   }

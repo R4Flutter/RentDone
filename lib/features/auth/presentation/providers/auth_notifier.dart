@@ -6,6 +6,8 @@ import 'package:rentdone/features/auth/domain/entities/auth_user.dart';
 import 'auth_state.dart';
 
 class AuthNotifier extends Notifier<AuthState> {
+  static const int _minPasswordLength = 12;
+
   @override
   AuthState build() {
     return AuthState.initial();
@@ -35,7 +37,10 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return user;
     } catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: error.toString());
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: _normalizeErrorMessage(error),
+      );
       rethrow;
     }
   }
@@ -55,8 +60,8 @@ class AuthNotifier extends Notifier<AuthState> {
       throw StateError(message);
     }
 
-    if (password.length < 6) {
-      final message = 'Password should be at least 6 characters.';
+    if (password.length < _minPasswordLength) {
+      final message = 'Password should be at least 12 characters.';
       state = state.copyWith(errorMessage: message);
       throw StateError(message);
     }
@@ -81,9 +86,23 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return user;
     } catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: error.toString());
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: _normalizeErrorMessage(error),
+      );
       rethrow;
     }
+  }
+
+  String _normalizeErrorMessage(Object error) {
+    final raw = error.toString();
+    if (raw.startsWith('Bad state: ')) {
+      return raw.substring('Bad state: '.length).trim();
+    }
+    if (raw.startsWith('Exception: ')) {
+      return raw.substring('Exception: '.length).trim();
+    }
+    return raw;
   }
 
   UserRole _validatedRole() {

@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 class DocumentCacheService {
   static const int _defaultMaxCacheBytes = 500 * 1024 * 1024;
-  static final int _maxCacheBytes = int.fromEnvironment(
+  static const int _maxCacheBytes = int.fromEnvironment(
     'DOCUMENT_CACHE_MAX_BYTES',
     defaultValue: _defaultMaxCacheBytes,
   );
@@ -126,14 +126,11 @@ class DocumentCacheService {
     final gate = Completer<void>();
     _lock = gate.future;
 
-    return previous
-        .catchError((_) {})
-        .then((_) => action())
-        .whenComplete(() {
-          if (!gate.isCompleted) {
-            gate.complete();
-          }
-        });
+    return previous.catchError((_) {}).then((_) => action()).whenComplete(() {
+      if (!gate.isCompleted) {
+        gate.complete();
+      }
+    });
   }
 
   static Future<void> _enforceSizeLimit(Directory dir) async {
@@ -166,8 +163,9 @@ class DocumentCacheService {
         continue;
       }
 
-      final normalizedMeta =
-          meta.sizeBytes == binSize ? meta : meta.copyWith(sizeBytes: binSize);
+      final normalizedMeta = meta.sizeBytes == binSize
+          ? meta
+          : meta.copyWith(sizeBytes: binSize);
       if (normalizedMeta.sizeBytes != meta.sizeBytes) {
         await _writeMeta(entity, normalizedMeta);
       }
@@ -260,11 +258,7 @@ class _CacheMeta {
   final int lastAccessMs;
   final int sizeBytes;
 
-  _CacheMeta copyWith({
-    int? createdAtMs,
-    int? lastAccessMs,
-    int? sizeBytes,
-  }) {
+  _CacheMeta copyWith({int? createdAtMs, int? lastAccessMs, int? sizeBytes}) {
     return _CacheMeta(
       createdAtMs: createdAtMs ?? this.createdAtMs,
       lastAccessMs: lastAccessMs ?? this.lastAccessMs,
@@ -280,10 +274,7 @@ class _CacheMeta {
     });
   }
 
-  static _CacheMeta fromRaw(
-    String raw, {
-    required int fallbackSizeBytes,
-  }) {
+  static _CacheMeta fromRaw(String raw, {required int fallbackSizeBytes}) {
     final trimmed = raw.trim();
     if (trimmed.startsWith('{')) {
       final decoded = jsonDecode(trimmed);

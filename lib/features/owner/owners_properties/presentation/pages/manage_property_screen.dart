@@ -10,6 +10,7 @@ import 'package:rentdone/features/owner/owners_properties/presentation/pages/add
 import 'package:rentdone/features/owner/owners_properties/presentation/pages/property_detail_screen.dart';
 
 import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class ManagePropertiesScreen extends ConsumerWidget {
   const ManagePropertiesScreen({super.key});
@@ -200,9 +201,8 @@ class ManagePropertiesScreen extends ConsumerWidget {
                                   ],
                                 );
                               },
-                              loading: () => const Center(
-                                child: CircularProgressIndicator(),
-                              ),
+                              loading: () =>
+                                  const Center(child: AppLoadingIndicator()),
                               error: (err, stk) => Center(
                                 child: Text(
                                   "Error: $err",

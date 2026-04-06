@@ -249,7 +249,9 @@ class FirebaseTenantStorageService {
       );
     }
     if (extension == 'pdf' && uploadBytes > _targetPdfUploadBytes) {
-      throw Exception('PDF must be 500KB or below. Please upload a smaller PDF.');
+      throw Exception(
+        'PDF must be 500KB or below. Please upload a smaller PDF.',
+      );
     }
     if (uploadBytes > _maxUploadBytes) {
       throw Exception(

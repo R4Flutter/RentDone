@@ -9,6 +9,7 @@ import 'package:rentdone/features/owner/owner_payment/presentation/widgets/payme
 import 'package:rentdone/shared/widgets/back_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantPaymentHistoryScreen extends ConsumerStatefulWidget {
   const TenantPaymentHistoryScreen({
@@ -177,8 +178,8 @@ class _TenantPaymentHistoryScreenState
           final tenantData = tenantDoc.data() ?? <String, dynamic>{};
           tenantOwnerId = (tenantData['ownerId'] as String? ?? '').trim();
           tenantPropertyId = (tenantData['propertyId'] as String? ?? '').trim();
-          tenantPropertyName =
-              (tenantData['propertyName'] as String? ?? '').trim();
+          tenantPropertyName = (tenantData['propertyName'] as String? ?? '')
+              .trim();
 
           if (propertyId.isEmpty && tenantPropertyId.isNotEmpty) {
             propertyId = tenantPropertyId;
@@ -193,7 +194,9 @@ class _TenantPaymentHistoryScreenState
     final tenantIsLinkedToOwnerApp =
         tenantOwnerId.isNotEmpty || tenantPropertyId.isNotEmpty;
 
-    if (propertyId.isEmpty && ownerId.isNotEmpty && ownerPropertyName.isNotEmpty) {
+    if (propertyId.isEmpty &&
+        ownerId.isNotEmpty &&
+        ownerPropertyName.isNotEmpty) {
       try {
         final resolvedPropertyId = await _findOwnerPropertyIdByName(
           ownerId: ownerId,
@@ -201,7 +204,8 @@ class _TenantPaymentHistoryScreenState
         );
         if (resolvedPropertyId != null && resolvedPropertyId.isNotEmpty) {
           if (tenantIsLinkedToOwnerApp && tenantPropertyName.isNotEmpty) {
-            final matches = _normalizePropertyName(tenantPropertyName) ==
+            final matches =
+                _normalizePropertyName(tenantPropertyName) ==
                 _normalizePropertyName(ownerPropertyName);
             if (!matches) {
               messenger.showSnackBar(
@@ -376,7 +380,7 @@ class _TenantPaymentHistoryScreenState
                 ),
                 const SizedBox(height: 16),
                 if (_isLoading)
-                  const Center(child: CircularProgressIndicator())
+                  const Center(child: AppLoadingIndicator())
                 else if (_error != null && _items.isEmpty)
                   _HistoryError(message: _error!, onRetry: _loadInitial)
                 else if (_items.isEmpty)
@@ -386,7 +390,7 @@ class _TenantPaymentHistoryScreenState
                 if (_isLoadingMore)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: AppLoadingIndicator()),
                   ),
                 if (_loadMoreError != null && _items.isNotEmpty)
                   Padding(

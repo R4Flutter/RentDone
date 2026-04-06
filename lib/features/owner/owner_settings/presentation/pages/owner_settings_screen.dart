@@ -7,6 +7,7 @@ import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/core/notifications/push_notification_provider.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -74,9 +75,7 @@ class SettingsScreen extends ConsumerWidget {
                               if (settings.isLoading)
                                 const Padding(
                                   padding: EdgeInsets.only(bottom: 14),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                                  child: Center(child: AppLoadingIndicator()),
                                 ),
                               if (isDesktop)
                                 Row(
@@ -903,7 +902,7 @@ class SettingsScreen extends ConsumerWidget {
                                     ? const SizedBox(
                                         width: 14,
                                         height: 14,
-                                        child: CircularProgressIndicator(
+                                        child: AppLoadingIndicator(
                                           strokeWidth: 2,
                                         ),
                                       )

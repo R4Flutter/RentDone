@@ -6,6 +6,7 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 import 'package:rentdone/features/owner/owner_profile/presentation/providers/owner_profile_provider.dart';
 import 'package:rentdone/features/owner/owner_settings/presentation/providers/owner_settings_provider.dart';
 import 'package:rentdone/shared/widgets/profile_picture_avatar.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   final String? avatarUrl;
@@ -198,7 +199,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
         profile.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: AppLoadingIndicator())
             : SingleChildScrollView(
                 controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(
@@ -570,7 +571,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ? SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(
+                        child: AppLoadingIndicator(
                           strokeWidth: 2,
                           color: saveForeground,
                         ),

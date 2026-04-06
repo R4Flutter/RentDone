@@ -7,8 +7,9 @@ const logger_1 = require("../utils/logger");
 const asString = (value) => String(value ?? "").trim();
 const asInt = (value) => {
     const parsed = Number(value ?? 0);
-    if (!Number.isFinite(parsed))
+    if (!Number.isFinite(parsed)) {
         return 0;
+    }
     return Math.trunc(parsed);
 };
 async function verifyRazorpayPayment(params) {
@@ -28,29 +29,24 @@ async function verifyRazorpayPayment(params) {
     if (!storedOrderId || storedOrderId !== razorpayOrderId) {
         throw new Error("order-mismatch");
     }
-    const keyId = asString(process.env.RAZORPAY_KEY_ID);
-    const keySecret = asString(process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET);
+    const keyId = asString(process.env.RAZORPAY_KEY);
+    const keySecret = asString(process.env.RAZORPAY_SECRET);
     if (!keyId || !keySecret) {
         throw new Error("razorpay-secret-missing");
     }
     // 1) Verify signature integrity.
-    try {
-        const expectedSignature = (0, node_crypto_1.createHmac)("sha256", keySecret)
-            .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-            .digest("hex");
-        const provided = Buffer.from(razorpaySignature);
-        const expected = Buffer.from(expectedSignature);
-        if (provided.length !== expected.length || !(0, node_crypto_1.timingSafeEqual)(provided, expected)) {
-            await (0, logger_1.logWarn)("Payment verification failed - invalid signature", {
-                paymentId,
-                razorpayOrderId,
-                razorpayPaymentId,
-            });
-            throw new Error("invalid-signature");
-        }
-    }
-    catch (err) {
-        throw err;
+    const expectedSignature = (0, node_crypto_1.createHmac)("sha256", keySecret)
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest("hex");
+    const provided = Buffer.from(razorpaySignature);
+    const expected = Buffer.from(expectedSignature);
+    if (provided.length !== expected.length || !(0, node_crypto_1.timingSafeEqual)(provided, expected)) {
+        await (0, logger_1.logWarn)("Payment verification failed - invalid signature", {
+            paymentId,
+            razorpayOrderId,
+            razorpayPaymentId,
+        });
+        throw new Error("invalid-signature");
     }
     // 2) Fetch payment from Razorpay and validate order/amount/currency/status.
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");

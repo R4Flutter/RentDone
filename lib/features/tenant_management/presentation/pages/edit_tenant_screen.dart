@@ -8,6 +8,7 @@ import 'package:rentdone/features/tenant_management/domain/entities/tenant_entit
 import 'package:rentdone/features/tenant_management/domain/usecases/validators.dart';
 import 'package:rentdone/features/tenant_management/presentation/providers/tenant_providers.dart';
 import 'package:rentdone/features/tenant_management/data/services/firebase_tenant_storage_service.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class EditTenantScreen extends ConsumerStatefulWidget {
   final String tenantId;
@@ -496,7 +497,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
                           ? SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(
+                              child: AppLoadingIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   scheme.onPrimary,
@@ -519,7 +520,7 @@ class _EditTenantScreenState extends ConsumerState<EditTenantScreen> {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppLoadingIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),
     );

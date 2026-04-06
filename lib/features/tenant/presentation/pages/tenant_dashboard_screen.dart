@@ -14,6 +14,7 @@ import 'package:rentdone/features/payment/presentation/providers/transaction_his
 import 'package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
 import 'package:rentdone/features/tenant/presentation/widgets/native_ad_widget.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantDashboardScreen extends ConsumerStatefulWidget {
   const TenantDashboardScreen({super.key});
@@ -56,7 +57,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
     return summaryAsync.when(
       loading: () => _CommandCenterScaffold(
         child: Center(
-          child: CircularProgressIndicator(
+          child: AppLoadingIndicator(
             color: OwnerDashboardColors.brandPrimary(context),
           ),
         ),

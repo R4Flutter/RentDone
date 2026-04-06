@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 Future<void> showForgotPasswordDialog({
   required BuildContext context,
@@ -273,7 +274,7 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
                               ? const SizedBox(
                                   width: 14,
                                   height: 14,
-                                  child: CircularProgressIndicator(
+                                  child: AppLoadingIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       AppColors.white,

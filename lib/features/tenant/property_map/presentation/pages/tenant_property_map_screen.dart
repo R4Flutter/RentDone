@@ -10,6 +10,7 @@ import 'package:rentdone/features/tenant/property_map/presentation/providers/ten
 import 'package:rentdone/features/tenant/property_map/presentation/widgets/owner_info_card.dart';
 import 'package:rentdone/features/tenant/property_map/presentation/widgets/tenant_property_marker.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantPropertyMapScreen extends ConsumerStatefulWidget {
   final String? cityFromRoute;
@@ -456,7 +457,7 @@ class _MapBodyState extends ConsumerState<_MapBody>
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: AppLoadingIndicator()),
           error: (e, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -465,7 +466,7 @@ class _MapBodyState extends ConsumerState<_MapBody>
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: AppLoadingIndicator()),
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -992,7 +993,7 @@ class _OwnerCardLoading extends StatelessWidget {
           SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2.2),
+            child: AppLoadingIndicator(strokeWidth: 2.2),
           ),
           SizedBox(width: 10),
           Expanded(child: Text('Loading owner details...')),

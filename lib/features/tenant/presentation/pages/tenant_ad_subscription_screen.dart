@@ -8,6 +8,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/core/ads/tenant_ad_subscription_service.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_ad_subscription_provider.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class TenantAdSubscriptionScreen extends ConsumerStatefulWidget {
   const TenantAdSubscriptionScreen({super.key});
@@ -256,7 +257,7 @@ class _TenantAdSubscriptionScreenState
                         ),
                         child: subscriptionAsync.when(
                           loading: () =>
-                              const Center(child: CircularProgressIndicator()),
+                              const Center(child: AppLoadingIndicator()),
                           error: (error, _) =>
                               Text('Could not load subscription: $error'),
                           data: (sub) {

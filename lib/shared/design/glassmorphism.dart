@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 /// Glassmorphism Design System for RentDone
 /// Combines frosted glass effect, backdrop blur, and modern aesthetics
@@ -75,7 +76,9 @@ class GlassContainer extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       (glassColor ?? defaultColor).withValues(alpha: opacity),
-                      (glassColor ?? defaultColor).withValues(alpha: opacity * 0.5),
+                      (glassColor ?? defaultColor).withValues(
+                        alpha: opacity * 0.5,
+                      ),
                     ],
                   ),
               borderRadius: BorderRadius.circular(borderRadius),
@@ -314,7 +317,7 @@ class GlassButton extends StatelessWidget {
                 child: SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(
+                  child: AppLoadingIndicator(
                     valueColor: AlwaysStoppedAnimation(
                       isPrimary
                           ? primaryColor
@@ -394,8 +397,8 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                   : null),
           backgroundColor:
               backgroundColor ??
-              (isDark ? Colors.white : Colors.black).withValues(alpha: 
-                GlassmorphismConfig.glassOpacity,
+              (isDark ? Colors.white : Colors.black).withValues(
+                alpha: GlassmorphismConfig.glassOpacity,
               ),
           elevation: elevation ?? 0,
           automaticallyImplyLeading: false,
@@ -461,8 +464,8 @@ class GlassBottomSheet extends StatelessWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 
-                GlassmorphismConfig.glassOpacity,
+              color: (isDark ? Colors.white : Colors.black).withValues(
+                alpha: GlassmorphismConfig.glassOpacity,
               ),
               border: Border(
                 top: BorderSide(
@@ -571,4 +574,3 @@ extension GlassText on TextStyle {
     );
   }
 }
-

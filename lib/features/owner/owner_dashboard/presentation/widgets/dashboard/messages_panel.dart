@@ -8,6 +8,7 @@ import 'package:rentdone/features/owner/owner_dashboard/domain/entities/dashboar
 import 'package:rentdone/features/owner/owner_dashboard/presentation/providers/dashboard_data_provider.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/providers/messages_provider.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/dashboard_card.dart';
+import 'package:rentdone/shared/widgets/app_loading_indicator.dart';
 
 class MessagesPanel extends ConsumerWidget {
   const MessagesPanel({super.key});
@@ -57,7 +58,7 @@ class MessagesPanel extends ConsumerWidget {
           if (messagesAsync.isLoading)
             const SizedBox(
               height: 90,
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: AppLoadingIndicator()),
             )
           else if (items.isEmpty)
             Text(
