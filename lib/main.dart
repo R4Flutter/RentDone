@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'package:rentdone/app/app.dart';
 import 'package:rentdone/core/ads/admob_config.dart';
@@ -29,6 +30,12 @@ Future<void> main() async {
 
   // Initialize Firebase (single responsibility)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize App Check
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+    appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+  );
 
   // Optional local Functions emulator mode for Spark/testing environments.
   await _initializeFunctionsEmulatorIfEnabled();
