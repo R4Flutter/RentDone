@@ -394,20 +394,26 @@ class _MapBodyState extends ConsumerState<_MapBody> {
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text("Error loading properties: $e"),
+          loading: () => const Center(
+            child: CircularProgressIndicator(strokeWidth: 3),
+          ),
+          error: (error, stackTrace) => Center(
+            child: _MapOverlayMessage(
+              message: 'Unable to load properties right now. Please check your connection and try again.',
+              actionLabel: 'Retry',
+              onAction: () => ref.invalidate(tenantCityPropertiesProvider),
             ),
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text("Error geocoding city: $e"),
+      loading: () => const Center(
+        child: CircularProgressIndicator(strokeWidth: 3),
+      ),
+      error: (error, stackTrace) => Center(
+        child: _MapOverlayMessage(
+          message: 'Unable to locate city. Please try selecting a different city.',
+          actionLabel: 'Change City',
+          onAction: widget.onChangeCity,
         ),
       ),
     );
@@ -487,8 +493,14 @@ class _MapBodyState extends ConsumerState<_MapBody> {
 
 class _MapOverlayMessage extends StatelessWidget {
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
-  const _MapOverlayMessage({required this.message});
+  const _MapOverlayMessage({
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -503,14 +515,31 @@ class _MapOverlayMessage extends StatelessWidget {
             border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(
-              message,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (actionLabel != null && onAction != null) ...[
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: onAction,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(actionLabel!),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ),

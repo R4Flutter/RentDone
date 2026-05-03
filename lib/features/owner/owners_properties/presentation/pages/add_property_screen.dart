@@ -9,9 +9,9 @@ import 'package:rentdone/features/owner/owners_properties/domain/entities/proper
 import 'package:rentdone/features/owner/owners_properties/presentation/pages/property_detail_screen.dart';
 
 class AddPropertyScreen extends ConsumerStatefulWidget {
-  final Property? property;
+  final String? propertyId;
 
-  const AddPropertyScreen({super.key, this.property});
+  const AddPropertyScreen({super.key, this.propertyId});
 
   @override
   ConsumerState<AddPropertyScreen> createState() => _AddPropertyScreenState();
@@ -27,41 +27,47 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
   late TextEditingController lngCtrl;
 
   bool isPublished = false;
+  bool _isLoading = false;
 
   List<RoomInput> rooms = [];
+  Property? _resolvedProperty;
+  bool _hydratedFromStream = false;
 
   @override
   void initState() {
     super.initState();
-    nameCtrl = TextEditingController(text: widget.property?.name ?? '');
-    addressCtrl = TextEditingController(text: widget.property?.address ?? '');
-    totalRoomsCtrl = TextEditingController(
-      text: (widget.property?.totalRooms ?? 0).toString(),
-    );
-    cityCtrl = TextEditingController(text: widget.property?.city ?? '');
-    latCtrl = TextEditingController(
-      text: (widget.property?.lat ?? 0.0).toString(),
-    );
-    lngCtrl = TextEditingController(
-      text: (widget.property?.lng ?? 0.0).toString(),
-    );
-    isPublished = widget.property?.isPublished ?? false;
+    nameCtrl = TextEditingController();
+    addressCtrl = TextEditingController();
+    totalRoomsCtrl = TextEditingController(text: '0');
+    cityCtrl = TextEditingController();
+    latCtrl = TextEditingController(text: '0.0');
+    lngCtrl = TextEditingController(text: '0.0');
 
-    if (widget.property != null) {
-      rooms = widget.property!.rooms
-          .map(
-            (r) => RoomInput(
-              id: r.id,
-              roomNumber: r.roomNumber,
-              name: r.name,
-              isOccupied: r.isOccupied,
-              tenantId: r.tenantId,
-            ),
-          )
-          .toList();
+    if (widget.propertyId != null) {
+      _loadPropertyData();
     }
 
     totalRoomsCtrl.addListener(_updateRoomCount);
+  }
+
+  Future<void> _loadPropertyData() async {
+    setState(() => _isLoading = true);
+    try {
+      final property = await ref.read(propertyProvider(widget.propertyId!).future);
+      if (mounted) {
+        _applyLoadedProperty(property);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load property: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -117,7 +123,14 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isEditing = widget.property != null;
+    final streamPropertyId = widget.propertyId;
+
+    if (_isLoading && !_hydratedFromStream) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final activeProperty = _resolvedProperty;
+    final isEditing = activeProperty != null || (streamPropertyId?.isNotEmpty ?? false);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -487,6 +500,30 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     );
   }
 
+  void _applyLoadedProperty(Property property) {
+    _resolvedProperty = property;
+    nameCtrl.text = property.name;
+    addressCtrl.text = property.address;
+    totalRoomsCtrl.text = property.totalRooms.toString();
+    cityCtrl.text = property.city;
+    latCtrl.text = property.lat.toString();
+    lngCtrl.text = property.lng.toString();
+    isPublished = property.isPublished;
+    rooms = property.rooms
+        .map(
+          (r) => RoomInput(
+            id: r.id,
+            roomNumber: r.roomNumber,
+            name: r.name,
+            isOccupied: r.isOccupied,
+            tenantId: r.tenantId,
+          ),
+        )
+        .toList();
+    _hydratedFromStream = true;
+    setState(() {});
+  }
+
   Widget _liquidBlob({
     double? left,
     double? right,
@@ -643,8 +680,9 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     final lat = double.parse(latCtrl.text.trim());
     final lng = double.parse(lngCtrl.text.trim());
 
+    final activeProperty = _resolvedProperty;
     final property = Property(
-      id: widget.property?.id ?? const Uuid().v4(),
+      id: activeProperty?.id ?? const Uuid().v4(),
       name: nameCtrl.text.trim(),
       address: addressCtrl.text.trim(),
       totalRooms: int.parse(totalRoomsCtrl.text.trim()),
@@ -666,7 +704,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     );
 
     try {
-      if (widget.property != null) {
+      if (activeProperty != null) {
         await ref.read(updatePropertyUseCaseProvider)(property);
       } else {
         await ref.read(addPropertyUseCaseProvider)(property);
@@ -676,7 +714,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.property != null
+              activeProperty != null
                   ? "Property updated successfully!"
                   : "Property created successfully!",
             ),

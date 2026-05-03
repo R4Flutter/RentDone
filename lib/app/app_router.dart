@@ -331,9 +331,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/owner/properties/edit/:propertyId',
             name: 'editProperty',
             builder: (context, state) {
-              // final propertyId = state.pathParameters['propertyId'];
-              // You can pass the property object if needed
-              return const AddPropertyScreen();
+              final propertyId = state.pathParameters['propertyId'];
+              return AddPropertyScreen(propertyId: propertyId);
             },
           ),
 
@@ -608,32 +607,44 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
 
     errorBuilder: (context, state) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: AppColors.red),
-              const SizedBox(height: 16),
-              const Text(
-                'Page Not Found',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      return Consumer(
+        builder: (context, ref, child) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: AppColors.red),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Page Not Found',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Requested path: ${state.uri}',
+                    style: const TextStyle(color: AppColors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      final user = ref.read(authProvider).value;
+                      if (user != null) {
+                        final role = UserRoleX.tryParse(user.role);
+                        if (role == UserRole.tenant) {
+                          context.go('/tenant/dashboard');
+                          return;
+                        }
+                      }
+                      context.go('/owner/dashboard');
+                    },
+                    child: const Text('Go to Dashboard'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Requested path: ${state.uri}',
-                style: const TextStyle(color: AppColors.grey),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  context.go('/owner/dashboard');
-                },
-                child: const Text('Go to Dashboard'),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     },
   );

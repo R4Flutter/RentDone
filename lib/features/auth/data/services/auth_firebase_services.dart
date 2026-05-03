@@ -17,7 +17,6 @@ class AuthFirebaseService {
   final FirebaseFirestore _firestore;
   final GoogleSignIn _googleSignIn;
   String? _verificationId;
-  bool _googleInitialized = false;
 
   Future<void> sendOtp({
     required String phoneNumber,
@@ -124,10 +123,17 @@ class AuthFirebaseService {
       if (kIsWeb) {
         credential = await _auth.signInWithPopup(GoogleAuthProvider());
       } else {
-        await _initializeGoogleSignInIfNeeded();
-        final googleUser = await _googleSignIn.authenticate();
+        // Force account picker by signing out first if already signed in
+        if (await _googleSignIn.isSignedIn()) {
+          await _googleSignIn.signOut();
+        }
+        
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          throw const AuthException(message: 'Google sign-in was cancelled.');
+        }
 
-        final googleAuth = googleUser.authentication;
+        final googleAuth = await googleUser.authentication;
         final idToken = googleAuth.idToken;
         if (idToken == null || idToken.isEmpty) {
           throw const AuthException(
@@ -135,7 +141,10 @@ class AuthFirebaseService {
                 'Google Sign-In is not fully configured. Ensure SHA-1/SHA-256 fingerprints are added in Firebase Console and Google Sign-In is enabled.',
           );
         }
-        final authCredential = GoogleAuthProvider.credential(idToken: idToken);
+        final authCredential = GoogleAuthProvider.credential(
+          idToken: idToken,
+          accessToken: googleAuth.accessToken,
+        );
 
         credential = await _auth.signInWithCredential(authCredential);
       }
@@ -230,6 +239,17 @@ class AuthFirebaseService {
           message: 'Account creation failed. Please try again.',
         );
       }
+
+      // Fix: Immediately create user doc to satisfy security rules and ensure role existence.
+      // Rules depend on /users/{userId} existing for role-based access.
+      await _firestore.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'email': user.email,
+        'emailLowercase': email.trim().toLowerCase(),
+        'role': selectedRole.value,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
       return _upsertAndMapUser(
         user: user,
@@ -443,15 +463,6 @@ class AuthFirebaseService {
       lastLoginAt: dto.lastLoginAt,
       isProfileComplete: true,
     );
-  }
-
-  Future<void> _initializeGoogleSignInIfNeeded() async {
-    if (_googleInitialized) return;
-    await _googleSignIn.initialize(
-      serverClientId:
-          '35844123331-ut1le47rn4bc62ev8q1461m8bhboikrd.apps.googleusercontent.com',
-    );
-    _googleInitialized = true;
   }
 
   AuthException _mapFirebaseException(FirebaseAuthException error) {

@@ -19,7 +19,9 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
 });
 
 final googleSignInProvider = Provider<GoogleSignIn>((ref) {
-  return GoogleSignIn.instance;
+  return GoogleSignIn(
+    serverClientId: '35844123331-ut1le47rn4bc62ev8q1461m8bhboikrd.apps.googleusercontent.com',
+  );
 });
 
 final authFirebaseServiceProvider = Provider<AuthFirebaseService>((ref) {

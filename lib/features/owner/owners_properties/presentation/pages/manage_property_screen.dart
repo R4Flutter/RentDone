@@ -430,7 +430,7 @@ class ManagePropertiesScreen extends ConsumerWidget {
                             context,
                             MaterialPageRoute(
                               builder: (_) =>
-                                  AddPropertyScreen(property: property),
+                                  AddPropertyScreen(propertyId: property.id),
                             ),
                           );
                         },

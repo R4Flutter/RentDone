@@ -722,7 +722,7 @@ function stableStringify(value) {
   if (value === null) {
     return 'null';
   }
-  if (value instanceof Timestamp) {
+  if (value instanceof admin.firestore.Timestamp) {
     return `ts:${value.toMillis()}`;
   }
   if (value instanceof Date) {
@@ -1564,7 +1564,7 @@ exports.cleanupExpiredWebhookEvents = functions
   .schedule('every day 03:40')
   .timeZone('Asia/Kolkata')
   .onRun(async () => {
-    const now = Timestamp.now();
+    const now = admin.firestore.Timestamp.now();
     const deletedWebhookEvents = await deleteQueryInChunksCapped(
       db.collection('_webhookEvents').where('expiresAt', '<=', now),
       { chunkSize: 300, maxDocs: 1200 },
@@ -1703,6 +1703,8 @@ exports.generateMonthlyPayments = functions
 
     tenantsSnap.forEach((doc) => {
       const t = doc.data();
+      if (!t.rentAmount || t.rentAmount <= 0) return;
+
       const dueDate = dueDateFor(year, month, t.rentDueDay || 1);
       const paymentId = `${doc.id}_${period}`;
 
@@ -4443,7 +4445,7 @@ async function assertOwnerAccessOrThrow(ownerId) {
 
 function toEpochMillisOrNull(value) {
   if (!value) return null;
-  if (value instanceof Timestamp) return value.toMillis();
+  if (value instanceof admin.firestore.Timestamp) return value.toMillis();
   if (value instanceof Date) return value.getTime();
   return null;
 }
