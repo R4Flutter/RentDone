@@ -15,8 +15,16 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<AuthUser> verifyOtp({required String otp}) async {
-    final credential = await _service.verifyOtp(otp: otp);
+  Future<AuthUser> verifyOtp({
+    required String otp,
+    UserRole? selectedRole,
+    String? phone,
+  }) async {
+    final credential = await _service.verifyOtp(
+      otp: otp,
+      selectedRole: selectedRole,
+      phone: phone,
+    );
     final user = credential.user;
     if (user == null) {
       throw const AuthException(

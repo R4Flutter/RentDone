@@ -1,13 +1,13 @@
 import 'dart:ui';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/core/constants/user_role.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
 
-class SignupPage extends StatefulWidget {
+class SignupPage extends ConsumerStatefulWidget {
   const SignupPage({
     super.key,
     required this.selectedRole,
@@ -18,10 +18,10 @@ class SignupPage extends StatefulWidget {
   final String phoneNumber;
 
   @override
-  State<SignupPage> createState() => _SignupPageState();
+  ConsumerState<SignupPage> createState() => _SignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage>
+class _SignupPageState extends ConsumerState<SignupPage>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailController;
@@ -31,8 +31,6 @@ class _SignupPageState extends State<SignupPage>
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isLoading = false;
-  String? _authError;
 
   @override
   void initState() {
@@ -44,6 +42,13 @@ class _SignupPageState extends State<SignupPage>
       vsync: this,
       duration: const Duration(seconds: 16),
     )..repeat(reverse: true);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final notifier = ref.read(authProvider.notifier);
+      notifier.setSelectedRole(widget.selectedRole);
+      notifier.setMode(registerMode: true);
+    });
   }
 
   @override
@@ -108,9 +113,7 @@ class _SignupPageState extends State<SignupPage>
                           Row(
                             children: [
                               IconButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : () => context.goNamed('roleSelection'),
+                                onPressed: () => context.goNamed('roleSelection'),
                                 icon: Icon(
                                   Icons.arrow_back_rounded,
                                   color: OwnerDashboardColors.textPrimary(
@@ -307,7 +310,7 @@ class _SignupPageState extends State<SignupPage>
                   obscureText: _obscureConfirmPassword,
                   validator: _validateConfirmPassword,
                   onFieldSubmitted: (_) {
-                    if (!_isLoading) _onSignupPressed();
+                    _onSignupPressed();
                   },
                   suffix: IconButton(
                     onPressed: () {
@@ -323,48 +326,61 @@ class _SignupPageState extends State<SignupPage>
                     ),
                   ),
                 ),
-                if (_authError != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    _authError!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.errorRed,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+                Consumer(
+                  builder: (context, ref, _) {
+                    final authState = ref.watch(authProvider);
+                    if (authState.errorMessage == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        authState.errorMessage!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.errorRed,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 54,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: OwnerDashboardColors.brandPrimary(
-                        context,
-                      ),
-                      foregroundColor: isDark
-                          ? AppColors.white
-                          : AppColors.cFF0F172A,
-                    ),
-                    onPressed: _isLoading ? null : _onSignupPressed,
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.person_add_alt_1_rounded),
-                    label: Text(
-                      _isLoading ? 'Creating Account...' : 'Create Account',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final authState = ref.watch(authProvider);
+                      final isLoading = authState.isLoading;
+                      return FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: OwnerDashboardColors.brandPrimary(
+                            context,
+                          ),
+                          foregroundColor: isDark
+                              ? AppColors.white
+                              : AppColors.cFF0F172A,
+                        ),
+                        onPressed: isLoading ? null : _onSignupPressed,
+                        icon: isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.person_add_alt_1_rounded),
+                        label: Text(
+                          isLoading ? 'Creating Account...' : 'Create Account',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 10),
                 Center(
                   child: TextButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () => context.go(
+                    onPressed: () => context.go(
                             '/login?role=${widget.selectedRole.name}&phone=${widget.phoneNumber}',
                           ),
                     child: const Text('Already have an account? Sign In'),
@@ -487,74 +503,24 @@ class _SignupPageState extends State<SignupPage>
 
   Future<void> _onSignupPressed() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-      _authError = null;
-    });
+    
+    final notifier = ref.read(authProvider.notifier);
 
     try {
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
-      final user = credential.user;
-      if (user == null) {
-        throw FirebaseAuthException(code: 'unknown', message: 'Signup failed.');
+      final user = await notifier.continueWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        phone: widget.phoneNumber,
+      );
+
+      if (!mounted) return;
+      if (UserRoleX.tryParse(user.role) == UserRole.owner) {
+        context.goNamed('ownerDashboard');
+      } else {
+        context.goNamed('tenantDashboard');
       }
-
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'userId': user.uid,
-        'email': _emailController.text.trim(),
-        'phoneNumber': widget.phoneNumber,
-        'phone': widget.phoneNumber,
-        'role': 'owner',
-        'notifications': {'rent_due': true, 'payment_received': true},
-        'createdAt': FieldValue.serverTimestamp(),
-        'tenantScore': 0,
-      }, SetOptions(merge: true));
-
-      if (!mounted) return;
-      context.goNamed('ownerDashboard');
-    } on FirebaseAuthException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _authError = _mapAuthError(error);
-      });
-    } on FirebaseException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _authError =
-            error.message ?? 'Could not create account. Please try again.';
-      });
     } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _authError = 'Could not create account. Please try again.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  String _mapAuthError(FirebaseAuthException error) {
-    switch (error.code) {
-      case 'email-already-in-use':
-        return 'This email is already in use.';
-      case 'invalid-email':
-        return 'Enter a valid email address.';
-      case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
-      case 'network-request-failed':
-        return 'Network error. Check your connection and try again.';
-      default:
-        return error.message ?? 'Could not create account. Please try again.';
+      // Error is handled by AuthNotifier state and displayed via authProvider
     }
   }
 }

@@ -77,12 +77,16 @@ class AuthFirebaseService {
     }
   }
 
-  Future<UserCredential> verifyOtp({required String otp}) async {
+  Future<UserCredential> verifyOtp({
+    required String otp,
+    UserRole? selectedRole,
+    String? phone,
+  }) async {
     try {
       final verificationId = _verificationId;
       if (verificationId == null) {
         throw const AuthException(
-          message: 'OTP session expired. Please request again.',
+          message: 'Session expired. Please request OTP again.',
         );
       }
 
@@ -91,9 +95,18 @@ class AuthFirebaseService {
         smsCode: otp,
       );
 
-      return await _auth.signInWithCredential(credential);
-    } on AuthException {
-      rethrow;
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      // Ensure user doc exists for phone auth users
+      if (userCredential.user != null) {
+        await _upsertAndMapUser(
+          user: userCredential.user!,
+          selectedRole: selectedRole ?? UserRole.tenant,
+          phone: phone ?? '',
+        );
+      }
+
+      return userCredential;
     } on FirebaseAuthException catch (error) {
       throw _mapFirebaseException(error);
     } catch (_) {
@@ -379,15 +392,11 @@ class AuthFirebaseService {
       }
       // Role is already set and matches, continue with existing role
     } else {
-      // SECURITY: New user - role is determined by signup flow, NOT client choice
-      // In production: Backend service should determine role based on business logic
-      // For now, enforce that role can only be 'tenant' on first signup
-      // Owners should be created via invitation or backend admin
-      if (selectedRole != UserRole.tenant) {
+      // SECURITY: New user - role is determined by signup flow.
+      // We allow both tenant and owner roles to be set on first signup.
+      if (selectedRole != UserRole.tenant && selectedRole != UserRole.owner) {
         throw AuthException(
-          message:
-              'New accounts must register as tenants. '
-              'Contact support to become an owner.',
+          message: 'Invalid role selected. Please choose Owner or Tenant.',
         );
       }
     }

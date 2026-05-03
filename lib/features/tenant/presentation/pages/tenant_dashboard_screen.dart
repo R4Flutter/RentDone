@@ -86,9 +86,9 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
 
   Future<void> _handlePayNowWithRewards() async {
     if (!mounted) return;
-    final rootContext = this.context;
 
     await _logAdEvent('pay_now_cta_opened', placement: 'active_dues_card');
+    if (!mounted) return;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -148,7 +148,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                     );
 
                     if (!mounted) return;
-                    ScaffoldMessenger.of(rootContext).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
                           rewarded
@@ -157,7 +157,9 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                         ),
                       ),
                     );
-                    GoRouter.of(rootContext).push('/tenant/payments');
+                    if (mounted) {
+                      context.push('/tenant/payments');
+                    }
                   },
                 ),
                 ListTile(
@@ -167,7 +169,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                   subtitle: const Text('Continue to payment directly'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    GoRouter.of(rootContext).push('/tenant/payments');
+                    context.push('/tenant/payments');
                   },
                 ),
               ],

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:rentdone/core/services/gravatar_service.dart';
 
@@ -67,12 +68,13 @@ class ProfilePictureAvatar extends StatelessWidget {
     }
 
     final hasValidImage = imageUrl != null && imageUrl.isNotEmpty;
+    final effectiveBorderRadius = borderRadius ?? BorderRadius.circular(size / 2);
 
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        borderRadius: borderRadius ?? BorderRadius.circular(size / 2),
+        borderRadius: effectiveBorderRadius,
         border: showBorder
             ? border ??
                   Border.all(
@@ -80,20 +82,43 @@ class ProfilePictureAvatar extends StatelessWidget {
                     width: 2,
                   )
             : null,
-        color: hasValidImage ? null : effectiveBackgroundColor,
-        image: hasValidImage
-            ? DecorationImage(
-                image: NetworkImage(imageUrl),
-                fit: BoxFit.cover,
-                onError: (error, stackTrace) {
-                  // Image failed to load, will show fallback icon instead
-                },
-              )
-            : null,
+        color: effectiveBackgroundColor,
       ),
-      child: !hasValidImage
-          ? Icon(Icons.person, size: size * 0.6, color: effectiveIconColor)
-          : null,
+      child: ClipRRect(
+        borderRadius: effectiveBorderRadius,
+        child: hasValidImage
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                memCacheWidth: (size * 2).toInt(),
+                memCacheHeight: (size * 2).toInt(),
+                placeholder: (context, url) => Container(
+                  color: effectiveBackgroundColor,
+                  child: Center(
+                    child: SizedBox(
+                      width: size * 0.4,
+                      height: size * 0.4,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          theme.colorScheme.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Icon(
+                  Icons.person,
+                  size: size * 0.6,
+                  color: effectiveIconColor,
+                ),
+              )
+            : Icon(
+                Icons.person,
+                size: size * 0.6,
+                color: effectiveIconColor,
+              ),
+      ),
     );
   }
 }

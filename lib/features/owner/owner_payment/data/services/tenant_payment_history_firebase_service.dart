@@ -12,13 +12,16 @@ import 'package:rentdone/features/owner/owner_payment/models/tenant_payment_reco
 class TenantPaymentHistoryFirebaseService {
   TenantPaymentHistoryFirebaseService({
     FirebaseFirestore? firestore,
-    FirebaseFunctions? functions,
+    FirebaseFunctions? functionsAsia,
+    FirebaseFunctions? functionsUs,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _functions = functions ?? FirebaseFunctions.instance,
+       _functionsAsia = functionsAsia ?? FirebaseFunctions.instanceFor(region: 'asia-south1'),
+       _functionsUs = functionsUs ?? FirebaseFunctions.instanceFor(region: 'us-central1'),
        _auth = FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
-  final FirebaseFunctions _functions;
+  final FirebaseFunctions _functionsAsia;
+  final FirebaseFunctions _functionsUs;
   final FirebaseAuth _auth;
 
   static const int _maxPaymentAmount = 5000000;
@@ -372,7 +375,7 @@ class TenantPaymentHistoryFirebaseService {
     );
 
     try {
-      final callable = _functions.httpsCallable('createPayment');
+      final callable = _functionsAsia.httpsCallable('createPayment');
       final result = await callable.call({
         'tenantId': normalizedTenantId,
         'propertyId': normalizedPropertyId,
@@ -424,13 +427,13 @@ class TenantPaymentHistoryFirebaseService {
     }
 
     try {
-      final callable = _functions.httpsCallable('updatePaymentStatus');
+      final callable = _functionsAsia.httpsCallable('updatePaymentStatus');
       final payload = <String, dynamic>{
         'paymentId': paymentId.trim(),
         'newStatus': normalized,
-        'installmentAmount': ?installmentAmount,
-        'installmentMethod': ?installmentMethod,
-        'installmentNotes': ?installmentNotes,
+        if (installmentAmount != null) 'installmentAmount': installmentAmount,
+        if (installmentMethod != null) 'installmentMethod': installmentMethod,
+        if (installmentNotes != null) 'installmentNotes': installmentNotes,
       };
       await callable.call(payload);
     } on FirebaseFunctionsException catch (e) {
@@ -486,7 +489,7 @@ class TenantPaymentHistoryFirebaseService {
     );
 
     try {
-      final verifyCallable = _functions.httpsCallable('verifyPayment');
+      final verifyCallable = _functionsUs.httpsCallable('verifyPayment');
       await verifyCallable.call({
         'paymentId': paymentId,
         'razorpayPaymentId': transactionId.trim(),
@@ -525,3 +528,4 @@ class TenantPaymentHistoryFirebaseService {
     );
   }
 }
+

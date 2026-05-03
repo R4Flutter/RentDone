@@ -26,7 +26,7 @@ class DashboardFirebaseService {
     final snapshot = await _firestore
         .collection('properties')
         .where('ownerId', isEqualTo: ownerId)
-        .get();
+        .get(const GetOptions(source: Source.serverAndCache));
     return snapshot.docs
         .map((doc) => DashboardPropertyDto.fromMap(doc.id, doc.data()))
         .toList();
@@ -61,7 +61,7 @@ class DashboardFirebaseService {
       final snapshot = await _firestore
           .collection('payments')
           .where('ownerId', isEqualTo: ownerId)
-          .get();
+          .get(const GetOptions(source: Source.serverAndCache));
       return snapshot.docs
           .map((doc) => DashboardPaymentDto.fromMap(doc.id, doc.data()))
           .toList();
@@ -112,7 +112,7 @@ class DashboardFirebaseService {
       final snapshot = await _firestore
           .collection('tenants')
           .where('ownerId', isEqualTo: ownerId)
-          .get();
+          .get(const GetOptions(source: Source.serverAndCache));
       return snapshot.size;
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') return 0;

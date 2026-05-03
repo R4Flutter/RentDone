@@ -5,7 +5,11 @@ import '../entities/auth_user.dart';
 abstract class AuthRepository {
   Future<void> sendOtp({required String phone});
 
-  Future<AuthUser> verifyOtp({required String otp});
+  Future<AuthUser> verifyOtp({
+    required String otp,
+    UserRole? selectedRole,
+    String? phone,
+  });
 
   Future<AuthUser?> getCurrentUser();
 

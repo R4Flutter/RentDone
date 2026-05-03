@@ -74,9 +74,10 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
     final activeColor = OwnerDashboardColors.navActive(context);
     final inactiveColor = OwnerDashboardColors.navInactive(context);
     final hideTopBorderForProperties = widget.currentIndex == 2;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     return SizedBox(
-      height: _kTotalHeight,
+      height: _kTotalHeight + bottomPadding,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
@@ -106,7 +107,7 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    height: _kBarHeight,
+                    height: _kBarHeight + bottomPadding,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: const BorderRadius.vertical(
@@ -138,7 +139,7 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    height: _kBarHeight,
+                    height: _kBarHeight + bottomPadding,
                     child: ClipPath(
                       clipper: clipper,
                       child: BackdropFilter(
@@ -177,7 +178,7 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                   // ── Icons (full height, padded into bar area) ──────────
                   Positioned.fill(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: _kIconRise),
+                      padding: EdgeInsets.only(top: _kIconRise, bottom: bottomPadding),
                       child: Row(
                         children: [
                           Expanded(

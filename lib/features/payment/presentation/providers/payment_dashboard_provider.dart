@@ -7,7 +7,6 @@ import 'package:rentdone/features/payment/domain/entities/payment_due.dart';
 import 'package:rentdone/features/payment/domain/entities/payment_failure.dart';
 import 'package:rentdone/features/payment/domain/entities/payment_intent.dart';
 import 'package:rentdone/features/payment/presentation/providers/payment_di.dart';
-import 'package:rentdone/core/logging/payment_event_logger.dart';
 import 'package:rentdone/core/config/app_config_service.dart';
 
 enum PaymentFlowStatus { idle, loading, processingPayment, success, failure }
@@ -132,7 +131,6 @@ class PaymentDashboardNotifier extends AsyncNotifier<PaymentDashboardState> {
       return null;
     }
 
-    final logger = PaymentEventLogger.instance;
     final appConfig = await AppConfigService().getConfig(forceRefresh: true);
 
     final uid = FirebaseAuth.instance.currentUser!.uid;

@@ -15,43 +15,36 @@ service cloud.firestore {
     }
 
     function currentRole() {
-      return request.auth.token.role;
+      return request.auth.token.get('role', '');
     }
 
     function isOwner() {
-      return isAuthenticated() && currentRole() == 'owner';
+      return isAuthenticated() && (
+        currentRole() == 'owner'
+        || (userDoc(currentUid()).exists && userDoc(currentUid()).data.get('role', '') == 'owner')
+      );
     }
 
     function isAdmin() {
       return isAuthenticated()
         && (
-          request.auth.token.admin == true
+          request.auth.token.get('admin', false) == true
           || currentRole() == 'admin'
-        );
-    }
-
-    function isOwnerOrLegacySelf(ownerId) {
-      return isAuthenticated()
-        && ownerId == currentUid()
-        && (
-          currentRole() == 'owner'
-          || !userDoc(currentUid()).exists
-          || !('role' in userDoc(currentUid()).data)
+          || (userDoc(currentUid()).exists && userDoc(currentUid()).data.get('role', '') == 'admin')
         );
     }
 
     function isTenant() {
-      return isAuthenticated() && currentRole() == 'tenant';
+      return isAuthenticated() && (
+        currentRole() == 'tenant'
+        || (userDoc(currentUid()).exists && userDoc(currentUid()).data.get('role', '') == 'tenant')
+      );
     }
 
     function isVerified() {
-      return request.auth.token.email_verified == true;
-    }
-
-    function tenantPropertyId(uid) {
-      return exists(/databases/$(database)/documents/tenants/$(uid))
-        ? get(/databases/$(database)/documents/tenants/$(uid)).data.propertyId
-        : null;
+      return request.auth.token.email_verified == true
+        || request.auth.token.firebase.sign_in_provider == 'phone'
+        || request.auth.token.firebase.sign_in_provider == 'google.com';
     }
 
     function roleIsValid(role) {
@@ -99,33 +92,6 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/properties/$(propertyId)).data.ownerId == currentUid();
     }
 
-    function ownerDoc(uid) {
-      return get(/databases/$(database)/documents/owners/$(uid));
-    }
-
-    function ownerTenantLimit(uid) {
-      return ownerDoc(uid).exists && ('tenantLimit' in ownerDoc(uid).data)
-        ? ownerDoc(uid).data.tenantLimit
-        : 2;
-    }
-
-    function ownerCurrentTenantCount(uid) {
-      return ownerDoc(uid).exists && ('currentTenantCount' in ownerDoc(uid).data)
-        ? ownerDoc(uid).data.currentTenantCount
-        : 0;
-    }
-
-    function ownerPaymentStatus(uid) {
-      return ownerDoc(uid).exists && ('paymentStatus' in ownerDoc(uid).data)
-        ? ownerDoc(uid).data.paymentStatus
-        : 'active';
-    }
-
-    function ownerCanCreateTenant(uid) {
-      return ownerPaymentStatus(uid) != 'pending'
-        && ownerCurrentTenantCount(uid) < ownerTenantLimit(uid);
-    }
-
     function tenantOwnerImmutableFieldsUnchanged() {
       return request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.fullName == resource.data.fullName
@@ -145,14 +111,6 @@ service cloud.firestore {
       && (
         (('trustBadge' in resource.data) && request.resource.data.trustBadge == resource.data.trustBadge)
           || (!('trustBadge' in resource.data) && !('trustBadge' in request.resource.data))
-      );
-    }
-
-    function tenantOwnsDocByIdOrEmail(tenantId, tenantData) {
-      return isTenant() && (
-        tenantId == currentUid()
-        || (('authUid' in tenantData) && tenantData.authUid == currentUid())
-        || (('email' in tenantData) && tenantData.email == request.auth.token.email)
       );
     }
 
@@ -176,48 +134,9 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/tenants/$(tenantId)).data;
     }
 
-    function ownerCanAccessTenantByParent(tenantId) {
-      return isOwner() && (
-        tenantParentData(tenantId).ownerId == currentUid()
-        || (
-          ('propertyId' in tenantParentData(tenantId))
-          && ownerOwnsProperty(tenantParentData(tenantId).propertyId)
-        )
-      );
-    }
-
     function validIndianPhone(value) {
       return value is string
         && value.matches('^[6-9][0-9]{9}$');
-    }
-
-    function isPhoneKeyedTenantDoc(tenantId) {
-      return tenantId is string
-        && tenantId.matches('^\\+91[6-9][0-9]{9}$');
-    }
-
-    function validPaymentMethod(method) {
-      return method in ['UPI', 'Cash', 'Bank Transfer', 'Razorpay', 'Credit Card', 'online'];
-    }
-
-    function validPaymentStatus(status) {
-      return status in ['paid', 'partial', 'unpaid', 'pending', 'success'];
-    }
-
-    function validPaymentAmount(amount) {
-      return amount is int && amount > 0 && amount <= 5000000;
-    }
-
-    function paymentFieldsLookValid(data) {
-      return validPaymentAmount(data.amount)
-        && validPaymentMethod(data.method)
-        && validPaymentStatus(data.status)
-        && (!('paidAmount' in data) || (data.paidAmount is int && data.paidAmount >= 0 && data.paidAmount <= data.amount))
-        && (!('baseAmount' in data) || (data.baseAmount is int && data.baseAmount >= 0 && data.baseAmount <= 5000000))
-        && (!('remainingAmount' in data) || (data.remainingAmount is int && data.remainingAmount >= 0 && data.remainingAmount <= data.amount))
-        && (!('month' in data) || (data.month is int && data.month >= 1 && data.month <= 12))
-        && (!('year' in data) || (data.year is int && data.year >= 2020 && data.year <= 2100))
-        && (!('paymentMonth' in data) || (data.paymentMonth is string && data.paymentMonth.matches('^[0-9]{4}-[0-9]{2}$')));
     }
 
     // ===== FIRESTORE RULES =====
@@ -225,7 +144,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated() && (
         userId == currentUid()
-        || (isTenant() && ('role' in resource.data) && resource.data.role == 'owner')
+        || (isTenant() && userDoc(userId).exists && userDoc(userId).data.get('role', '') == 'owner')
       );
 
       allow list: if isAuthenticated() &&
@@ -233,8 +152,8 @@ service cloud.firestore {
 
       allow create: if isAuthenticated()
         && userId == currentUid()
-        && request.resource.data.uid == currentUid()
-        && request.resource.data.role == 'tenant'
+        && (request.resource.data.get('uid', '') == currentUid() || request.resource.data.get('userId', '') == currentUid())
+        && roleIsValid(request.resource.data.get('role', ''))
         && notificationsShapeIsValid(request.resource.data);
 
       allow update: if isAuthenticated()
@@ -265,52 +184,35 @@ service cloud.firestore {
       }
     }
 
-    match /ownerPaymentProfiles/{ownerId} {
-      allow read, write: if isOwnerOrLegacySelf(ownerId);
-    }
-
-    match /owners/{ownerId} {
-      allow read: if isOwnerOrLegacySelf(ownerId);
-
-      allow create: if isOwnerOrLegacySelf(ownerId)
-        && request.resource.data.ownerId == currentUid();
-
-      allow update: if isOwnerOrLegacySelf(ownerId)
-        && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.currentTenantCount is int
-        && request.resource.data.tenantLimit is int
-        && request.resource.data.tenantLimit >= 2;
-
-      allow delete: if false;
-    }
-
     match /owners_summary/{ownerId} {
-      allow read: if isOwnerOrLegacySelf(ownerId);
+      allow get: if isAuthenticated() && ownerId == currentUid();
+      allow list: if isAuthenticated() && (ownerId == currentUid() || request.query.limit <= 1);
 
       allow create, update, delete: if false;
     }
 
     match /ownerTrustScoreLookupQuota/{docId} {
-      allow read: if isOwner() && resource.data.ownerId == currentUid();
+      allow read: if isAuthenticated() && resource.data.ownerId == currentUid();
       allow create, update, delete: if false;
     }
 
     match /ownerTrustScoreLookupEvents/{eventId} {
-      allow read: if isOwner() && resource.data.ownerId == currentUid();
+      allow read: if isAuthenticated() && resource.data.ownerId == currentUid();
       allow create, update, delete: if false;
     }
 
     match /tenantTrust/{phone} {
-      allow read: if request.auth != null;
+      allow read: if isAuthenticated();
       allow write: if isOwner();
     }
 
     match /properties/{propertyId} {
-      allow read: if (isOwner() && resource.data.ownerId == currentUid())
-        || (isTenant() && (
-          tenantPropertyId(currentUid()) == propertyId
-          || (('isPublished' in resource.data) && resource.data.isPublished == true)
-        ));
+      allow list: if isOwner();
+      allow read: if isAuthenticated() && (
+        resource.data.ownerId == currentUid()
+        || resource.data.isPublished == true
+        || (exists(/databases/$(database)/documents/tenants/$(currentUid())) && get(/databases/$(database)/documents/tenants/$(currentUid())).data.propertyId == propertyId)
+      );
 
       allow create: if isOwner()
         && isVerified()
@@ -324,17 +226,18 @@ service cloud.firestore {
       allow delete: if isOwner()
         && isVerified()
         && resource.data.ownerId == currentUid();
+
+      // Allow owners to query their own properties
+      allow list: if isOwner() && request.query.ownerId == currentUid();
     }
 
     match /tenants/{tenantId} {
-      allow read: if (isOwner() && (
+      allow read: if isAuthenticated() && (
           resource.data.ownerId == currentUid()
-          || (
-            ('propertyId' in resource.data)
-            && ownerOwnsProperty(resource.data.propertyId)
-          )
-        ))
-        || tenantOwnsDocByIdOrEmail(tenantId, resource.data);
+          || tenantId == currentUid()
+          || (('authUid' in resource.data) && resource.data.authUid == currentUid())
+          || (('email' in resource.data) && resource.data.email == request.auth.token.email)
+        );
 
       allow create: if (
           isOwner()
@@ -354,7 +257,7 @@ service cloud.firestore {
           && tenantTrustFieldsUnchanged()
         )
         || (
-          tenantOwnsDocByIdOrEmail(tenantId, resource.data)
+          (tenantId == currentUid() || (('authUid' in resource.data) && resource.data.authUid == currentUid()))
           && isVerified()
           && request.resource.data.ownerId == resource.data.ownerId
           && request.resource.data.email == resource.data.email
@@ -371,8 +274,10 @@ service cloud.firestore {
     }
 
     match /tenants/{tenantId}/payments/{paymentId} {
-      allow read: if ownerCanAccessTenantByParent(tenantId)
-        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+      allow read: if isAuthenticated() && (
+        tenantParentData(tenantId).ownerId == currentUid()
+        || tenantId == currentUid()
+      );
 
       // Legacy tenant subcollection payment writes are disabled.
       // Payments must be written by Cloud Functions (Admin SDK).
@@ -380,10 +285,12 @@ service cloud.firestore {
     }
 
     match /tenants/{tenantId}/room_details/{docId} {
-      allow read: if ownerCanAccessTenantByParent(tenantId)
-        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+      allow read: if isAuthenticated() && (
+        tenantParentData(tenantId).ownerId == currentUid()
+        || tenantId == currentUid()
+      );
 
-      allow create, update: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+      allow create, update: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
         && docId == 'current'
         && request.resource.data.propertyName is string
         && request.resource.data.roomNumber is string
@@ -397,10 +304,12 @@ service cloud.firestore {
     }
 
     match /tenants/{tenantId}/owner_details/{docId} {
-      allow read: if ownerCanAccessTenantByParent(tenantId)
-        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+      allow read: if isAuthenticated() && (
+        tenantParentData(tenantId).ownerId == currentUid()
+        || tenantId == currentUid()
+      );
 
-      allow create, update: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+      allow create, update: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
         && docId == 'current'
         && validIndianPhone(request.resource.data.ownerPhoneNumber);
 
@@ -408,16 +317,21 @@ service cloud.firestore {
     }
 
     match /tenants/{tenantId}/reminders/{reminderId} {
-      allow read: if ownerCanAccessTenantByParent(tenantId)
-        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+      allow read: if isAuthenticated() && (
+        tenantParentData(tenantId).ownerId == currentUid()
+        || tenantId == currentUid()
+      );
 
       allow create, update, delete: if false;
     }
 
     match /tenants/{tenantId}/documents/{docId} {
-      allow read: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+      allow read: if isAuthenticated() && (
+        tenantParentData(tenantId).ownerId == currentUid()
+        || tenantId == currentUid()
+      );
 
-      allow create: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+      allow create: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
         && request.resource.data.fileUrl is string
         && request.resource.data.publicId is string
         && request.resource.data.fileType in ['image', 'pdf']
@@ -428,25 +342,27 @@ service cloud.firestore {
           (request.resource.data.fileType == 'pdf' && request.resource.data.fileSizeBytes <= 500 * 1024)
         );
 
-      allow update: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+      allow update: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
         && request.resource.data.fileUrl == resource.data.fileUrl
         && request.resource.data.publicId == resource.data.publicId
         && request.resource.data.fileType == resource.data.fileType
         && request.resource.data.fileSizeBytes == resource.data.fileSizeBytes;
 
-      allow delete: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+      allow delete: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()));
     }
 
     match /tenants/{tenantId}/complaints/{complaintId} {
-      allow read: if ownerCanAccessTenantByParent(tenantId)
-        || tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId));
+      allow read: if isAuthenticated() && (
+        tenantParentData(tenantId).ownerId == currentUid()
+        || tenantId == currentUid()
+      );
 
-      allow create: if tenantOwnsDocByIdOrEmail(tenantId, tenantParentData(tenantId))
+      allow create: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
         && request.resource.data.description is string
         && request.resource.data.category is string
         && request.resource.data.status in ['pending', 'resolved'];
 
-      allow update: if ownerCanAccessTenantByParent(tenantId)
+      allow update: if (tenantParentData(tenantId).ownerId == currentUid())
         && request.resource.data.description == resource.data.description
         && request.resource.data.category == resource.data.category
         && request.resource.data.timestamp == resource.data.timestamp
@@ -456,11 +372,17 @@ service cloud.firestore {
     }
 
     match /payments/{paymentId} {
-      allow read: if (isOwner() && resource.data.ownerId == currentUid())
-        || (isTenant() && resource.data.tenantId == currentUid());
+      allow list: if isOwner() || isTenant();
+      allow read: if isAuthenticated() && (
+        resource.data.ownerId == currentUid()
+        || resource.data.tenantId == currentUid()
+      );
 
       // Payment writes are server-only via Cloud Functions (Admin SDK bypasses rules).
       allow create, update, delete: if false;
+
+      // Allow owners and tenants to query their own payments
+      allow list: if (isOwner() && request.query.ownerId == currentUid()) || (isTenant() && request.query.tenantId == currentUid());
     }
 
     match /appConfig/{docId} {

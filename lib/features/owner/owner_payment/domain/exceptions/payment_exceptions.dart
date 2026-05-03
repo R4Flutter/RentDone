@@ -15,8 +15,7 @@ abstract class PaymentException implements Exception {
 
 /// Thrown when payment amount validation fails
 class InvalidPaymentAmountException extends PaymentException {
-  InvalidPaymentAmountException({required super.message, String? code})
-    : super(code: code ?? 'INVALID_AMOUNT');
+  InvalidPaymentAmountException({required super.message, super.code = 'INVALID_AMOUNT'});
 
   factory InvalidPaymentAmountException.zero() => InvalidPaymentAmountException(
     message: 'Payment amount must be greater than zero',
@@ -44,8 +43,7 @@ class InvalidPaymentAmountException extends PaymentException {
 
 /// Thrown when payment status is invalid or transition not allowed
 class InvalidPaymentStatusException extends PaymentException {
-  InvalidPaymentStatusException({required super.message, String? code})
-    : super(code: code ?? 'INVALID_STATUS');
+  InvalidPaymentStatusException({required super.message, super.code = 'INVALID_STATUS'});
 
   factory InvalidPaymentStatusException.invalidStatus(
     String status,
@@ -66,9 +64,9 @@ class InvalidPaymentStatusException extends PaymentException {
 class PaymentStorageException extends PaymentException {
   PaymentStorageException({
     required super.message,
-    String? code,
+    super.code = 'STORAGE_ERROR',
     super.originalException,
-  }) : super(code: code ?? 'STORAGE_ERROR');
+  });
 
   factory PaymentStorageException.write(Exception? e) =>
       PaymentStorageException(
@@ -113,9 +111,9 @@ class PaymentStorageException extends PaymentException {
 class PaymentGatewayException extends PaymentException {
   PaymentGatewayException({
     required super.message,
-    String? code,
+    super.code = 'GATEWAY_ERROR',
     super.originalException,
-  }) : super(code: code ?? 'GATEWAY_ERROR');
+  });
 
   factory PaymentGatewayException.checkoutFailed(Exception? e) =>
       PaymentGatewayException(
@@ -148,8 +146,7 @@ class PaymentGatewayException extends PaymentException {
 
 /// Thrown when tenant/property context is invalid
 class InvalidPaymentContextException extends PaymentException {
-  InvalidPaymentContextException({required super.message, String? code})
-    : super(code: code ?? 'INVALID_CONTEXT');
+  InvalidPaymentContextException({required super.message, super.code = 'INVALID_CONTEXT'});
 
   factory InvalidPaymentContextException.noAuth() =>
       InvalidPaymentContextException(
