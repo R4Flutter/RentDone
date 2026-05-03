@@ -85,18 +85,16 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
   }
 
   Future<void> _handlePayNowWithRewards() async {
-    if (!mounted) return;
-    final rootContext = this.context;
-
     await _logAdEvent('pay_now_cta_opened', placement: 'active_dues_card');
 
+    if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (modalContext) {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -106,14 +104,14 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
               children: <Widget>[
                 Text(
                   'Save on your payment',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: Theme.of(modalContext).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Use credit card or watch an ad to unlock up to Rs 10 promo on checkout.',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(modalContext).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
                 ListTile(
@@ -122,7 +120,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                   title: const Text('Apply Credit Card'),
                   subtitle: const Text('Open trusted fintech partner offer'),
                   onTap: () async {
-                    Navigator.of(context).pop();
+                    Navigator.of(modalContext).pop();
                     await _openCreditCardOffer();
                   },
                 ),
@@ -132,7 +130,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                   title: const Text('Watch Ad'),
                   subtitle: const Text('Unlock reward promo and continue'),
                   onTap: () async {
-                    Navigator.of(context).pop();
+                    Navigator.of(modalContext).pop();
                     await _logAdEvent(
                       'rewarded_ad_requested',
                       placement: 'pay_now_modal',
@@ -148,7 +146,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                     );
 
                     if (!mounted) return;
-                    ScaffoldMessenger.of(rootContext).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
                           rewarded
@@ -157,7 +155,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                         ),
                       ),
                     );
-                    GoRouter.of(rootContext).push('/tenant/payments');
+                    GoRouter.of(context).push('/tenant/payments');
                   },
                 ),
                 ListTile(
@@ -166,8 +164,9 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
                   title: const Text('Skip'),
                   subtitle: const Text('Continue to payment directly'),
                   onTap: () {
-                    Navigator.of(context).pop();
-                    GoRouter.of(rootContext).push('/tenant/payments');
+                    Navigator.of(modalContext).pop();
+                    if (!mounted) return;
+                    GoRouter.of(context).push('/tenant/payments');
                   },
                 ),
               ],
