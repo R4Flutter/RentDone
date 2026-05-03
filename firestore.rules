@@ -35,8 +35,8 @@ service cloud.firestore {
         && ownerId == currentUid()
         && (
           currentRole() == 'owner'
-          || !userDoc(currentUid()).exists
-          || !('role' in userDoc(currentUid()).data)
+          || (userDoc(currentUid()).exists && userDoc(currentUid()).data.role == 'owner')
+          || exists(/databases/$(database)/documents/owners/$(currentUid()))
         );
     }
 

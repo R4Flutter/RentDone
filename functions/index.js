@@ -4450,18 +4450,18 @@ exports.verifyOwnerRazorpayPayment = functions.region('asia-south1').https.onCal
 
 async function assertOwnerAccessOrThrow(ownerId) {
   const ownerUserDoc = await db.collection('users').doc(ownerId).get();
-  if (!ownerUserDoc.exists) {
-    // Legacy accounts might not have a synced users doc yet.
-    return;
-  }
+  const ownerRole = ownerUserDoc.exists ? String(ownerUserDoc.data()?.role || '').trim().toLowerCase() : '';
 
-  const ownerRole = String(ownerUserDoc.data()?.role || '').trim().toLowerCase();
-  if (ownerRole && ownerRole !== 'owner') {
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'Only owners can perform this operation',
-    );
-  }
+  if (ownerRole === 'owner') return;
+
+  // Safe fallback: Legacy accounts might not have a synced users doc yet, but MUST have an owners doc.
+  const ownerProfileDoc = await db.collection('owners').doc(ownerId).get();
+  if (ownerProfileDoc.exists) return;
+
+  throw new functions.https.HttpsError(
+    'permission-denied',
+    'Only owners can perform this operation',
+  );
 }
 
 function toEpochMillisOrNull(value) {
@@ -4481,7 +4481,21 @@ exports.ensureOwnerSubscriptionProfile = functions.region('asia-south1')
     throw new functions.https.HttpsError('permission-denied', 'Invalid owner scope');
   }
 
-  await assertOwnerAccessOrThrow(ownerId);
+  const userDoc = await db.collection('users').doc(ownerId).get();
+  const currentRole = userDoc.exists ? String(userDoc.data()?.role || '').trim().toLowerCase() : '';
+  
+  if (currentRole === 'tenant') {
+    throw new functions.https.HttpsError('permission-denied', 'Tenant accounts cannot act as owners');
+  }
+
+  if (currentRole !== 'owner') {
+    await db.collection('users').doc(ownerId).set({ 
+      uid: ownerId,
+      email: String(data?.email || context.auth.token.email || '').trim(),
+      role: 'owner', 
+      updatedAt: FieldValue.serverTimestamp() 
+    }, { merge: true });
+  }
 
   const email = String(data?.email || '').trim();
   const ownerRef = db.collection('owners').doc(ownerId);
@@ -4515,7 +4529,21 @@ exports.getOwnerSubscriptionSnapshot = functions.region('asia-south1')
     throw new functions.https.HttpsError('permission-denied', 'Invalid owner scope');
   }
 
-  await assertOwnerAccessOrThrow(ownerId);
+  const userDoc = await db.collection('users').doc(ownerId).get();
+  const currentRole = userDoc.exists ? String(userDoc.data()?.role || '').trim().toLowerCase() : '';
+  
+  if (currentRole === 'tenant') {
+    throw new functions.https.HttpsError('permission-denied', 'Tenant accounts cannot act as owners');
+  }
+
+  if (currentRole !== 'owner') {
+    await db.collection('users').doc(ownerId).set({ 
+      uid: ownerId,
+      email: String(data?.email || context.auth.token.email || '').trim(),
+      role: 'owner', 
+      updatedAt: FieldValue.serverTimestamp() 
+    }, { merge: true });
+  }
 
   const email = String(data?.email || '').trim();
   const ownerRef = db.collection('owners').doc(ownerId);
@@ -5003,7 +5031,7 @@ exports.linkTenantAccount = functions.region('asia-south1')
   const userData = userDoc.data() || {};
   const role = userData.role || null;
 
-  if (!userDoc.exists || !role) {
+  if (!userDoc.exists || role === 'pending' || !role) {
     await userRef.set(
       {
         uid,
@@ -5216,5 +5244,21 @@ exports.razorpayWebhook = functions.region('asia-south1')
 exports.stripeWebhook = functions.region('asia-south1')
   .https.onRequest(async (req, res) => {
   res.status(501).send('Stripe webhook not configured');
+});
+
+exports.onUserCreated = functions.region('asia-south1').auth.user().onCreate(async (user) => {
+  const email = String(user.email || '').trim();
+  await db.collection('users').doc(user.uid).set({
+    uid: user.uid,
+    email: email,
+    emailLowercase: email.toLowerCase(),
+    role: 'pending',
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+});
+
+exports.onUserDeleted = functions.region('asia-south1').auth.user().onDelete(async (user) => {
+  await db.collection('users').doc(user.uid).delete();
 });
 
