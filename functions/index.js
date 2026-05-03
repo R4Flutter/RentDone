@@ -476,21 +476,37 @@ async function createRazorpayOrderForPayment({
     );
   }
 
+  if (amountInPaise < 100) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      `Razorpay requires a minimum amount of ₹1.00 (100 paise). Provided: ${amountInPaise} paise.`,
+    );
+  }
+
   const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
   const receipt = String(paymentId || '').trim();
-  const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${auth}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      amount: amountInPaise,
-      currency,
-      receipt,
-      notes,
-    }),
-  });
+  let orderRes;
+  try {
+    orderRes = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${auth}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: Math.trunc(amountInPaise),
+        currency,
+        receipt,
+        notes,
+      }),
+    });
+  } catch (err) {
+    functions.logger.error('Razorpay API fetch error', err);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to reach Razorpay servers.',
+    );
+  }
 
   if (!orderRes.ok) {
     const text = await orderRes.text();
@@ -2851,6 +2867,13 @@ exports.quotePayment = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError(
       'failed-precondition',
       'Configured fee is below gateway cost. Refusing quote to prevent platform loss.',
+    );
+  }
+
+  if (feeBreakdown.totalPayableInPaise < 100) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Total payable amount must be at least ₹1.00',
     );
   }
 
