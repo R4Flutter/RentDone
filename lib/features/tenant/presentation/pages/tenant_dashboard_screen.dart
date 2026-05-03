@@ -50,12 +50,13 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
 
   Future<void> _logAdEvent(String name, {String? placement}) async {
     try {
+      final params = <String, Object>{'screen': 'tenant_dashboard'};
+      if (placement != null) {
+        params['placement'] = placement;
+      }
       await _analytics.logEvent(
         name: name,
-        parameters: <String, Object>{
-          'screen': 'tenant_dashboard',
-          if (placement != null) 'placement': placement,
-        },
+        parameters: params,
       );
     } catch (_) {}
   }
@@ -96,7 +97,7 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -106,14 +107,14 @@ class _TenantDashboardScreenState extends ConsumerState<TenantDashboardScreen>
               children: <Widget>[
                 Text(
                   'Save on your payment',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Use credit card or watch an ad to unlock up to Rs 10 promo on checkout.',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(sheetContext).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
                 ListTile(

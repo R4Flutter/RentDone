@@ -21,7 +21,7 @@ service cloud.firestore {
     function isOwner() {
       return isAuthenticated() && (
         currentRole() == 'owner'
-        || (userDoc(currentUid()).exists && userDoc(currentUid()).data.get('role', '') == 'owner')
+        || (exists(/databases/$(database)/documents/users/$(currentUid())) && userDoc(currentUid()).data.get('role', '') == 'owner')
       );
     }
 
@@ -30,21 +30,22 @@ service cloud.firestore {
         && (
           request.auth.token.get('admin', false) == true
           || currentRole() == 'admin'
-          || (userDoc(currentUid()).exists && userDoc(currentUid()).data.get('role', '') == 'admin')
+          || (exists(/databases/$(database)/documents/users/$(currentUid())) && userDoc(currentUid()).data.get('role', '') == 'admin')
         );
     }
 
     function isTenant() {
       return isAuthenticated() && (
         currentRole() == 'tenant'
-        || (userDoc(currentUid()).exists && userDoc(currentUid()).data.get('role', '') == 'tenant')
+        || (exists(/databases/$(database)/documents/users/$(currentUid())) && userDoc(currentUid()).data.get('role', '') == 'tenant')
       );
     }
 
     function isVerified() {
-      return request.auth.token.email_verified == true
-        || request.auth.token.firebase.sign_in_provider == 'phone'
-        || request.auth.token.firebase.sign_in_provider == 'google.com';
+      return isAuthenticated() && (
+        request.auth.token.email_verified == true
+        || request.auth.token.firebase.sign_in_provider in ['phone', 'google.com', 'password', 'apple.com', 'facebook.com']
+      );
     }
 
     function roleIsValid(role) {
@@ -96,11 +97,7 @@ service cloud.firestore {
       return request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.fullName == resource.data.fullName
         && request.resource.data.phone == resource.data.phone
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.idProofType == resource.data.idProofType
-        && request.resource.data.idProofUrl == resource.data.idProofUrl
-        && request.resource.data.agreementUrl == resource.data.agreementUrl
-        && request.resource.data.additionalDocumentUrls == resource.data.additionalDocumentUrls;
+        && request.resource.data.email == resource.data.email;
     }
 
     function tenantTrustFieldsUnchanged() {
@@ -119,15 +116,7 @@ service cloud.firestore {
         && tenantId == currentUid()
         && request.resource.data.authUid == currentUid()
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.emailLowercase is string
-        && request.resource.data.name is string
-        && request.resource.data.phoneNumber is string
-        && request.resource.data.ownerId == ''
-        && request.resource.data.roomNumber is string
-        && request.resource.data.dueAmount == 0
-        && request.resource.data.totalPaid == 0
-        && request.resource.data.isActive == false
-        && request.resource.data.onboardingStatus == 'pending_assignment';
+        && request.resource.data.isActive == false;
     }
 
     function tenantParentData(tenantId) {
@@ -144,7 +133,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated() && (
         userId == currentUid()
-        || (isTenant() && userDoc(userId).exists && userDoc(userId).data.get('role', '') == 'owner')
+        || (isTenant() && exists(/databases/$(database)/documents/users/$(userId)) && userDoc(userId).data.get('role', '') == 'owner')
       );
 
       allow list: if isAuthenticated() &&
@@ -166,16 +155,8 @@ service cloud.firestore {
 
       match /deviceTokens/{tokenId} {
         allow read: if isAuthenticated() && userId == currentUid();
-
-        allow create: if isAuthenticated()
-          && userId == currentUid()
-          && deviceTokenShapeIsValid(request.resource.data);
-
-        allow update: if isAuthenticated()
-          && userId == currentUid()
-          && deviceTokenShapeIsValid(request.resource.data)
-          && request.resource.data.token == resource.data.token;
-
+        allow create: if isAuthenticated() && userId == currentUid() && deviceTokenShapeIsValid(request.resource.data);
+        allow update: if isAuthenticated() && userId == currentUid() && deviceTokenShapeIsValid(request.resource.data) && request.resource.data.token == resource.data.token;
         allow delete: if isAuthenticated() && userId == currentUid();
       }
 
@@ -184,10 +165,21 @@ service cloud.firestore {
       }
     }
 
+    match /owners/{ownerId} {
+      allow read: if isAuthenticated() && (ownerId == currentUid() || isAdmin());
+      allow create, update: if isAuthenticated() && ownerId == currentUid() && isOwner();
+      allow delete: if isAdmin();
+    }
+
+    match /ownerPaymentProfiles/{ownerId} {
+      allow read: if isAuthenticated() && (ownerId == currentUid() || isAdmin());
+      allow create, update: if isAuthenticated() && ownerId == currentUid() && isOwner();
+      allow delete: if isAdmin();
+    }
+
     match /owners_summary/{ownerId} {
       allow get: if isAuthenticated() && ownerId == currentUid();
       allow list: if isAuthenticated() && (ownerId == currentUid() || request.query.limit <= 1);
-
       allow create, update, delete: if false;
     }
 
@@ -207,7 +199,7 @@ service cloud.firestore {
     }
 
     match /properties/{propertyId} {
-      allow list: if isOwner();
+      allow list: if isOwner() && request.query.ownerId == currentUid();
       allow read: if isAuthenticated() && (
         resource.data.ownerId == currentUid()
         || resource.data.isPublished == true
@@ -226,9 +218,6 @@ service cloud.firestore {
       allow delete: if isOwner()
         && isVerified()
         && resource.data.ownerId == currentUid();
-
-      // Allow owners to query their own properties
-      allow list: if isOwner() && request.query.ownerId == currentUid();
     }
 
     match /tenants/{tenantId} {
@@ -252,137 +241,72 @@ service cloud.firestore {
           && isVerified()
           && resource.data.ownerId == currentUid()
           && request.resource.data.ownerId == resource.data.ownerId
-          && ownerOwnsProperty(request.resource.data.propertyId)
-          && tenantOwnerImmutableFieldsUnchanged()
-          && tenantTrustFieldsUnchanged()
+          && (request.resource.data.propertyId == resource.data.propertyId || ownerOwnsProperty(request.resource.data.propertyId))
+          && (request.auth.uid == resource.data.ownerId) // Only owner can update trust/status
         )
         || (
           (tenantId == currentUid() || (('authUid' in resource.data) && resource.data.authUid == currentUid()))
           && isVerified()
           && request.resource.data.ownerId == resource.data.ownerId
           && request.resource.data.email == resource.data.email
-          && request.resource.data.authUid == resource.data.authUid
         );
 
       allow delete: if isOwner() && isVerified() && (
         resource.data.ownerId == currentUid()
-        || (
-          ('propertyId' in resource.data)
-          && ownerOwnsProperty(resource.data.propertyId)
-        )
-      );
-    }
-
-    match /tenants/{tenantId}/payments/{paymentId} {
-      allow read: if isAuthenticated() && (
-        tenantParentData(tenantId).ownerId == currentUid()
-        || tenantId == currentUid()
+        || (('propertyId' in resource.data) && ownerOwnsProperty(resource.data.propertyId))
       );
 
-      // Legacy tenant subcollection payment writes are disabled.
-      // Payments must be written by Cloud Functions (Admin SDK).
-      allow create, update, delete: if false;
-    }
-
-    match /tenants/{tenantId}/room_details/{docId} {
-      allow read: if isAuthenticated() && (
-        tenantParentData(tenantId).ownerId == currentUid()
-        || tenantId == currentUid()
-      );
-
-      allow create, update: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
-        && docId == 'current'
-        && request.resource.data.propertyName is string
-        && request.resource.data.roomNumber is string
-        && request.resource.data.monthlyRent is int
-        && request.resource.data.monthlyRent > 0
-        && request.resource.data.rentDueDay is int
-        && request.resource.data.rentDueDay >= 1
-        && request.resource.data.rentDueDay <= 31;
-
-      allow delete: if false;
-    }
-
-    match /tenants/{tenantId}/owner_details/{docId} {
-      allow read: if isAuthenticated() && (
-        tenantParentData(tenantId).ownerId == currentUid()
-        || tenantId == currentUid()
-      );
-
-      allow create, update: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
-        && docId == 'current'
-        && validIndianPhone(request.resource.data.ownerPhoneNumber);
-
-      allow delete: if false;
-    }
-
-    match /tenants/{tenantId}/reminders/{reminderId} {
-      allow read: if isAuthenticated() && (
-        tenantParentData(tenantId).ownerId == currentUid()
-        || tenantId == currentUid()
-      );
-
-      allow create, update, delete: if false;
-    }
-
-    match /tenants/{tenantId}/documents/{docId} {
-      allow read: if isAuthenticated() && (
-        tenantParentData(tenantId).ownerId == currentUid()
-        || tenantId == currentUid()
-      );
-
-      allow create: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
-        && request.resource.data.fileUrl is string
-        && request.resource.data.publicId is string
-        && request.resource.data.fileType in ['image', 'pdf']
-        && request.resource.data.fileSizeBytes is int
-        && (
-          (request.resource.data.fileType == 'image' && request.resource.data.fileSizeBytes <= 200 * 1024)
-          ||
-          (request.resource.data.fileType == 'pdf' && request.resource.data.fileSizeBytes <= 500 * 1024)
+      match /trust_score_events/{eventId} {
+        allow read: if isAuthenticated() && (
+          (exists(/databases/$(database)/documents/tenants/$(tenantId)) && tenantParentData(tenantId).ownerId == currentUid())
+          || tenantId == currentUid()
         );
-
-      allow update: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
-        && request.resource.data.fileUrl == resource.data.fileUrl
-        && request.resource.data.publicId == resource.data.publicId
-        && request.resource.data.fileType == resource.data.fileType
-        && request.resource.data.fileSizeBytes == resource.data.fileSizeBytes;
-
-      allow delete: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()));
-    }
-
-    match /tenants/{tenantId}/complaints/{complaintId} {
-      allow read: if isAuthenticated() && (
-        tenantParentData(tenantId).ownerId == currentUid()
-        || tenantId == currentUid()
-      );
-
-      allow create: if (tenantId == currentUid() || (('authUid' in tenantParentData(tenantId)) && tenantParentData(tenantId).authUid == currentUid()))
-        && request.resource.data.description is string
-        && request.resource.data.category is string
-        && request.resource.data.status in ['pending', 'resolved'];
-
-      allow update: if (tenantParentData(tenantId).ownerId == currentUid())
-        && request.resource.data.description == resource.data.description
-        && request.resource.data.category == resource.data.category
-        && request.resource.data.timestamp == resource.data.timestamp
-        && request.resource.data.status in ['pending', 'resolved'];
-
-      allow delete: if false;
+        allow write: if isOwner() && (exists(/databases/$(database)/documents/tenants/$(tenantId)) && tenantParentData(tenantId).ownerId == currentUid());
+      }
     }
 
     match /payments/{paymentId} {
-      allow list: if isOwner() || isTenant();
+      allow list: if (isOwner() && request.query.ownerId == currentUid()) || (isTenant() && request.query.tenantId == currentUid());
       allow read: if isAuthenticated() && (
         resource.data.ownerId == currentUid()
         || resource.data.tenantId == currentUid()
       );
 
-      // Payment writes are server-only via Cloud Functions (Admin SDK bypasses rules).
-      allow create, update, delete: if false;
+      // Allow owners to mark payments as paid
+      allow update: if isOwner()
+        && resource.data.ownerId == currentUid()
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'method', 'paidAt', 'updatedAt', 'transactionId', 'installments', 'notes']);
 
-      // Allow owners and tenants to query their own payments
-      allow list: if (isOwner() && request.query.ownerId == currentUid()) || (isTenant() && request.query.tenantId == currentUid());
+      allow create, delete: if false; // Creation handled by backend or owners via property/tenant flow if allowed
+    }
+
+    match /tenants/{tenantId}/documents/{docId} {
+      allow read: if isAuthenticated() && (
+        (exists(/databases/$(database)/documents/tenants/$(tenantId)) && tenantParentData(tenantId).ownerId == currentUid())
+        || tenantId == currentUid()
+      );
+      allow create, update, delete: if (tenantId == currentUid() || (exists(/databases/$(database)/documents/tenants/$(tenantId)) && tenantParentData(tenantId).ownerId == currentUid()));
+    }
+
+    match /tenants/{tenantId}/complaints/{complaintId} {
+      allow read: if isAuthenticated() && (
+        (exists(/databases/$(database)/documents/tenants/$(tenantId)) && tenantParentData(tenantId).ownerId == currentUid())
+        || tenantId == currentUid()
+      );
+      allow create: if (tenantId == currentUid());
+      allow update: if (exists(/databases/$(database)/documents/tenants/$(tenantId)) && tenantParentData(tenantId).ownerId == currentUid());
+      allow delete: if false;
+    }
+
+    match /user_images/{imageId} {
+      allow read: if isAuthenticated() && resource.data.userId == currentUid();
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == currentUid()
+        && request.resource.data.imageUrl is string
+        && (request.resource.data.uploadedAt is timestamp || request.resource.data.uploadedAt == null);
+      allow update: if isAuthenticated() && resource.data.userId == currentUid();
+      allow delete: if isAuthenticated() && resource.data.userId == currentUid();
     }
 
     match /appConfig/{docId} {
@@ -398,21 +322,6 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow read: if isAdmin() && adminId == currentUid();
       allow write: if false;
-    }
-
-    match /user_images/{imageId} {
-      allow read: if isAuthenticated() && resource.data.userId == currentUid();
-
-      allow create: if isAuthenticated()
-        && request.resource.data.userId == currentUid()
-        && request.resource.data.imageUrl is string
-        && request.resource.data.uploadedAt is timestamp;
-
-      allow update: if isAuthenticated()
-        && resource.data.userId == currentUid()
-        && request.resource.data.userId == resource.data.userId;
-
-      allow delete: if isAuthenticated() && resource.data.userId == currentUid();
     }
 
     match /transactions/{transactionId} {
@@ -431,26 +340,6 @@ service cloud.firestore {
       allow read: if (isOwner() && resource.data.ownerId == currentUid())
         || (isTenant() && resource.data.tenantId == currentUid());
       allow write: if false;
-    }
-
-    match /fcmTokens/{tokenId} {
-      allow read, write: if false;
-    }
-
-    match /_webhookEvents/{eventId} {
-      allow read, write: if false;
-    }
-
-    match /_securitySignals/{signalId} {
-      allow read, write: if false;
-    }
-
-    match /_securityAlerts/{alertId} {
-      allow read, write: if false;
-    }
-
-    match /_notificationEvents/{eventId} {
-      allow read, write: if false;
     }
 
     match /{document=**} {

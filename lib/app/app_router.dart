@@ -30,7 +30,7 @@ import 'package:rentdone/features/owner/owner_tenants/presentation/pages/manage_
 import 'package:rentdone/features/owner/owner_tenants/presentation/pages/tenant_trust_search_screen.dart';
 import 'package:rentdone/features/owner/owner_tenants/presentation/pages/tenant_trust_score_screen.dart';
 import 'package:rentdone/features/owner/owners_properties/presentation/pages/manage_property_screen.dart';
-import 'package:rentdone/features/owner/owners_properties/presenatation/pages/add_property_screen.dart';
+import 'package:rentdone/features/owner/owners_properties/presentation/pages/add_property_screen.dart';
 import 'package:rentdone/features/owner/reports/presentation/pages/report_screen.dart';
 import 'package:rentdone/features/payment/domain/entities/transaction_actor.dart';
 import 'package:rentdone/features/payment/presentation/screens/transaction_history_screen.dart';

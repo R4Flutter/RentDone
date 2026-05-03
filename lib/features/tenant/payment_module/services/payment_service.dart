@@ -102,7 +102,7 @@ class PaymentService {
       final rent = tenant?.rent ?? 0;
       final paid = payments.fold<double>(
         0,
-        (sum, payment) => sum + payment.amount,
+        (total, payment) => total + payment.amount,
       );
       final double due = (rent - paid) <= 0 ? 0.0 : (rent - paid);
 
@@ -299,9 +299,9 @@ class PaymentService {
         .where('createdAt', isLessThan: Timestamp.fromDate(_nextMonthStart))
         .get();
 
-    return snapshot.docs.fold<double>(0, (sum, doc) {
+    return snapshot.docs.fold<double>(0, (total, doc) {
       final data = doc.data();
-      return sum + ((data['amount'] as num?)?.toDouble() ?? 0);
+      return total + ((data['amount'] as num?)?.toDouble() ?? 0);
     });
   }
 }

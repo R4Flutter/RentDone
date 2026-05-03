@@ -431,10 +431,16 @@ class TenantPaymentHistoryFirebaseService {
       final payload = <String, dynamic>{
         'paymentId': paymentId.trim(),
         'newStatus': normalized,
-        if (installmentAmount != null) 'installmentAmount': installmentAmount,
-        if (installmentMethod != null) 'installmentMethod': installmentMethod,
-        if (installmentNotes != null) 'installmentNotes': installmentNotes,
       };
+      if (installmentAmount != null) {
+        payload['installmentAmount'] = installmentAmount;
+      }
+      if (installmentMethod != null) {
+        payload['installmentMethod'] = installmentMethod;
+      }
+      if (installmentNotes != null) {
+        payload['installmentNotes'] = installmentNotes;
+      }
       await callable.call(payload);
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'permission-denied') {

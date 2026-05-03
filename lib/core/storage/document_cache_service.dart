@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -141,7 +140,7 @@ class DocumentCacheService {
       return;
     }
 
-    final lruEntries = LinkedHashMap<String, _CacheEntry>();
+    final lruEntries = <String, _CacheEntry>{};
     var totalBytes = 0;
 
     final cacheEntries = <_CacheEntry>[];
