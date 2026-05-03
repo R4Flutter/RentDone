@@ -24,6 +24,7 @@ class TenantPropertyFirebaseService {
     final query = firestore
         .collection('properties')
         .where('isPublished', isEqualTo: true)
+        .where('cityLowercase', isEqualTo: normalizedSearchCity)
         .limit(400);
 
     return query.snapshots().asyncMap((snapshot) async {

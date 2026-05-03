@@ -5262,3 +5262,21 @@ exports.onUserDeleted = functions.region('asia-south1').auth.user().onDelete(asy
   await db.collection('users').doc(user.uid).delete();
 });
 
+exports.onPropertyWrite = functions.region('asia-south1').firestore.document('properties/{propertyId}').onWrite(async (change, context) => {
+  if (!change.after.exists) return; // Deleted
+
+  const data = change.after.data();
+  const rawCity = String(data.city || '').trim();
+  
+  if (!rawCity) return;
+
+  const cityLowercase = rawCity
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (data.cityLowercase !== cityLowercase) {
+    await change.after.ref.set({ cityLowercase }, { merge: true });
+  }
+});

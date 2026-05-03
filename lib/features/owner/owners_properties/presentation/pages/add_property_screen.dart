@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:rentdone/app/app_theme.dart';
@@ -27,6 +29,53 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
   late TextEditingController lngCtrl;
 
   bool isPublished = false;
+  bool _isFetchingLocation = false;
+
+  Future<void> _fetchCurrentLocation() async {
+    setState(() => _isFetchingLocation = true);
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) throw Exception('Location services are disabled.');
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Location permissions are denied');
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Location permissions are permanently denied.');
+      } 
+
+      final position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+      
+      latCtrl.text = position.latitude.toStringAsFixed(6);
+      lngCtrl.text = position.longitude.toStringAsFixed(6);
+
+      try {
+        final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          final place = placemarks.first;
+          if (place.locality != null && place.locality!.isNotEmpty) {
+            cityCtrl.text = place.locality!;
+          } else if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
+             cityCtrl.text = place.subAdministrativeArea!;
+          }
+        }
+      } catch (e) {
+        // Geocoding failed, but we got coordinates
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _isFetchingLocation = false);
+    }
+  }
 
   List<RoomInput> rooms = [];
 
@@ -280,6 +329,17 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                                     theme,
                                     'Map Location (Tenant View)',
                                     [
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton.icon(
+                                          onPressed: _isFetchingLocation ? null : _fetchCurrentLocation,
+                                          icon: _isFetchingLocation
+                                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                              : const Icon(Icons.my_location_rounded),
+                                          label: const Text('Use My Location'),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
                                       _glassField(
                                         controller: cityCtrl,
                                         label: 'City',
