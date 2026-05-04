@@ -1,0 +1,4309 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {
+    "hyperedges": [
+      {
+        "id": "notification_pipeline",
+        "label": "Notification Dispatch Pipeline",
+        "nodes": [
+          "notificationservice_reservenotificationevent",
+          "ratelimitservice_checkandincrementratelimit",
+          "notificationservice_sendmulticastwithretry"
+        ],
+        "relation": "participate_in",
+        "confidence": "INFERRED",
+        "confidence_score": 0.95,
+        "source_file": "functions/src/services/notificationService.ts"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "label": "email_duplicate_cleanup.js",
+      "file_type": "code",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L1",
+      "id": "email_duplicate_cleanup_js",
+      "community": 9,
+      "norm_label": "email_duplicate_cleanup.js"
+    },
+    {
+      "label": "parseBool()",
+      "file_type": "code",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L12",
+      "id": "functions_email_duplicate_cleanup_parsebool",
+      "community": 9,
+      "norm_label": "parsebool()"
+    },
+    {
+      "label": "getSecurityConfig()",
+      "file_type": "code",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L20",
+      "id": "functions_email_duplicate_cleanup_getsecurityconfig",
+      "community": 9,
+      "norm_label": "getsecurityconfig()"
+    },
+    {
+      "label": "assertAdminCallableAuth()",
+      "file_type": "code",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L27",
+      "id": "functions_email_duplicate_cleanup_assertadmincallableauth",
+      "community": 9,
+      "norm_label": "assertadmincallableauth()"
+    },
+    {
+      "label": "rateLimitAdminOrThrow()",
+      "file_type": "code",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L51",
+      "id": "functions_email_duplicate_cleanup_ratelimitadminorthrow",
+      "community": 9,
+      "norm_label": "ratelimitadminorthrow()"
+    },
+    {
+      "label": "gravatar_migration.js",
+      "file_type": "code",
+      "source_file": "functions/gravatar_migration.js",
+      "source_location": "L1",
+      "id": "gravatar_migration_js",
+      "community": 15,
+      "norm_label": "gravatar_migration.js"
+    },
+    {
+      "label": "getGravatarUrl()",
+      "file_type": "code",
+      "source_file": "functions/gravatar_migration.js",
+      "source_location": "L13",
+      "id": "functions_gravatar_migration_getgravatarurl",
+      "community": 15,
+      "norm_label": "getgravatarurl()"
+    },
+    {
+      "label": "assertAdminHttpRequest()",
+      "file_type": "code",
+      "source_file": "functions/gravatar_migration.js",
+      "source_location": "L23",
+      "id": "functions_gravatar_migration_assertadminhttprequest",
+      "community": 15,
+      "norm_label": "assertadminhttprequest()"
+    },
+    {
+      "label": "index.js",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1",
+      "id": "index_js",
+      "community": 0,
+      "norm_label": "index.js"
+    },
+    {
+      "label": "parseBool()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L9",
+      "id": "functions_index_parsebool",
+      "community": 10,
+      "norm_label": "parsebool()"
+    },
+    {
+      "label": "getSecurityConfig()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L17",
+      "id": "functions_index_getsecurityconfig",
+      "community": 10,
+      "norm_label": "getsecurityconfig()"
+    },
+    {
+      "label": "assertCallableAuth()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L30",
+      "id": "functions_index_assertcallableauth",
+      "community": 10,
+      "norm_label": "assertcallableauth()"
+    },
+    {
+      "label": "getGlobalAppConfig()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L56",
+      "id": "functions_index_getglobalappconfig",
+      "community": 21,
+      "norm_label": "getglobalappconfig()"
+    },
+    {
+      "label": "assertPaymentsEnabledOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L79",
+      "id": "functions_index_assertpaymentsenabledorthrow",
+      "community": 21,
+      "norm_label": "assertpaymentsenabledorthrow()"
+    },
+    {
+      "label": "assertAdminAccessOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L113",
+      "id": "functions_index_assertadminaccessorthrow",
+      "community": 0,
+      "norm_label": "assertadminaccessorthrow()"
+    },
+    {
+      "label": "logAdminAudit()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L149",
+      "id": "functions_index_logadminaudit",
+      "community": 0,
+      "norm_label": "logadminaudit()"
+    },
+    {
+      "label": "setCorsHeaders()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L170",
+      "id": "functions_index_setcorsheaders",
+      "community": 10,
+      "norm_label": "setcorsheaders()"
+    },
+    {
+      "label": "safeEqualDigest()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L184",
+      "id": "functions_index_safeequaldigest",
+      "community": 20,
+      "norm_label": "safeequaldigest()"
+    },
+    {
+      "label": "verifyHttpAppCheckOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L195",
+      "id": "functions_index_verifyhttpappcheckorthrow",
+      "community": 10,
+      "norm_label": "verifyhttpappcheckorthrow()"
+    },
+    {
+      "label": "assertTenantAccessOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L210",
+      "id": "functions_index_asserttenantaccessorthrow",
+      "community": 0,
+      "norm_label": "asserttenantaccessorthrow()"
+    },
+    {
+      "label": "recordWebhookDelivery()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L228",
+      "id": "functions_index_recordwebhookdelivery",
+      "community": 0,
+      "norm_label": "recordwebhookdelivery()"
+    },
+    {
+      "label": "requestIpFromHeaders()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L258",
+      "id": "functions_index_requestipfromheaders",
+      "community": 0,
+      "norm_label": "requestipfromheaders()"
+    },
+    {
+      "label": "minuteBucketKey()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L266",
+      "id": "functions_index_minutebucketkey",
+      "community": 16,
+      "norm_label": "minutebucketkey()"
+    },
+    {
+      "label": "rateLimitOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L278",
+      "id": "functions_index_ratelimitorthrow",
+      "community": 16,
+      "norm_label": "ratelimitorthrow()"
+    },
+    {
+      "label": "recordSecuritySignal()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L329",
+      "id": "functions_index_recordsecuritysignal",
+      "community": 16,
+      "norm_label": "recordsecuritysignal()"
+    },
+    {
+      "label": "getRazorpayConfig()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L384",
+      "id": "functions_index_getrazorpayconfig",
+      "community": 24,
+      "norm_label": "getrazorpayconfig()"
+    },
+    {
+      "label": "createRazorpayOrderForPayment()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L458",
+      "id": "functions_index_createrazorpayorderforpayment",
+      "community": 24,
+      "norm_label": "createrazorpayorderforpayment()"
+    },
+    {
+      "label": "getStripeConfig()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L518",
+      "id": "functions_index_getstripeconfig",
+      "community": 0,
+      "norm_label": "getstripeconfig()"
+    },
+    {
+      "label": "parsePercent()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L526",
+      "id": "functions_index_parsepercent",
+      "community": 8,
+      "norm_label": "parsepercent()"
+    },
+    {
+      "label": "ceilDivide()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L534",
+      "id": "functions_index_ceildivide",
+      "community": 8,
+      "norm_label": "ceildivide()"
+    },
+    {
+      "label": "percentToBps()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L538",
+      "id": "functions_index_percenttobps",
+      "community": 8,
+      "norm_label": "percenttobps()"
+    },
+    {
+      "label": "defaultPaymentFeeConfig()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L542",
+      "id": "functions_index_defaultpaymentfeeconfig",
+      "community": 8,
+      "norm_label": "defaultpaymentfeeconfig()"
+    },
+    {
+      "label": "loadPaymentFeeConfig()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L564",
+      "id": "functions_index_loadpaymentfeeconfig",
+      "community": 8,
+      "norm_label": "loadpaymentfeeconfig()"
+    },
+    {
+      "label": "calculateFeeBreakdownInPaise()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L622",
+      "id": "functions_index_calculatefeebreakdowninpaise",
+      "community": 8,
+      "norm_label": "calculatefeebreakdowninpaise()"
+    },
+    {
+      "label": "incrementFeeAnalytics()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L663",
+      "id": "functions_index_incrementfeeanalytics",
+      "community": 0,
+      "norm_label": "incrementfeeanalytics()"
+    },
+    {
+      "label": "getWhatsAppConfig()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L695",
+      "id": "functions_index_getwhatsappconfig",
+      "community": 13,
+      "norm_label": "getwhatsappconfig()"
+    },
+    {
+      "label": "monthKey()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L709",
+      "id": "functions_index_monthkey",
+      "community": 22,
+      "norm_label": "monthkey()"
+    },
+    {
+      "label": "normalizePaymentStatus()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L714",
+      "id": "functions_index_normalizepaymentstatus",
+      "community": 3,
+      "norm_label": "normalizepaymentstatus()"
+    },
+    {
+      "label": "stableStringify()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L718",
+      "id": "functions_index_stablestringify",
+      "community": 0,
+      "norm_label": "stablestringify()"
+    },
+    {
+      "label": "hasAnyFieldChanged()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L741",
+      "id": "functions_index_hasanyfieldchanged",
+      "community": 17,
+      "norm_label": "hasanyfieldchanged()"
+    },
+    {
+      "label": "shouldRecomputeOwnerSummaryForPaymentWrite()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L749",
+      "id": "functions_index_shouldrecomputeownersummaryforpaymentwrite",
+      "community": 17,
+      "norm_label": "shouldrecomputeownersummaryforpaymentwrite()"
+    },
+    {
+      "label": "shouldRecomputeOwnerSummaryForTenantWrite()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L780",
+      "id": "functions_index_shouldrecomputeownersummaryfortenantwrite",
+      "community": 0,
+      "norm_label": "shouldrecomputeownersummaryfortenantwrite()"
+    },
+    {
+      "label": "shouldRecomputeOwnerSummaryForPropertyWrite()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L795",
+      "id": "functions_index_shouldrecomputeownersummaryforpropertywrite",
+      "community": 17,
+      "norm_label": "shouldrecomputeownersummaryforpropertywrite()"
+    },
+    {
+      "label": "isUnpaidStatus()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L815",
+      "id": "functions_index_isunpaidstatus",
+      "community": 3,
+      "norm_label": "isunpaidstatus()"
+    },
+    {
+      "label": "amountInr()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L820",
+      "id": "functions_index_amountinr",
+      "community": 3,
+      "norm_label": "amountinr()"
+    },
+    {
+      "label": "dueDateLabel()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L825",
+      "id": "functions_index_duedatelabel",
+      "community": 11,
+      "norm_label": "duedatelabel()"
+    },
+    {
+      "label": "todayBoundsInKolkata()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L835",
+      "id": "functions_index_todayboundsinkolkata",
+      "community": 0,
+      "norm_label": "todayboundsinkolkata()"
+    },
+    {
+      "label": "shouldSendUserNotification()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L842",
+      "id": "functions_index_shouldsendusernotification",
+      "community": 3,
+      "norm_label": "shouldsendusernotification()"
+    },
+    {
+      "label": "reserveNotificationEvent()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L888",
+      "id": "functions_index_reservenotificationevent",
+      "community": 3,
+      "norm_label": "reservenotificationevent()"
+    },
+    {
+      "label": "sendDirectPush()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L905",
+      "id": "functions_index_senddirectpush",
+      "community": 0,
+      "norm_label": "senddirectpush()"
+    },
+    {
+      "label": "sendPushMulticast()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L937",
+      "id": "functions_index_sendpushmulticast",
+      "community": 3,
+      "norm_label": "sendpushmulticast()"
+    },
+    {
+      "label": "previousMonthKey()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1031",
+      "id": "functions_index_previousmonthkey",
+      "community": 22,
+      "norm_label": "previousmonthkey()"
+    },
+    {
+      "label": "dueDateFor()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1036",
+      "id": "functions_index_duedatefor",
+      "community": 0,
+      "norm_label": "duedatefor()"
+    },
+    {
+      "label": "toDate()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1042",
+      "id": "functions_index_todate",
+      "community": 11,
+      "norm_label": "todate()"
+    },
+    {
+      "label": "normalizeIndianPhone()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1055",
+      "id": "functions_index_normalizeindianphone",
+      "community": 0,
+      "norm_label": "normalizeindianphone()"
+    },
+    {
+      "label": "getLeaseOrTenantPaymentContext()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1064",
+      "id": "functions_index_getleaseortenantpaymentcontext",
+      "community": 2,
+      "norm_label": "getleaseortenantpaymentcontext()"
+    },
+    {
+      "label": "resolveTenantCandidateIds()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1110",
+      "id": "functions_index_resolvetenantcandidateids",
+      "community": 0,
+      "norm_label": "resolvetenantcandidateids()"
+    },
+    {
+      "label": "leaseBelongsToTenant()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1145",
+      "id": "functions_index_leasebelongstotenant",
+      "community": 0,
+      "norm_label": "leasebelongstotenant()"
+    },
+    {
+      "label": "buildUpiLink()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1152",
+      "id": "functions_index_buildupilink",
+      "community": 0,
+      "norm_label": "buildupilink()"
+    },
+    {
+      "label": "sleep()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1163",
+      "id": "functions_index_sleep",
+      "community": 13,
+      "norm_label": "sleep()"
+    },
+    {
+      "label": "deleteQueryInChunks()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1167",
+      "id": "functions_index_deletequeryinchunks",
+      "community": 0,
+      "norm_label": "deletequeryinchunks()"
+    },
+    {
+      "label": "deleteQueryInChunksCapped()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1186",
+      "id": "functions_index_deletequeryinchunkscapped",
+      "community": 0,
+      "norm_label": "deletequeryinchunkscapped()"
+    },
+    {
+      "label": "isSameMonth()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1213",
+      "id": "functions_index_issamemonth",
+      "community": 0,
+      "norm_label": "issamemonth()"
+    },
+    {
+      "label": "recomputeOwnerSummary()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1221",
+      "id": "functions_index_recomputeownersummary",
+      "community": 0,
+      "norm_label": "recomputeownersummary()"
+    },
+    {
+      "label": "deleteStoragePathIfExists()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1320",
+      "id": "functions_index_deletestoragepathifexists",
+      "community": 11,
+      "norm_label": "deletestoragepathifexists()"
+    },
+    {
+      "label": "cleanupOrphanTenantDocumentFiles()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1340",
+      "id": "functions_index_cleanuporphantenantdocumentfiles",
+      "community": 11,
+      "norm_label": "cleanuporphantenantdocumentfiles()"
+    },
+    {
+      "label": "cleanupOldReportExports()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1385",
+      "id": "functions_index_cleanupoldreportexports",
+      "community": 11,
+      "norm_label": "cleanupoldreportexports()"
+    },
+    {
+      "label": "postWhatsAppMessage()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1410",
+      "id": "functions_index_postwhatsappmessage",
+      "community": 13,
+      "norm_label": "postwhatsappmessage()"
+    },
+    {
+      "label": "sendWhatsAppMessage()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1424",
+      "id": "functions_index_sendwhatsappmessage",
+      "community": 13,
+      "norm_label": "sendwhatsappmessage()"
+    },
+    {
+      "label": "sendPushToAll()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1527",
+      "id": "functions_index_sendpushtoall",
+      "community": 0,
+      "norm_label": "sendpushtoall()"
+    },
+    {
+      "label": "verifyWebhookSignature()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1541",
+      "id": "functions_index_verifywebhooksignature",
+      "community": 20,
+      "norm_label": "verifywebhooksignature()"
+    },
+    {
+      "label": "getPaymentIdFromPayload()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1549",
+      "id": "functions_index_getpaymentidfrompayload",
+      "community": 0,
+      "norm_label": "getpaymentidfrompayload()"
+    },
+    {
+      "label": "isPaidLikeStatus()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1840",
+      "id": "functions_index_ispaidlikestatus",
+      "community": 3,
+      "norm_label": "ispaidlikestatus()"
+    },
+    {
+      "label": "dispatchPaymentReceivedNotification()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1845",
+      "id": "functions_index_dispatchpaymentreceivednotification",
+      "community": 3,
+      "norm_label": "dispatchpaymentreceivednotification()"
+    },
+    {
+      "label": "normalizePaymentMethod()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1974",
+      "id": "functions_index_normalizepaymentmethod",
+      "community": 0,
+      "norm_label": "normalizepaymentmethod()"
+    },
+    {
+      "label": "normalizeIntegerAmount()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1982",
+      "id": "functions_index_normalizeintegeramount",
+      "community": 2,
+      "norm_label": "normalizeintegeramount()"
+    },
+    {
+      "label": "normalizePropertyNameForComparison()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1990",
+      "id": "functions_index_normalizepropertynameforcomparison",
+      "community": 23,
+      "norm_label": "normalizepropertynameforcomparison()"
+    },
+    {
+      "label": "resolveTenantOwnerLinkPolicy()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L1994",
+      "id": "functions_index_resolvetenantownerlinkpolicy",
+      "community": 23,
+      "norm_label": "resolvetenantownerlinkpolicy()"
+    },
+    {
+      "label": "hashTenantLinkToken()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2048",
+      "id": "functions_index_hashtenantlinktoken",
+      "community": 19,
+      "norm_label": "hashtenantlinktoken()"
+    },
+    {
+      "label": "assertTenantBackfillProofOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2055",
+      "id": "functions_index_asserttenantbackfillprooforthrow",
+      "community": 19,
+      "norm_label": "asserttenantbackfillprooforthrow()"
+    },
+    {
+      "label": "resolvePaymentStatusFromAmounts()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2100",
+      "id": "functions_index_resolvepaymentstatusfromamounts",
+      "community": 2,
+      "norm_label": "resolvepaymentstatusfromamounts()"
+    },
+    {
+      "label": "logPaymentIntegrityEvent()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2110",
+      "id": "functions_index_logpaymentintegrityevent",
+      "community": 2,
+      "norm_label": "logpaymentintegrityevent()"
+    },
+    {
+      "label": "normalizeLogString()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2125",
+      "id": "functions_index_normalizelogstring",
+      "community": 2,
+      "norm_label": "normalizelogstring()"
+    },
+    {
+      "label": "normalizeLogNumber()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2130",
+      "id": "functions_index_normalizelognumber",
+      "community": 2,
+      "norm_label": "normalizelognumber()"
+    },
+    {
+      "label": "buildPaymentLogPayload()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2135",
+      "id": "functions_index_buildpaymentlogpayload",
+      "community": 2,
+      "norm_label": "buildpaymentlogpayload()"
+    },
+    {
+      "label": "logPaymentEvent()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2168",
+      "id": "functions_index_logpaymentevent",
+      "community": 2,
+      "norm_label": "logpaymentevent()"
+    },
+    {
+      "label": "validatePaymentDocumentIntegrity()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2181",
+      "id": "functions_index_validatepaymentdocumentintegrity",
+      "community": 2,
+      "norm_label": "validatepaymentdocumentintegrity()"
+    },
+    {
+      "label": "verifyPaymentAfterWriteOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2226",
+      "id": "functions_index_verifypaymentafterwriteorthrow",
+      "community": 2,
+      "norm_label": "verifypaymentafterwriteorthrow()"
+    },
+    {
+      "label": "findPaymentByIdempotencyKey()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2292",
+      "id": "functions_index_findpaymentbyidempotencykey",
+      "community": 0,
+      "norm_label": "findpaymentbyidempotencykey()"
+    },
+    {
+      "label": "blockDuplicatePaymentOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L2306",
+      "id": "functions_index_blockduplicatepaymentorthrow",
+      "community": 2,
+      "norm_label": "blockduplicatepaymentorthrow()"
+    },
+    {
+      "label": "assertOwnerAccessOrThrow()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L4430",
+      "id": "functions_index_assertowneraccessorthrow",
+      "community": 0,
+      "norm_label": "assertowneraccessorthrow()"
+    },
+    {
+      "label": "toEpochMillisOrNull()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L4446",
+      "id": "functions_index_toepochmillisornull",
+      "community": 0,
+      "norm_label": "toepochmillisornull()"
+    },
+    {
+      "label": "trustStatusLabel()",
+      "file_type": "code",
+      "source_file": "index.js",
+      "source_location": "L4581",
+      "id": "functions_index_truststatuslabel",
+      "community": 0,
+      "norm_label": "truststatuslabel()"
+    },
+    {
+      "label": "index.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/index.js",
+      "source_location": "L1",
+      "id": "lib_index_js",
+      "community": 26,
+      "norm_label": "index.js"
+    },
+    {
+      "label": "rentReminderScheduler.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/schedulers/rentReminderScheduler.js",
+      "source_location": "L1",
+      "id": "lib_schedulers_rentreminderscheduler_js",
+      "community": 1,
+      "norm_label": "rentreminderscheduler.js"
+    },
+    {
+      "label": "toIstNow()",
+      "file_type": "code",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L12",
+      "id": "schedulers_rentreminderscheduler_toistnow",
+      "community": 1,
+      "norm_label": "toistnow()"
+    },
+    {
+      "label": "dueDateKey()",
+      "file_type": "code",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L14",
+      "id": "schedulers_rentreminderscheduler_duedatekey",
+      "community": 1,
+      "norm_label": "duedatekey()"
+    },
+    {
+      "label": "statusString()",
+      "file_type": "code",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L21",
+      "id": "schedulers_rentreminderscheduler_statusstring",
+      "community": 1,
+      "norm_label": "statusstring()"
+    },
+    {
+      "label": "buildRentDueBody()",
+      "file_type": "code",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L23",
+      "id": "schedulers_rentreminderscheduler_buildrentduebody",
+      "community": 1,
+      "norm_label": "buildrentduebody()"
+    },
+    {
+      "label": "getTenantUserId()",
+      "file_type": "code",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L28",
+      "id": "schedulers_rentreminderscheduler_gettenantuserid",
+      "community": 1,
+      "norm_label": "gettenantuserid()"
+    },
+    {
+      "label": "loadDueTenants()",
+      "file_type": "code",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L36",
+      "id": "schedulers_rentreminderscheduler_loadduetenants",
+      "community": 1,
+      "norm_label": "loadduetenants()"
+    },
+    {
+      "label": "notificationService.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": "L1",
+      "id": "lib_services_notificationservice_js",
+      "community": 1,
+      "norm_label": "notificationservice.js"
+    },
+    {
+      "label": "isInvalidTokenError()",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L8",
+      "id": "services_notificationservice_isinvalidtokenerror",
+      "community": 1,
+      "norm_label": "isinvalidtokenerror()"
+    },
+    {
+      "label": "isTransientError()",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L13",
+      "id": "services_notificationservice_istransienterror",
+      "community": 1,
+      "norm_label": "istransienterror()"
+    },
+    {
+      "label": "sleep()",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L20",
+      "id": "services_notificationservice_sleep",
+      "community": 1,
+      "norm_label": "sleep()"
+    },
+    {
+      "label": "reserveNotificationEvent()",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L25",
+      "id": "services_notificationservice_reservenotificationevent",
+      "community": 1,
+      "norm_label": "reservenotificationevent()"
+    },
+    {
+      "label": "sendChunk()",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L46",
+      "id": "services_notificationservice_sendchunk",
+      "community": 1,
+      "norm_label": "sendchunk()"
+    },
+    {
+      "label": "sendMulticastWithRetry()",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L111",
+      "id": "services_notificationservice_sendmulticastwithretry",
+      "community": 1,
+      "norm_label": "sendmulticastwithretry()"
+    },
+    {
+      "label": "trackNotificationAnalytics()",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L164",
+      "id": "services_notificationservice_tracknotificationanalytics",
+      "community": 1,
+      "norm_label": "tracknotificationanalytics()"
+    },
+    {
+      "label": "rateLimitService.js",
+      "file_type": "code",
+      "source_file": "lib/services/rateLimitService.js",
+      "source_location": "L1",
+      "id": "lib_services_ratelimitservice_js",
+      "community": 1,
+      "norm_label": "ratelimitservice.js"
+    },
+    {
+      "label": "checkAndIncrementRateLimit()",
+      "file_type": "code",
+      "source_file": "functions/src/services/rateLimitService.ts",
+      "source_location": "L8",
+      "id": "services_ratelimitservice_checkandincrementratelimit",
+      "community": 1,
+      "norm_label": "checkandincrementratelimit()"
+    },
+    {
+      "label": "validationService.js",
+      "file_type": "code",
+      "source_file": "functions/lib/services/validationService.js",
+      "source_location": "L1",
+      "id": "lib_services_validationservice_js",
+      "community": 12,
+      "norm_label": "validationservice.js"
+    },
+    {
+      "label": "safeString()",
+      "file_type": "code",
+      "source_file": "functions/src/services/validationService.ts",
+      "source_location": "L3",
+      "id": "services_validationservice_safestring",
+      "community": 12,
+      "norm_label": "safestring()"
+    },
+    {
+      "label": "validatePaymentForNotification()",
+      "file_type": "code",
+      "source_file": "functions/src/services/validationService.ts",
+      "source_location": "L13",
+      "id": "services_validationservice_validatepaymentfornotification",
+      "community": 12,
+      "norm_label": "validatepaymentfornotification()"
+    },
+    {
+      "label": "rateLimitService.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/services/rateLimitService.js",
+      "source_location": "L1",
+      "id": "lib_src_services_ratelimitservice_js",
+      "community": 1,
+      "norm_label": "ratelimitservice.js"
+    },
+    {
+      "label": "validationService.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/services/validationService.js",
+      "source_location": "L1",
+      "id": "lib_src_services_validationservice_js",
+      "community": 12,
+      "norm_label": "validationservice.js"
+    },
+    {
+      "label": "paymentCallable.js",
+      "file_type": "code",
+      "source_file": "lib/triggers/paymentCallable.js",
+      "source_location": "L1",
+      "id": "lib_triggers_paymentcallable_js",
+      "community": 4,
+      "norm_label": "paymentcallable.js"
+    },
+    {
+      "label": "asString()",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L14",
+      "id": "triggers_paymentcallable_asstring",
+      "community": 4,
+      "norm_label": "asstring()"
+    },
+    {
+      "label": "asInt()",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L15",
+      "id": "triggers_paymentcallable_asint",
+      "community": 4,
+      "norm_label": "asint()"
+    },
+    {
+      "label": "normalizeMethod()",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L21",
+      "id": "triggers_paymentcallable_normalizemethod",
+      "community": 4,
+      "norm_label": "normalizemethod()"
+    },
+    {
+      "label": "assertAmountOrThrow()",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L27",
+      "id": "triggers_paymentcallable_assertamountorthrow",
+      "community": 4,
+      "norm_label": "assertamountorthrow()"
+    },
+    {
+      "label": "logPaymentEvent()",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L33",
+      "id": "triggers_paymentcallable_logpaymentevent",
+      "community": 4,
+      "norm_label": "logpaymentevent()"
+    },
+    {
+      "label": "assertAccessAndOwnership()",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L51",
+      "id": "triggers_paymentcallable_assertaccessandownership",
+      "community": 4,
+      "norm_label": "assertaccessandownership()"
+    },
+    {
+      "label": "paymentTrigger.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": "L1",
+      "id": "lib_src_triggers_paymenttrigger_js",
+      "community": 14,
+      "norm_label": "paymenttrigger.js"
+    },
+    {
+      "label": "normalizeStatus()",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L13",
+      "id": "triggers_paymenttrigger_normalizestatus",
+      "community": 14,
+      "norm_label": "normalizestatus()"
+    },
+    {
+      "label": "inr()",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L15",
+      "id": "triggers_paymenttrigger_inr",
+      "community": 14,
+      "norm_label": "inr()"
+    },
+    {
+      "label": "domain.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/types/domain.js",
+      "source_location": "L1",
+      "id": "lib_src_types_domain_js",
+      "community": 27,
+      "norm_label": "domain.js"
+    },
+    {
+      "label": "firebase.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/utils/firebase.js",
+      "source_location": "L1",
+      "id": "lib_src_utils_firebase_js",
+      "community": 28,
+      "norm_label": "firebase.js"
+    },
+    {
+      "label": "logger.js",
+      "file_type": "code",
+      "source_file": "functions/lib/src/utils/logger.js",
+      "source_location": "L1",
+      "id": "lib_src_utils_logger_js",
+      "community": 1,
+      "norm_label": "logger.js"
+    },
+    {
+      "label": "logInfo()",
+      "file_type": "code",
+      "source_file": "functions/src/utils/logger.ts",
+      "source_location": "L3",
+      "id": "utils_logger_loginfo",
+      "community": 1,
+      "norm_label": "loginfo()"
+    },
+    {
+      "label": "logWarn()",
+      "file_type": "code",
+      "source_file": "functions/src/utils/logger.ts",
+      "source_location": "L7",
+      "id": "utils_logger_logwarn",
+      "community": 1,
+      "norm_label": "logwarn()"
+    },
+    {
+      "label": "logError()",
+      "file_type": "code",
+      "source_file": "functions/src/utils/logger.ts",
+      "source_location": "L11",
+      "id": "utils_logger_logerror",
+      "community": 1,
+      "norm_label": "logerror()"
+    },
+    {
+      "label": "paymentTrigger.js",
+      "file_type": "code",
+      "source_file": "lib/triggers/paymentTrigger.js",
+      "source_location": "L1",
+      "id": "lib_triggers_paymenttrigger_js",
+      "community": 14,
+      "norm_label": "paymenttrigger.js"
+    },
+    {
+      "label": "domain.js",
+      "file_type": "code",
+      "source_file": "functions/lib/types/domain.js",
+      "source_location": "L1",
+      "id": "lib_types_domain_js",
+      "community": 29,
+      "norm_label": "domain.js"
+    },
+    {
+      "label": "firebase.js",
+      "file_type": "code",
+      "source_file": "functions/lib/utils/firebase.js",
+      "source_location": "L1",
+      "id": "lib_utils_firebase_js",
+      "community": 30,
+      "norm_label": "firebase.js"
+    },
+    {
+      "label": "logger.js",
+      "file_type": "code",
+      "source_file": "functions/lib/utils/logger.js",
+      "source_location": "L1",
+      "id": "lib_utils_logger_js",
+      "community": 1,
+      "norm_label": "logger.js"
+    },
+    {
+      "label": "index.ts",
+      "file_type": "code",
+      "source_file": "functions/src/index.ts",
+      "source_location": "L1",
+      "id": "src_index_ts",
+      "community": 31,
+      "norm_label": "index.ts"
+    },
+    {
+      "label": "rentReminderScheduler.ts",
+      "file_type": "code",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L1",
+      "id": "src_schedulers_rentreminderscheduler_ts",
+      "community": 1,
+      "norm_label": "rentreminderscheduler.ts"
+    },
+    {
+      "label": "notificationService.ts",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L1",
+      "id": "src_services_notificationservice_ts",
+      "community": 1,
+      "norm_label": "notificationservice.ts"
+    },
+    {
+      "label": "rateLimitService.ts",
+      "file_type": "code",
+      "source_file": "functions/src/services/rateLimitService.ts",
+      "source_location": "L1",
+      "id": "src_services_ratelimitservice_ts",
+      "community": 1,
+      "norm_label": "ratelimitservice.ts"
+    },
+    {
+      "label": "validationService.ts",
+      "file_type": "code",
+      "source_file": "functions/src/services/validationService.ts",
+      "source_location": "L1",
+      "id": "src_services_validationservice_ts",
+      "community": 12,
+      "norm_label": "validationservice.ts"
+    },
+    {
+      "label": "paymentCallable.ts",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L1",
+      "id": "src_triggers_paymentcallable_ts",
+      "community": 4,
+      "norm_label": "paymentcallable.ts"
+    },
+    {
+      "label": "paymentTrigger.ts",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L1",
+      "id": "src_triggers_paymenttrigger_ts",
+      "community": 1,
+      "norm_label": "paymenttrigger.ts"
+    },
+    {
+      "label": "domain.ts",
+      "file_type": "code",
+      "source_file": "functions/src/types/domain.ts",
+      "source_location": "L1",
+      "id": "src_types_domain_ts",
+      "community": 32,
+      "norm_label": "domain.ts"
+    },
+    {
+      "label": "firebase.ts",
+      "file_type": "code",
+      "source_file": "functions/src/utils/firebase.ts",
+      "source_location": "L1",
+      "id": "src_utils_firebase_ts",
+      "community": 33,
+      "norm_label": "firebase.ts"
+    },
+    {
+      "label": "logger.ts",
+      "file_type": "code",
+      "source_file": "functions/src/utils/logger.ts",
+      "source_location": "L1",
+      "id": "src_utils_logger_ts",
+      "community": 1,
+      "norm_label": "logger.ts"
+    },
+    {
+      "label": "Email Duplicate Cleanup Functions",
+      "file_type": "code",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": null,
+      "id": "functions_email_duplicate_cleanup",
+      "community": 18,
+      "norm_label": "email duplicate cleanup functions"
+    },
+    {
+      "label": "Gravatar Migration Functions",
+      "file_type": "code",
+      "source_file": "functions/gravatar_migration.js",
+      "source_location": null,
+      "id": "functions_gravatar_migration",
+      "community": 18,
+      "norm_label": "gravatar migration functions"
+    },
+    {
+      "label": "Firebase Functions Index (V1)",
+      "file_type": "code",
+      "source_file": "functions/index.js",
+      "source_location": null,
+      "id": "functions_index_v1",
+      "community": 5,
+      "norm_label": "firebase functions index (v1)"
+    },
+    {
+      "label": "Firebase Functions Lib Index",
+      "file_type": "code",
+      "source_file": "functions/lib/index.js",
+      "source_location": null,
+      "id": "functions_lib_index",
+      "community": 5,
+      "norm_label": "firebase functions lib index"
+    },
+    {
+      "label": "Rent Reminder Scheduler",
+      "file_type": "code",
+      "source_file": "functions/lib/schedulers/rentReminderScheduler.js",
+      "source_location": null,
+      "id": "schedulers_rent_reminder",
+      "community": 5,
+      "norm_label": "rent reminder scheduler"
+    },
+    {
+      "label": "Notification Service",
+      "file_type": "code",
+      "source_file": "functions/lib/services/notificationService.js",
+      "source_location": null,
+      "id": "services_notification",
+      "community": 5,
+      "norm_label": "notification service"
+    },
+    {
+      "label": "Rate Limit Service",
+      "file_type": "code",
+      "source_file": "functions/lib/services/rateLimitService.js",
+      "source_location": null,
+      "id": "services_rate_limit",
+      "community": 5,
+      "norm_label": "rate limit service"
+    },
+    {
+      "label": "Validation Service",
+      "file_type": "code",
+      "source_file": "functions/lib/services/validationService.js",
+      "source_location": null,
+      "id": "services_validation",
+      "community": 34,
+      "norm_label": "validation service"
+    },
+    {
+      "label": "Firestore: users",
+      "file_type": "code",
+      "source_file": "functions/index.js",
+      "source_location": null,
+      "id": "collections_users",
+      "community": 18,
+      "norm_label": "firestore: users"
+    },
+    {
+      "label": "Firestore: tenants",
+      "file_type": "code",
+      "source_file": "functions/index.js",
+      "source_location": null,
+      "id": "collections_tenants",
+      "community": 5,
+      "norm_label": "firestore: tenants"
+    },
+    {
+      "label": "Firestore: payments",
+      "file_type": "code",
+      "source_file": "functions/index.js",
+      "source_location": null,
+      "id": "collections_payments",
+      "community": 5,
+      "norm_label": "firestore: payments"
+    },
+    {
+      "label": "Firestore: properties",
+      "file_type": "code",
+      "source_file": "functions/index.js",
+      "source_location": null,
+      "id": "collections_properties",
+      "community": 5,
+      "norm_label": "firestore: properties"
+    },
+    {
+      "label": "findDuplicateEmails",
+      "file_type": "code",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": 79,
+      "id": "fn_find_duplicate_emails",
+      "community": 35,
+      "norm_label": "findduplicateemails"
+    },
+    {
+      "label": "migrateUsersToGravatar",
+      "file_type": "code",
+      "source_file": "functions/gravatar_migration.js",
+      "source_location": 60,
+      "id": "fn_migrate_to_gravatar",
+      "community": 36,
+      "norm_label": "migrateuserstogravatar"
+    },
+    {
+      "label": "sendRentDueReminders",
+      "file_type": "code",
+      "source_file": "functions/lib/schedulers/rentReminderScheduler.js",
+      "source_location": 40,
+      "id": "fn_send_rent_due_reminders",
+      "community": 37,
+      "norm_label": "sendrentduereminders"
+    },
+    {
+      "label": "Notification Service",
+      "file_type": "code",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": null,
+      "id": "functions_notificationservice",
+      "community": 6,
+      "norm_label": "notification service"
+    },
+    {
+      "label": "Rate Limit Service",
+      "file_type": "code",
+      "source_file": "functions/lib/src/services/rateLimitService.js",
+      "source_location": null,
+      "id": "functions_ratelimitservice",
+      "community": 6,
+      "norm_label": "rate limit service"
+    },
+    {
+      "label": "Validation Service",
+      "file_type": "code",
+      "source_file": "functions/lib/src/services/validationService.js",
+      "source_location": null,
+      "id": "functions_validationservice",
+      "community": 6,
+      "norm_label": "validation service"
+    },
+    {
+      "label": "Payment Callable Triggers",
+      "file_type": "code",
+      "source_file": "functions/lib/src/triggers/paymentCallable.js",
+      "source_location": null,
+      "id": "functions_paymentcallable",
+      "community": 6,
+      "norm_label": "payment callable triggers"
+    },
+    {
+      "label": "Payment Firestore Trigger",
+      "file_type": "code",
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": null,
+      "id": "functions_paymenttrigger",
+      "community": 6,
+      "norm_label": "payment firestore trigger"
+    },
+    {
+      "label": "Domain Types",
+      "file_type": "code",
+      "source_file": "functions/lib/src/types/domain.js",
+      "source_location": null,
+      "id": "functions_domain",
+      "community": 38,
+      "norm_label": "domain types"
+    },
+    {
+      "label": "Firebase Utility",
+      "file_type": "code",
+      "source_file": "functions/lib/src/utils/firebase.js",
+      "source_location": null,
+      "id": "functions_firebase",
+      "community": 6,
+      "norm_label": "firebase utility"
+    },
+    {
+      "label": "Logger Utility",
+      "file_type": "code",
+      "source_file": "functions/lib/src/utils/logger.js",
+      "source_location": null,
+      "id": "functions_logger",
+      "community": 6,
+      "norm_label": "logger utility"
+    },
+    {
+      "label": "Token Service",
+      "file_type": "code",
+      "source_file": "functions/lib/src/services/tokenService.js",
+      "source_location": null,
+      "id": "functions_tokenservice",
+      "community": 6,
+      "norm_label": "token service"
+    },
+    {
+      "label": "Export: onPaymentCreated",
+      "file_type": "code",
+      "source_file": "functions/src/index.ts",
+      "source_location": {
+        "line": 1,
+        "column": 1
+      },
+      "id": "index_export_onpaymentcreated",
+      "community": 39,
+      "norm_label": "export: onpaymentcreated"
+    },
+    {
+      "label": "Export: sendRentDueReminders",
+      "file_type": "code",
+      "source_file": "functions/src/index.ts",
+      "source_location": {
+        "line": 2,
+        "column": 1
+      },
+      "id": "index_export_sendrentduereminders",
+      "community": 40,
+      "norm_label": "export: sendrentduereminders"
+    },
+    {
+      "label": "sendRentDueReminders Scheduler",
+      "file_type": "code",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": {
+        "line": 52,
+        "column": 14
+      },
+      "id": "rentreminderscheduler_sendrentduereminders",
+      "community": 7,
+      "norm_label": "sendrentduereminders scheduler"
+    },
+    {
+      "label": "reserveNotificationEvent",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": {
+        "line": 28,
+        "column": 14
+      },
+      "id": "notificationservice_reservenotificationevent",
+      "community": 7,
+      "norm_label": "reservenotificationevent"
+    },
+    {
+      "label": "sendMulticastWithRetry",
+      "file_type": "code",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": {
+        "line": 102,
+        "column": 14
+      },
+      "id": "notificationservice_sendmulticastwithretry",
+      "community": 7,
+      "norm_label": "sendmulticastwithretry"
+    },
+    {
+      "label": "checkAndIncrementRateLimit",
+      "file_type": "code",
+      "source_file": "functions/src/services/rateLimitService.ts",
+      "source_location": {
+        "line": 8,
+        "column": 14
+      },
+      "id": "ratelimitservice_checkandincrementratelimit",
+      "community": 7,
+      "norm_label": "checkandincrementratelimit"
+    },
+    {
+      "label": "validatePaymentForNotification",
+      "file_type": "code",
+      "source_file": "functions/src/services/validationService.ts",
+      "source_location": {
+        "line": 13,
+        "column": 14
+      },
+      "id": "validationservice_validatepaymentfornotification",
+      "community": 7,
+      "norm_label": "validatepaymentfornotification"
+    },
+    {
+      "label": "createPayment",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": {
+        "line": 84,
+        "column": 14
+      },
+      "id": "paymentcallable_createpayment",
+      "community": 25,
+      "norm_label": "createpayment"
+    },
+    {
+      "label": "verifyPayment",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": {
+        "line": 296,
+        "column": 14
+      },
+      "id": "paymentcallable_verifypayment",
+      "community": 41,
+      "norm_label": "verifypayment"
+    },
+    {
+      "label": "onPaymentCreated Trigger",
+      "file_type": "code",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": {
+        "line": 18,
+        "column": 14
+      },
+      "id": "paymenttrigger_onpaymentcreated",
+      "community": 7,
+      "norm_label": "onpaymentcreated trigger"
+    },
+    {
+      "label": "Notification Idempotency Pattern",
+      "file_type": "rationale",
+      "source_file": "functions/src/services/notificationService.ts",
+      "rationale": "Prevents duplicate notifications by creating a record in _notificationEvents collection before dispatch.",
+      "id": "rationale_notification_idempotency",
+      "community": 7,
+      "norm_label": "notification idempotency pattern"
+    },
+    {
+      "label": "Payment Creation Idempotency",
+      "file_type": "rationale",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "rationale": "Uses idempotencyKey and a 2-minute time window for duplicate detection to prevent double-charging or duplicate records.",
+      "id": "rationale_payment_idempotency",
+      "community": 25,
+      "norm_label": "payment creation idempotency"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "email_duplicate_cleanup_js",
+      "target": "functions_email_duplicate_cleanup_parsebool",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "email_duplicate_cleanup_js",
+      "target": "functions_email_duplicate_cleanup_getsecurityconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "email_duplicate_cleanup_js",
+      "target": "functions_email_duplicate_cleanup_assertadmincallableauth",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L51",
+      "weight": 1.0,
+      "source": "email_duplicate_cleanup_js",
+      "target": "functions_email_duplicate_cleanup_ratelimitadminorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "functions_email_duplicate_cleanup_getsecurityconfig",
+      "target": "functions_email_duplicate_cleanup_parsebool",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": "L35",
+      "weight": 1.0,
+      "source": "functions_email_duplicate_cleanup_assertadmincallableauth",
+      "target": "functions_email_duplicate_cleanup_getsecurityconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/gravatar_migration.js",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "gravatar_migration_js",
+      "target": "functions_gravatar_migration_getgravatarurl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/gravatar_migration.js",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "gravatar_migration_js",
+      "target": "functions_gravatar_migration_assertadminhttprequest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_parsebool",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_getsecurityconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_assertcallableauth",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L56",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_getglobalappconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L79",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_assertpaymentsenabledorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L113",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_assertadminaccessorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L149",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_logadminaudit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L170",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_setcorsheaders",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L184",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_safeequaldigest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L195",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_verifyhttpappcheckorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L210",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_asserttenantaccessorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L228",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_recordwebhookdelivery",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L258",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_requestipfromheaders",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L266",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_minutebucketkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L278",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_ratelimitorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L329",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_recordsecuritysignal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L384",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_getrazorpayconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L458",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_createrazorpayorderforpayment",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L518",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_getstripeconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L526",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_parsepercent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L534",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_ceildivide",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L538",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_percenttobps",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L542",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_defaultpaymentfeeconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L564",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_loadpaymentfeeconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L622",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_calculatefeebreakdowninpaise",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L663",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_incrementfeeanalytics",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L695",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_getwhatsappconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L709",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_monthkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L714",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_normalizepaymentstatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L718",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_stablestringify",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L741",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_hasanyfieldchanged",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L749",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_shouldrecomputeownersummaryforpaymentwrite",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L780",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_shouldrecomputeownersummaryfortenantwrite",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L795",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_shouldrecomputeownersummaryforpropertywrite",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L815",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_isunpaidstatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L820",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_amountinr",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L825",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_duedatelabel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L835",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_todayboundsinkolkata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L842",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_shouldsendusernotification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L888",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_reservenotificationevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L905",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_senddirectpush",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L937",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_sendpushmulticast",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1031",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_previousmonthkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1036",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_duedatefor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1042",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_todate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1055",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_normalizeindianphone",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1064",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_getleaseortenantpaymentcontext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1110",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_resolvetenantcandidateids",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1145",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_leasebelongstotenant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1152",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_buildupilink",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1163",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_sleep",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1167",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_deletequeryinchunks",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1186",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_deletequeryinchunkscapped",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1213",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_issamemonth",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1221",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_recomputeownersummary",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1320",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_deletestoragepathifexists",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1340",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_cleanuporphantenantdocumentfiles",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1385",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_cleanupoldreportexports",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1410",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_postwhatsappmessage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1424",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_sendwhatsappmessage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1527",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_sendpushtoall",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1541",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_verifywebhooksignature",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1549",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_getpaymentidfrompayload",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1840",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_ispaidlikestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1845",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_dispatchpaymentreceivednotification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1974",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_normalizepaymentmethod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1982",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_normalizeintegeramount",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1990",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_normalizepropertynameforcomparison",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1994",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_resolvetenantownerlinkpolicy",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2048",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_hashtenantlinktoken",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2055",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_asserttenantbackfillprooforthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2100",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_resolvepaymentstatusfromamounts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2110",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_logpaymentintegrityevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2125",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_normalizelogstring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2130",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_normalizelognumber",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2135",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_buildpaymentlogpayload",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2168",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_logpaymentevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2181",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_validatepaymentdocumentintegrity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2226",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_verifypaymentafterwriteorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2292",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_findpaymentbyidempotencykey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2306",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_blockduplicatepaymentorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L4430",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_assertowneraccessorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L4446",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_toepochmillisornull",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L4581",
+      "weight": 1.0,
+      "source": "index_js",
+      "target": "functions_index_truststatuslabel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "functions_index_getsecurityconfig",
+      "target": "functions_index_parsebool",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "functions_index_assertcallableauth",
+      "target": "functions_index_getsecurityconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L171",
+      "weight": 1.0,
+      "source": "functions_index_setcorsheaders",
+      "target": "functions_index_getsecurityconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L196",
+      "weight": 1.0,
+      "source": "functions_index_verifyhttpappcheckorthrow",
+      "target": "functions_index_getsecurityconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L80",
+      "weight": 1.0,
+      "source": "functions_index_assertpaymentsenabledorthrow",
+      "target": "functions_index_getglobalappconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1546",
+      "weight": 1.0,
+      "source": "functions_index_verifywebhooksignature",
+      "target": "functions_index_safeequaldigest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L289",
+      "weight": 1.0,
+      "source": "functions_index_ratelimitorthrow",
+      "target": "functions_index_minutebucketkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L340",
+      "weight": 1.0,
+      "source": "functions_index_recordsecuritysignal",
+      "target": "functions_index_minutebucketkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L316",
+      "weight": 1.0,
+      "source": "functions_index_ratelimitorthrow",
+      "target": "functions_index_recordsecuritysignal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L465",
+      "weight": 1.0,
+      "source": "functions_index_createrazorpayorderforpayment",
+      "target": "functions_index_getrazorpayconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L539",
+      "weight": 1.0,
+      "source": "functions_index_percenttobps",
+      "target": "functions_index_parsepercent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L544",
+      "weight": 1.0,
+      "source": "functions_index_defaultpaymentfeeconfig",
+      "target": "functions_index_parsepercent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L593",
+      "weight": 1.0,
+      "source": "functions_index_loadpaymentfeeconfig",
+      "target": "functions_index_parsepercent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L643",
+      "weight": 1.0,
+      "source": "functions_index_calculatefeebreakdowninpaise",
+      "target": "functions_index_ceildivide",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L637",
+      "weight": 1.0,
+      "source": "functions_index_calculatefeebreakdowninpaise",
+      "target": "functions_index_percenttobps",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L578",
+      "weight": 1.0,
+      "source": "functions_index_loadpaymentfeeconfig",
+      "target": "functions_index_defaultpaymentfeeconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1432",
+      "weight": 1.0,
+      "source": "functions_index_sendwhatsappmessage",
+      "target": "functions_index_getwhatsappconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1033",
+      "weight": 1.0,
+      "source": "functions_index_previousmonthkey",
+      "target": "functions_index_monthkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L816",
+      "weight": 1.0,
+      "source": "functions_index_isunpaidstatus",
+      "target": "functions_index_normalizepaymentstatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1841",
+      "weight": 1.0,
+      "source": "functions_index_ispaidlikestatus",
+      "target": "functions_index_normalizepaymentstatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1884",
+      "weight": 1.0,
+      "source": "functions_index_dispatchpaymentreceivednotification",
+      "target": "functions_index_normalizepaymentstatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L766",
+      "weight": 1.0,
+      "source": "functions_index_shouldrecomputeownersummaryforpaymentwrite",
+      "target": "functions_index_hasanyfieldchanged",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L812",
+      "weight": 1.0,
+      "source": "functions_index_shouldrecomputeownersummaryforpropertywrite",
+      "target": "functions_index_hasanyfieldchanged",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1883",
+      "weight": 1.0,
+      "source": "functions_index_dispatchpaymentreceivednotification",
+      "target": "functions_index_amountinr",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L826",
+      "weight": 1.0,
+      "source": "functions_index_duedatelabel",
+      "target": "functions_index_todate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1867",
+      "weight": 1.0,
+      "source": "functions_index_dispatchpaymentreceivednotification",
+      "target": "functions_index_shouldsendusernotification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1856",
+      "weight": 1.0,
+      "source": "functions_index_dispatchpaymentreceivednotification",
+      "target": "functions_index_reservenotificationevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1906",
+      "weight": 1.0,
+      "source": "functions_index_dispatchpaymentreceivednotification",
+      "target": "functions_index_sendpushmulticast",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1398",
+      "weight": 1.0,
+      "source": "functions_index_cleanupoldreportexports",
+      "target": "functions_index_todate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1081",
+      "weight": 1.0,
+      "source": "functions_index_getleaseortenantpaymentcontext",
+      "target": "functions_index_normalizeintegeramount",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1149",
+      "weight": 1.0,
+      "source": "functions_index_leasebelongstotenant",
+      "target": "functions_index_resolvetenantcandidateids",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1516",
+      "weight": 1.0,
+      "source": "functions_index_sendwhatsappmessage",
+      "target": "functions_index_sleep",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1374",
+      "weight": 1.0,
+      "source": "functions_index_cleanuporphantenantdocumentfiles",
+      "target": "functions_index_deletestoragepathifexists",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1403",
+      "weight": 1.0,
+      "source": "functions_index_cleanupoldreportexports",
+      "target": "functions_index_deletestoragepathifexists",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L1474",
+      "weight": 1.0,
+      "source": "functions_index_sendwhatsappmessage",
+      "target": "functions_index_postwhatsappmessage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2187",
+      "weight": 1.0,
+      "source": "functions_index_validatepaymentdocumentintegrity",
+      "target": "functions_index_normalizeintegeramount",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2026",
+      "weight": 1.0,
+      "source": "functions_index_resolvetenantownerlinkpolicy",
+      "target": "functions_index_normalizepropertynameforcomparison",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2075",
+      "weight": 1.0,
+      "source": "functions_index_asserttenantbackfillprooforthrow",
+      "target": "functions_index_hashtenantlinktoken",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2205",
+      "weight": 1.0,
+      "source": "functions_index_validatepaymentdocumentintegrity",
+      "target": "functions_index_resolvepaymentstatusfromamounts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2237",
+      "weight": 1.0,
+      "source": "functions_index_verifypaymentafterwriteorthrow",
+      "target": "functions_index_logpaymentintegrityevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2350",
+      "weight": 1.0,
+      "source": "functions_index_blockduplicatepaymentorthrow",
+      "target": "functions_index_logpaymentintegrityevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2151",
+      "weight": 1.0,
+      "source": "functions_index_buildpaymentlogpayload",
+      "target": "functions_index_normalizelogstring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2158",
+      "weight": 1.0,
+      "source": "functions_index_buildpaymentlogpayload",
+      "target": "functions_index_normalizelognumber",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2169",
+      "weight": 1.0,
+      "source": "functions_index_logpaymentevent",
+      "target": "functions_index_buildpaymentlogpayload",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2341",
+      "weight": 1.0,
+      "source": "functions_index_blockduplicatepaymentorthrow",
+      "target": "functions_index_logpaymentevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.js",
+      "source_location": "L2250",
+      "weight": 1.0,
+      "source": "functions_index_verifypaymentafterwriteorthrow",
+      "target": "functions_index_validatepaymentdocumentintegrity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/schedulers/rentReminderScheduler.js",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "lib_schedulers_rentreminderscheduler_js",
+      "target": "schedulers_rentreminderscheduler_toistnow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/schedulers/rentReminderScheduler.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_schedulers_rentreminderscheduler_js",
+      "target": "schedulers_rentreminderscheduler_duedatekey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/schedulers/rentReminderScheduler.js",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "lib_schedulers_rentreminderscheduler_js",
+      "target": "schedulers_rentreminderscheduler_statusstring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/schedulers/rentReminderScheduler.js",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "lib_schedulers_rentreminderscheduler_js",
+      "target": "schedulers_rentreminderscheduler_buildrentduebody",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/schedulers/rentReminderScheduler.js",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "lib_schedulers_rentreminderscheduler_js",
+      "target": "schedulers_rentreminderscheduler_gettenantuserid",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/schedulers/rentReminderScheduler.js",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "lib_schedulers_rentreminderscheduler_js",
+      "target": "schedulers_rentreminderscheduler_loadduetenants",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "schedulers_rentreminderscheduler_toistnow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "schedulers_rentreminderscheduler_duedatekey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "schedulers_rentreminderscheduler_statusstring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "schedulers_rentreminderscheduler_buildrentduebody",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "schedulers_rentreminderscheduler_gettenantuserid",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L36",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "schedulers_rentreminderscheduler_loadduetenants",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "lib_services_notificationservice_js",
+      "target": "services_notificationservice_isinvalidtokenerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_services_notificationservice_js",
+      "target": "services_notificationservice_istransienterror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "lib_services_notificationservice_js",
+      "target": "services_notificationservice_sleep",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "lib_services_notificationservice_js",
+      "target": "services_notificationservice_reservenotificationevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "lib_services_notificationservice_js",
+      "target": "services_notificationservice_sendchunk",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "lib_services_notificationservice_js",
+      "target": "services_notificationservice_sendmulticastwithretry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": "L135",
+      "weight": 1.0,
+      "source": "lib_services_notificationservice_js",
+      "target": "services_notificationservice_tracknotificationanalytics",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "services_notificationservice_isinvalidtokenerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "services_notificationservice_istransienterror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L146",
+      "weight": 1.0,
+      "source": "services_notificationservice_sendmulticastwithretry",
+      "target": "services_notificationservice_sleep",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "services_notificationservice_sleep",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "services_notificationservice_reservenotificationevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "services_notificationservice_reservenotificationevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "services_notificationservice_reservenotificationevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L131",
+      "weight": 1.0,
+      "source": "services_notificationservice_sendmulticastwithretry",
+      "target": "services_notificationservice_sendchunk",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L46",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "services_notificationservice_sendchunk",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "services_notificationservice_sendmulticastwithretry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L111",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "services_notificationservice_sendmulticastwithretry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "services_notificationservice_sendmulticastwithretry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "services_notificationservice_tracknotificationanalytics",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L164",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "services_notificationservice_tracknotificationanalytics",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "services_notificationservice_tracknotificationanalytics",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/services/rateLimitService.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "lib_services_ratelimitservice_js",
+      "target": "services_ratelimitservice_checkandincrementratelimit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/rateLimitService.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "lib_src_services_ratelimitservice_js",
+      "target": "services_ratelimitservice_checkandincrementratelimit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "services_ratelimitservice_checkandincrementratelimit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/rateLimitService.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "src_services_ratelimitservice_ts",
+      "target": "services_ratelimitservice_checkandincrementratelimit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "services_ratelimitservice_checkandincrementratelimit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/services/validationService.js",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "lib_services_validationservice_js",
+      "target": "services_validationservice_safestring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/services/validationService.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "lib_services_validationservice_js",
+      "target": "services_validationservice_validatepaymentfornotification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/validationService.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "services_validationservice_validatepaymentfornotification",
+      "target": "services_validationservice_safestring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/validationService.js",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "lib_src_services_validationservice_js",
+      "target": "services_validationservice_safestring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/validationService.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_services_validationservice_ts",
+      "target": "services_validationservice_safestring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/services/validationService.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "lib_src_services_validationservice_js",
+      "target": "services_validationservice_validatepaymentfornotification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/validationService.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "src_services_validationservice_ts",
+      "target": "services_validationservice_validatepaymentfornotification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "services_validationservice_validatepaymentfornotification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/triggers/paymentCallable.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_triggers_paymentcallable_js",
+      "target": "triggers_paymentcallable_asstring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/triggers/paymentCallable.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "lib_triggers_paymentcallable_js",
+      "target": "triggers_paymentcallable_asint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/triggers/paymentCallable.js",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "lib_triggers_paymentcallable_js",
+      "target": "triggers_paymentcallable_normalizemethod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/triggers/paymentCallable.js",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "lib_triggers_paymentcallable_js",
+      "target": "triggers_paymentcallable_assertamountorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/triggers/paymentCallable.js",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "lib_triggers_paymentcallable_js",
+      "target": "triggers_paymentcallable_logpaymentevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/triggers/paymentCallable.js",
+      "source_location": "L44",
+      "weight": 1.0,
+      "source": "lib_triggers_paymentcallable_js",
+      "target": "triggers_paymentcallable_assertaccessandownership",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "triggers_paymentcallable_normalizemethod",
+      "target": "triggers_paymentcallable_asstring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L71",
+      "weight": 1.0,
+      "source": "triggers_paymentcallable_assertaccessandownership",
+      "target": "triggers_paymentcallable_asstring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "triggers_paymentcallable_asstring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "triggers_paymentcallable_asint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "triggers_paymentcallable_normalizemethod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "triggers_paymentcallable_assertamountorthrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "triggers_paymentcallable_logpaymentevent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L51",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "triggers_paymentcallable_assertaccessandownership",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_src_triggers_paymenttrigger_js",
+      "target": "triggers_paymenttrigger_normalizestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "lib_src_triggers_paymenttrigger_js",
+      "target": "triggers_paymenttrigger_inr",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/triggers/paymentTrigger.js",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_triggers_paymenttrigger_js",
+      "target": "triggers_paymenttrigger_normalizestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "triggers_paymenttrigger_normalizestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/triggers/paymentTrigger.js",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "lib_triggers_paymenttrigger_js",
+      "target": "triggers_paymenttrigger_inr",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "triggers_paymenttrigger_inr",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/utils/logger.js",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "lib_src_utils_logger_js",
+      "target": "utils_logger_loginfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/utils/logger.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "lib_src_utils_logger_js",
+      "target": "utils_logger_logwarn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/src/utils/logger.js",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "lib_src_utils_logger_js",
+      "target": "utils_logger_logerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/utils/logger.js",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "lib_utils_logger_js",
+      "target": "utils_logger_loginfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "utils_logger_loginfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "utils_logger_loginfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "utils_logger_loginfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "utils_logger_loginfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/utils/logger.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_utils_logger_ts",
+      "target": "utils_logger_loginfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/utils/logger.js",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "lib_utils_logger_js",
+      "target": "utils_logger_logwarn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "utils_logger_logwarn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "utils_logger_logwarn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "utils_logger_logwarn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "utils_logger_logwarn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/utils/logger.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "src_utils_logger_ts",
+      "target": "utils_logger_logwarn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/lib/utils/logger.js",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "lib_utils_logger_js",
+      "target": "utils_logger_logerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "src_schedulers_rentreminderscheduler_ts",
+      "target": "utils_logger_logerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/services/notificationService.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_services_notificationservice_ts",
+      "target": "utils_logger_logerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "src_triggers_paymentcallable_ts",
+      "target": "utils_logger_logerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "src_triggers_paymenttrigger_ts",
+      "target": "utils_logger_logerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/src/utils/logger.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "src_utils_logger_ts",
+      "target": "utils_logger_logerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/email_duplicate_cleanup.js",
+      "source_location": 84,
+      "weight": 1.0,
+      "source": "functions_email_duplicate_cleanup",
+      "target": "collections_users"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/gravatar_migration.js",
+      "source_location": 66,
+      "weight": 1.0,
+      "source": "functions_gravatar_migration",
+      "target": "collections_users"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/index.js",
+      "source_location": 1059,
+      "weight": 1.0,
+      "source": "functions_index_v1",
+      "target": "collections_payments"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/index.js",
+      "source_location": 1058,
+      "weight": 1.0,
+      "source": "functions_index_v1",
+      "target": "collections_properties"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/index.js",
+      "source_location": 1060,
+      "weight": 1.0,
+      "source": "functions_index_v1",
+      "target": "collections_tenants"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "functions/lib/services/notificationService.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "services_notification",
+      "target": "functions_index_v1"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/index.js",
+      "source_location": 6,
+      "weight": 1.0,
+      "source": "functions_lib_index",
+      "target": "schedulers_rent_reminder"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/schedulers/rentReminderScheduler.js",
+      "source_location": 74,
+      "weight": 1.0,
+      "source": "schedulers_rent_reminder",
+      "target": "services_notification"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/schedulers/rentReminderScheduler.js",
+      "source_location": 82,
+      "weight": 1.0,
+      "source": "schedulers_rent_reminder",
+      "target": "services_rate_limit"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_notificationservice",
+      "target": "functions_firebase"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/services/notificationService.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_notificationservice",
+      "target": "functions_logger"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_paymenttrigger",
+      "target": "functions_notificationservice"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/services/rateLimitService.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_ratelimitservice",
+      "target": "functions_firebase"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_paymenttrigger",
+      "target": "functions_ratelimitservice"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/services/validationService.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_validationservice",
+      "target": "functions_firebase"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_paymenttrigger",
+      "target": "functions_validationservice"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/triggers/paymentCallable.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_paymentcallable",
+      "target": "functions_firebase"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/triggers/paymentCallable.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_paymentcallable",
+      "target": "functions_logger"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_paymenttrigger",
+      "target": "functions_firebase"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_paymenttrigger",
+      "target": "functions_tokenservice"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/lib/src/triggers/paymentTrigger.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "functions_paymenttrigger",
+      "target": "functions_logger"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source": "rentreminderscheduler_sendrentduereminders",
+      "target": "notificationservice_reservenotificationevent"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source": "rentreminderscheduler_sendrentduereminders",
+      "target": "ratelimitservice_checkandincrementratelimit"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/src/schedulers/rentReminderScheduler.ts",
+      "source": "rentreminderscheduler_sendrentduereminders",
+      "target": "notificationservice_sendmulticastwithretry"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source": "paymenttrigger_onpaymentcreated",
+      "target": "notificationservice_reservenotificationevent"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "functions/src/services/notificationService.ts",
+      "source": "notificationservice_reservenotificationevent",
+      "target": "rationale_notification_idempotency"
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "functions/src/triggers/paymentTrigger.ts",
+      "source": "paymenttrigger_onpaymentcreated",
+      "target": "validationservice_validatepaymentfornotification"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "functions/src/triggers/paymentCallable.ts",
+      "source": "paymentcallable_createpayment",
+      "target": "rationale_payment_idempotency"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "notification_pipeline",
+      "label": "Notification Dispatch Pipeline",
+      "nodes": [
+        "notificationservice_reservenotificationevent",
+        "ratelimitservice_checkandincrementratelimit",
+        "notificationservice_sendmulticastwithretry"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "functions/src/services/notificationService.ts"
+    }
+  ],
+  "built_at_commit": "092bb70e434a4440d415b691bfbedf91834dd6b2"
+}

@@ -165,15 +165,10 @@ class AuthFirebaseService {
       rethrow;
     } on FirebaseAuthException catch (error) {
       throw _mapFirebaseException(error);
-    } on GoogleSignInException catch (error) {
-      if (error.code.name == 'canceled') {
+    } on PlatformException catch (e) {
+      if (e.code == 'sign_in_canceled') {
         throw const AuthException(message: 'Google sign-in was cancelled.');
       }
-      throw AuthException(
-        message:
-            error.description ?? 'Unable to sign in with Google right now.',
-      );
-    } on PlatformException catch (e) {
       if (e.message?.contains('serverClientId') == true) {
         throw const AuthException(
           message:

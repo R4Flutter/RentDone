@@ -1,0 +1,13 @@
+C:\flutter projects\rentdone\ios\Runner\Assets.xcassets\LaunchImage.imageset\LaunchImage@3x.png
+C:\flutter projects\rentdone\macos\Runner\Assets.xcassets\AppIcon.appiconset\app_icon_1024.png
+C:\flutter projects\rentdone\macos\Runner\Assets.xcassets\AppIcon.appiconset\app_icon_128.png
+C:\flutter projects\rentdone\macos\Runner\Assets.xcassets\AppIcon.appiconset\app_icon_16.png
+C:\flutter projects\rentdone\macos\Runner\Assets.xcassets\AppIcon.appiconset\app_icon_256.png
+C:\flutter projects\rentdone\macos\Runner\Assets.xcassets\AppIcon.appiconset\app_icon_32.png
+C:\flutter projects\rentdone\macos\Runner\Assets.xcassets\AppIcon.appiconset\app_icon_512.png
+C:\flutter projects\rentdone\macos\Runner\Assets.xcassets\AppIcon.appiconset\app_icon_64.png
+C:\flutter projects\rentdone\web\favicon.png
+C:\flutter projects\rentdone\web\icons\Icon-192.png
+C:\flutter projects\rentdone\web\icons\Icon-512.png
+C:\flutter projects\rentdone\web\icons\Icon-maskable-192.png
+C:\flutter projects\rentdone\web\icons\Icon-maskable-512.png

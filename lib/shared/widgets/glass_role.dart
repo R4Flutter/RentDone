@@ -47,37 +47,36 @@ class GlassRoleCard extends StatelessWidget {
                   height: 158,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isDark
-                          ? [
-                              Colors.white.withAlpha(20),
-                              Colors.white.withAlpha(10),
-                            ]
-                          : [
-                              Colors.white.withAlpha(185),
-                              Colors.white.withAlpha(140),
-                            ],
-                    ),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: AppTheme.liquidPrimaryStart.withAlpha(
-                        isDark ? 56 : 66,
-                      ),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.liquidShadow.withAlpha(
-                          isDark ? 78 : 56,
-                        ),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? [
+                            Colors.white.withValues(alpha: 0.08),
+                            Colors.white.withValues(alpha: 0.04),
+                          ]
+                        : [
+                            Colors.white.withValues(alpha: 0.72),
+                            Colors.white.withValues(alpha: 0.55),
+                          ],
                   ),
-                  child: Row(
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: AppTheme.liquidPrimaryStart.withValues(
+                      alpha: isDark ? 0.22 : 0.26,
+                    ),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.liquidShadow.withValues(
+                        alpha: isDark ? 0.3 : 0.22,
+                      ),
+                      blurRadius: 22,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                  ),                  child: Row(
                     children: [
                       Expanded(
                         child: Column(
@@ -135,7 +134,9 @@ class GlassRoleCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               gradient: RadialGradient(
                                 colors: [
-                                  AppTheme.liquidPrimaryStart.withAlpha(36),
+                                  AppTheme.liquidPrimaryStart.withValues(
+                                    alpha: 0.14,
+                                  ),
                                   Colors.transparent,
                                 ],
                               ),

@@ -452,9 +452,9 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.errorRed.withAlpha(18),
+        color: AppTheme.errorRed.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.errorRed.withAlpha(80)),
+        border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.31)),
       ),
       child: Text(
         message,

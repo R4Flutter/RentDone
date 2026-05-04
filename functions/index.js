@@ -4499,7 +4499,6 @@ exports.getOwnerSubscriptionSnapshot = functions.region('asia-south1')
   const email = String(data?.email || '').trim();
   const ownerRef = db.collection('owners').doc(ownerId);
   const ownerDoc = await ownerRef.get();
-  const current = ownerDoc.data() || {};
 
   if (!ownerDoc.exists) {
     await ownerRef.set({
@@ -4512,8 +4511,11 @@ exports.getOwnerSubscriptionSnapshot = functions.region('asia-south1')
       subscriptionStartDate: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-  } else if (email && current.email !== email) {
-    await ownerRef.set({ email, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  } else {
+    const current = ownerDoc.data() || {};
+    if (email && current.email !== email) {
+      await ownerRef.set({ email, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    }
   }
 
   const finalDoc = await ownerRef.get();
@@ -5177,12 +5179,15 @@ exports.razorpayWebhook = functions.region('asia-south1')
     const paymentEntity = payload?.payment?.entity;
     const paymentId = await getPaymentIdFromPayload(payload);
     if (paymentId) {
+      const notes = paymentEntity?.notes || payload?.order?.entity?.notes || {};
       await db.collection('messages').doc(`${paymentId}_failed`).set({
         type: 'reminder',
         title: 'Payment failed',
         body: `Razorpay payment failed (${paymentEntity?.error_description || 'unknown reason'}).`,
         severity: 'warn',
         paymentId,
+        tenantId: notes.tenantId || null,
+        ownerId: notes.ownerId || null,
         createdAt: FieldValue.serverTimestamp(),
         read: false,
       });

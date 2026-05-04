@@ -308,9 +308,9 @@ class SettingsScreen extends ConsumerWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppTheme.errorRed.withAlpha(20),
+            color: AppTheme.errorRed.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.errorRed.withAlpha(90)),
+            border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.35)),
           ),
           child: Row(
             children: [

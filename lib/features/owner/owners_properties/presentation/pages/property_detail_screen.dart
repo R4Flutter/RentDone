@@ -214,14 +214,20 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: isDark
-                  ? [Colors.white.withAlpha(18), Colors.white.withAlpha(10)]
-                  : [Colors.white.withAlpha(185), Colors.white.withAlpha(140)],
+                  ? [
+                      Colors.white.withValues(alpha: 0.07),
+                      Colors.white.withValues(alpha: 0.04),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: 0.72),
+                      Colors.white.withValues(alpha: 0.55),
+                    ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppTheme.liquidPrimaryStart.withAlpha(46),
+              color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.18),
               width: 1.2,
             ),
             boxShadow: [
@@ -329,14 +335,20 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: isDark
-                  ? [Colors.white.withAlpha(18), Colors.white.withAlpha(10)]
-                  : [Colors.white.withAlpha(185), Colors.white.withAlpha(140)],
+                  ? [
+                      Colors.white.withValues(alpha: 0.07),
+                      Colors.white.withValues(alpha: 0.04),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: 0.72),
+                      Colors.white.withValues(alpha: 0.55),
+                    ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppTheme.liquidPrimaryStart.withAlpha(36),
+              color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.14),
               width: 1.0,
             ),
             boxShadow: [
@@ -384,8 +396,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: room.isOccupied
-                          ? AppTheme.liquidPrimaryEnd.withAlpha(26)
-                          : AppColors.orange.withAlpha(26),
+                          ? AppTheme.liquidPrimaryEnd.withValues(alpha: 0.1)
+                          : AppColors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -561,8 +573,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       child: FilledButton(
                         style: FilledButton.styleFrom(
                           backgroundColor: room.isOccupied
-                              ? AppColors.red.withAlpha(200)
-                              : Colors.grey.withAlpha(80),
+                              ? AppColors.red.withValues(alpha: 0.78)
+                              : Colors.grey.withValues(alpha: 0.31),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -611,7 +623,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           style: TextStyle(
                             color: room.isOccupied
                                 ? Colors.white
-                                : Colors.grey.withAlpha(140),
+                                : Colors.grey.withValues(alpha: 0.55),
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -701,8 +713,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDark
-              ? AppTheme.liquidPrimaryStart.withAlpha(18)
-              : AppTheme.liquidPrimaryStart.withAlpha(26),
+              ? AppTheme.liquidPrimaryStart.withValues(alpha: 0.07)
+              : AppTheme.liquidPrimaryStart.withValues(alpha: 0.1),
         ),
       ),
     );

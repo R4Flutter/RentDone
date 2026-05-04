@@ -8,6 +8,7 @@ import 'package:rentdone/app/app_navigation.dart';
 import 'package:rentdone/core/constants/user_role.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
 
+import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/phone_capture_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/signup_screen.dart';
@@ -41,11 +42,6 @@ import 'package:rentdone/features/tenant/presentation/pages/tenant_payments_scre
 import 'package:rentdone/features/tenant/presentation/pages/tenant_profile_screen.dart';
 import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_city_entry_screen.dart';
 import 'package:rentdone/features/tenant/property_map/presentation/pages/tenant_property_map_screen.dart';
-import 'package:rentdone/features/tenant_management/presentation/pages/add_tenant_screen.dart';
-import 'package:rentdone/features/tenant_management/presentation/pages/edit_tenant_screen.dart';
-import 'package:rentdone/features/tenant_management/presentation/pages/record_payment_screen.dart';
-import 'package:rentdone/features/tenant_management/presentation/pages/tenant_list_screen.dart';
-import 'package:rentdone/features/tenant_management/presentation/pages/tenant_analytics_screen.dart';
 import 'package:rentdone/shared/widgets/back_handler.dart';
 import 'package:rentdone/shared/pages/role_selection_screen.dart';
 import 'package:rentdone/shared/pages/splash_screen.dart';
@@ -312,13 +308,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           // 🏠 PROPERTY MANAGEMENT
           // ========================================================
 
-          /// �️ Manage Properties - CRUD Operations
-          GoRoute(
-            path: '/owner/properties/manage',
-            name: 'manageProperties',
-            builder: (context, state) => const ManagePropertiesScreen(),
-          ),
-
           /// ➕ Add New Property
           GoRoute(
             path: '/owner/properties/add',
@@ -373,60 +362,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/owner/tenants/trust-search',
             name: 'tenantTrustSearch',
             builder: (context, state) => const TenantTrustSearchScreen(),
-          ),
-
-          /// ✏️ Edit Tenant Information
-          GoRoute(
-            path: '/owner/tenants/edit/:tenantId',
-            name: 'editTenant',
-            builder: (context, state) {
-              final tenantId = state.pathParameters['tenantId'] ?? '';
-              return EditTenantScreen(tenantId: tenantId);
-            },
-          ),
-
-          /// 📋 Tenant Management Routes (SaaS-Ready)
-          GoRoute(
-            path: '/tenant-management/list',
-            name: 'tenantList',
-            builder: (context, state) => const TenantListScreen(),
-          ),
-
-          GoRoute(
-            path: '/tenant-management/add-tenant',
-            name: 'addTenantManagement',
-            builder: (context, state) {
-              final propertyId = state.uri.queryParameters['propertyId'] ?? '';
-              return AddTenantScreen(propertyId: propertyId);
-            },
-          ),
-
-          GoRoute(
-            path: '/tenant-management/edit-tenant/:tenantId',
-            name: 'editTenantManagement',
-            builder: (context, state) {
-              final tenantId = state.pathParameters['tenantId'] ?? '';
-              return EditTenantScreen(tenantId: tenantId);
-            },
-          ),
-
-          GoRoute(
-            path: '/tenant-management/record-payment/:tenantId',
-            name: 'recordPayment',
-            builder: (context, state) {
-              final tenantId = state.pathParameters['tenantId'] ?? '';
-              final propertyId = state.uri.queryParameters['propertyId'] ?? '';
-              return RecordPaymentScreen(
-                tenantId: tenantId,
-                propertyId: propertyId,
-              );
-            },
-          ),
-
-          GoRoute(
-            path: '/tenant-management/analytics',
-            name: 'tenantAnalytics',
-            builder: (context, state) => const TenantAnalyticsScreen(),
           ),
 
           // ========================================================
@@ -628,15 +563,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
-                      final user = ref.read(authProvider).value;
-                      if (user != null) {
-                        final role = UserRoleX.tryParse(user.role);
-                        if (role == UserRole.tenant) {
-                          context.go('/tenant/dashboard');
-                          return;
-                        }
-                      }
-                      context.go('/owner/dashboard');
+                      context.go('/');
                     },
                     child: const Text('Go to Dashboard'),
                   ),

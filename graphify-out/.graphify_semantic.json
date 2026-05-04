@@ -1,0 +1,1533 @@
+{
+  "nodes": [
+    {
+      "id": "main_dart",
+      "label": "lib/main.dart",
+      "file_type": "code",
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "app_router_dart",
+      "label": "lib/app/app_router.dart",
+      "file_type": "code",
+      "source_file": "lib/app/app_router.dart",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "app_config_dart",
+      "label": "lib/core/config/app_config.dart",
+      "file_type": "code",
+      "source_file": "lib/core/config/app_config.dart",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "analysis_options_yaml",
+      "label": "analysis_options.yaml",
+      "file_type": "code",
+      "source_file": "analysis_options.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "analysis_result_txt",
+      "label": "analysis_result.txt",
+      "file_type": "document",
+      "source_file": "analysis_result.txt",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "bandwidth_analysis_md",
+      "label": "BANDWIDTH_ANALYSIS.md",
+      "file_type": "document",
+      "source_file": "BANDWIDTH_ANALYSIS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "email_uniqueness_fix_md",
+      "label": "EMAIL_UNIQUENESS_FIX.md",
+      "file_type": "document",
+      "source_file": "EMAIL_UNIQUENESS_FIX.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "logging_monitoring_audit_md",
+      "label": "LOGGING_MONITORING_AUDIT.md",
+      "file_type": "document",
+      "source_file": "LOGGING_MONITORING_AUDIT.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "production_readiness_guide_md",
+      "label": "PRODUCTION_READINESS_GUIDE.md",
+      "file_type": "document",
+      "source_file": "PRODUCTION_READINESS_GUIDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "pubspec_yaml",
+      "label": "pubspec.yaml",
+      "file_type": "code",
+      "source_file": "pubspec.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "razorpay_production_setup_md",
+      "label": "RAZORPAY_PRODUCTION_SETUP.md",
+      "file_type": "document",
+      "source_file": "RAZORPAY_PRODUCTION_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tenant_module_summary_md",
+      "label": "TENANT_MODULE_SUMMARY.md",
+      "file_type": "document",
+      "source_file": "TENANT_MODULE_SUMMARY.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "backend_security_hardening_md",
+      "label": "docs/BACKEND_SECURITY_HARDENING.md",
+      "file_type": "document",
+      "source_file": "docs/BACKEND_SECURITY_HARDENING.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "bandwidth_before_after_md",
+      "label": "docs/BANDWIDTH_BEFORE_AFTER.md",
+      "file_type": "document",
+      "source_file": "docs/BANDWIDTH_BEFORE_AFTER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "bandwidth_optimization_implementation_md",
+      "label": "docs/BANDWIDTH_OPTIMIZATION_IMPLEMENTATION.md",
+      "file_type": "document",
+      "source_file": "docs/BANDWIDTH_OPTIMIZATION_IMPLEMENTATION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "bandwidth_optimization_summary_md",
+      "label": "docs/BANDWIDTH_OPTIMIZATION_SUMMARY.md",
+      "file_type": "document",
+      "source_file": "docs/BANDWIDTH_OPTIMIZATION_SUMMARY.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cloud_functions_cost_optimization_md",
+      "label": "docs/CLOUD_FUNCTIONS_COST_OPTIMIZATION_IMPLEMENTATION.md",
+      "file_type": "document",
+      "source_file": "docs/CLOUD_FUNCTIONS_COST_OPTIMIZATION_IMPLEMENTATION.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cloud_functions_guide_md",
+      "label": "docs/CLOUD_FUNCTIONS_GUIDE.md",
+      "file_type": "document",
+      "source_file": "docs/CLOUD_FUNCTIONS_GUIDE.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "deployment_checklist_md",
+      "label": "docs/DEPLOYMENT_CHECKLIST.md",
+      "file_type": "document",
+      "source_file": "docs/DEPLOYMENT_CHECKLIST.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "documentation_hub_md",
+      "label": "docs/DOCUMENTATION_HUB.md",
+      "file_type": "document",
+      "source_file": "docs/DOCUMENTATION_HUB.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "email_profile_pictures_md",
+      "label": "docs/EMAIL_PROFILE_PICTURES.md",
+      "file_type": "document",
+      "source_file": "docs/EMAIL_PROFILE_PICTURES.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "fcm_production_notification_system_md",
+      "label": "docs/FCM_PRODUCTION_NOTIFICATION_SYSTEM.md",
+      "file_type": "document",
+      "source_file": "docs/FCM_PRODUCTION_NOTIFICATION_SYSTEM.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "firebase_core",
+      "label": "Firebase Core",
+      "file_type": "rationale",
+      "source_file": "pubspec.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "razorpay_flutter",
+      "label": "Razorpay Flutter",
+      "file_type": "rationale",
+      "source_file": "pubspec.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "riverpod",
+      "label": "Flutter Riverpod",
+      "file_type": "rationale",
+      "source_file": "pubspec.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "go_router",
+      "label": "GoRouter",
+      "file_type": "rationale",
+      "source_file": "pubspec.yaml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "doc_firebase_config",
+      "label": "Firebase Configuration & Project Structure",
+      "file_type": "document",
+      "source_file": "docs/FIREBASE_CONFIGURATION.md"
+    },
+    {
+      "id": "doc_firestore_arch",
+      "label": "RentDone Firestore Architecture Guide",
+      "file_type": "document",
+      "source_file": "docs/FIRESTORE_ARCHITECTURE.md"
+    },
+    {
+      "id": "doc_firestore_cost",
+      "label": "Firestore Cost Optimization Implementation",
+      "file_type": "document",
+      "source_file": "docs/FIRESTORE_COST_OPTIMIZATION_IMPLEMENTATION.md"
+    },
+    {
+      "id": "doc_flutter_firebase",
+      "label": "Flutter + Firebase Integration",
+      "file_type": "document",
+      "source_file": "docs/FLUTTER_FIREBASE_INTEGRATION.md"
+    },
+    {
+      "id": "doc_glassmorphism_guide",
+      "label": "Glassmorphism Implementation Guide",
+      "file_type": "document",
+      "source_file": "docs/GLASSMORPHISM_GUIDE.md"
+    },
+    {
+      "id": "doc_glassmorphism_migration",
+      "label": "Glassmorphism Quick Migration Guide",
+      "file_type": "document",
+      "source_file": "docs/GLASSMORPHISM_MIGRATION.md"
+    },
+    {
+      "id": "doc_impl_summary",
+      "label": "Email-Based Profile Picture Implementation Summary",
+      "file_type": "document",
+      "source_file": "docs/IMPLEMENTATION_SUMMARY.md"
+    },
+    {
+      "id": "doc_logging_before_after",
+      "label": "Logging & Monitoring: Before vs After",
+      "file_type": "document",
+      "source_file": "docs/LOGGING_BEFORE_AFTER.md"
+    },
+    {
+      "id": "doc_logging_optimization",
+      "label": "Logging & Monitoring Optimization Implementation",
+      "file_type": "document",
+      "source_file": "docs/LOGGING_MONITORING_OPTIMIZATION_IMPLEMENTATION.md"
+    },
+    {
+      "id": "doc_opt_arch_guide",
+      "label": "RentDone Optimization Architecture Guide",
+      "file_type": "document",
+      "source_file": "docs/OPTIMIZATION_ARCHITECTURE_GUIDE.md"
+    },
+    {
+      "id": "doc_prod_deploy_guide",
+      "label": "Production Deployment & Launch Checklist",
+      "file_type": "document",
+      "source_file": "docs/PRODUCTION_DEPLOYMENT_GUIDE.md"
+    },
+    {
+      "id": "doc_quick_start",
+      "label": "Quick Start: Email-Based Profile Pictures",
+      "file_type": "document",
+      "source_file": "docs/QUICK_START.md"
+    },
+    {
+      "id": "doc_razorpay_checklist",
+      "label": "Razorpay Integration Implementation Checklist",
+      "file_type": "document",
+      "source_file": "docs/RAZORPAY_IMPLEMENTATION_CHECKLIST.md"
+    },
+    {
+      "id": "doc_razorpay_guide",
+      "label": "RentDone Razorpay Payment Integration Guide",
+      "file_type": "document",
+      "source_file": "docs/RAZORPAY_INTEGRATION_GUIDE.md"
+    },
+    {
+      "id": "doc_readme_start",
+      "label": "RentDone Professional Documentation - Summary",
+      "file_type": "document",
+      "source_file": "docs/README_START_HERE.md"
+    },
+    {
+      "id": "doc_enterprise_redesign",
+      "label": "RentDone Enterprise Redesign for 1M+ Users",
+      "file_type": "document",
+      "source_file": "docs/RENtDONE_1M_ENTERPRISE_REDESIGN.md"
+    },
+    {
+      "id": "doc_security_audit",
+      "label": "Security Audit & Hardening Report",
+      "file_type": "document",
+      "source_file": "docs/SECURITY_AUDIT_COMPLETE.md"
+    },
+    {
+      "id": "doc_security_hardening",
+      "label": "Firebase Security Hardening Implementation",
+      "file_type": "document",
+      "source_file": "docs/SECURITY_HARDENING_COMPLETE.md"
+    },
+    {
+      "id": "doc_tenant_impl_guide",
+      "label": "Tenant Management Module Implementation Guide",
+      "file_type": "document",
+      "source_file": "lib/features/tenant_management/IMPLEMENTATION_GUIDE.md"
+    },
+    {
+      "id": "doc_tenant_prod_deploy",
+      "label": "Tenant Management Module Production Deployment Guide",
+      "file_type": "document",
+      "source_file": "lib/features/tenant_management/PRODUCTION_DEPLOYMENT_GUIDE.md"
+    },
+    {
+      "id": "web_index",
+      "label": "Web Entry Point",
+      "file_type": "code",
+      "source_file": "web/index.html"
+    },
+    {
+      "id": "linux_cmake",
+      "label": "Linux Build Config",
+      "file_type": "code",
+      "source_file": "linux/CMakeLists.txt"
+    },
+    {
+      "id": "windows_cmake",
+      "label": "Windows Build Config",
+      "file_type": "code",
+      "source_file": "windows/CMakeLists.txt"
+    },
+    {
+      "id": "node_img_android_hdpi",
+      "label": "Flutter Logo (Android HDPI)",
+      "file_type": "image",
+      "source_file": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+      "id": "node_img_android_mdpi",
+      "label": "Flutter Logo (Android MDPI)",
+      "file_type": "image",
+      "source_file": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+      "id": "node_img_android_xhdpi",
+      "label": "Flutter Logo (Android XHDPI)",
+      "file_type": "image",
+      "source_file": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+      "id": "node_img_android_xxhdpi",
+      "label": "Flutter Logo (Android XXHDPI)",
+      "file_type": "image",
+      "source_file": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+      "id": "node_img_android_xxxhdpi",
+      "label": "Flutter Logo (Android XXXHDPI)",
+      "file_type": "image",
+      "source_file": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+      "id": "node_img_asset_cash",
+      "label": "Cash Payment Illustration",
+      "file_type": "image",
+      "source_file": "assets/images/cash.png"
+    },
+    {
+      "id": "node_img_asset_collected",
+      "label": "Collected Rent Illustration",
+      "file_type": "image",
+      "source_file": "assets/images/collected.png"
+    },
+    {
+      "id": "node_img_asset_owner",
+      "label": "Property Owner Illustration",
+      "file_type": "image",
+      "source_file": "assets/images/owner_final.png"
+    },
+    {
+      "id": "node_img_asset_pending",
+      "label": "Pending Time Illustration",
+      "file_type": "image",
+      "source_file": "assets/images/pending.png"
+    },
+    {
+      "id": "node_img_asset_property",
+      "label": "Property/Building Illustration",
+      "file_type": "image",
+      "source_file": "assets/images/property.png"
+    },
+    {
+      "id": "node_img_asset_rentdone_logo",
+      "label": "RentDone App Logo",
+      "file_type": "image",
+      "source_file": "assets/images/rentdone_logo.png"
+    },
+    {
+      "id": "node_img_asset_tenant",
+      "label": "Tenant Illustration",
+      "file_type": "image",
+      "source_file": "assets/images/tenant_final.png"
+    },
+    {
+      "id": "node_img_asset_upi",
+      "label": "UPI QR Code Payment Illustration",
+      "file_type": "image",
+      "source_file": "assets/images/upi.png"
+    },
+    {
+      "id": "node_img_ios_1024",
+      "label": "Flutter Logo (iOS 1024x1024)",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
+    },
+    {
+      "id": "node_img_ios_20",
+      "label": "Flutter Logo (iOS 20x20)",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png"
+    },
+    {
+      "id": "node_concept_flutter",
+      "label": "Default Flutter Application Logo",
+      "file_type": "rationale"
+    },
+    {
+      "id": "node_concept_rentdone_branding",
+      "label": "RentDone Brand Assets",
+      "file_type": "rationale"
+    },
+    {
+      "id": "node_concept_payments",
+      "label": "Payment Processing Assets",
+      "file_type": "rationale"
+    },
+    {
+      "id": "node_concept_user_roles",
+      "label": "Platform User Roles Assets",
+      "file_type": "rationale"
+    },
+    {
+      "id": "ios_app_icon_20x20_2x",
+      "label": "App Icon 20x20@2x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_20x20_3x",
+      "label": "App Icon 20x20@3x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_29x29_1x",
+      "label": "App Icon 29x29@1x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_29x29_2x",
+      "label": "App Icon 29x29@2x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_29x29_3x",
+      "label": "App Icon 29x29@3x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_40x40_1x",
+      "label": "App Icon 40x40@1x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_40x40_2x",
+      "label": "App Icon 40x40@2x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_40x40_3x",
+      "label": "App Icon 40x40@3x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_60x60_2x",
+      "label": "App Icon 60x60@2x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_60x60_3x",
+      "label": "App Icon 60x60@3x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_76x76_1x",
+      "label": "App Icon 76x76@1x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_76x76_2x",
+      "label": "App Icon 76x76@2x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_83_5x83_5_2x",
+      "label": "App Icon 83.5x83.5@2x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_launch_image_1x",
+      "label": "Launch Image 1x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_launch_image_2x",
+      "label": "Launch Image @2x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_app_icon_set",
+      "label": "App Icon Set",
+      "file_type": "rationale",
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_launch_image_set",
+      "label": "Launch Image Set",
+      "file_type": "rationale",
+      "source_file": "ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": "xcode",
+      "contributor": null
+    },
+    {
+      "id": "ios_launch_image_3x",
+      "label": "iOS Launch Image @3x",
+      "file_type": "image",
+      "source_file": "ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "macos_icon_1024",
+      "label": "macOS App Icon 1024x1024",
+      "file_type": "image",
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "macos_icon_128",
+      "label": "macOS App Icon 128x128",
+      "file_type": "image",
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "macos_icon_16",
+      "label": "macOS App Icon 16x16",
+      "file_type": "image",
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "macos_icon_256",
+      "label": "macOS App Icon 256x256",
+      "file_type": "image",
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "macos_icon_32",
+      "label": "macOS App Icon 32x32",
+      "file_type": "image",
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "macos_icon_512",
+      "label": "macOS App Icon 512x512",
+      "file_type": "image",
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "macos_icon_64",
+      "label": "macOS App Icon 64x64",
+      "file_type": "image",
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_favicon",
+      "label": "Web Favicon",
+      "file_type": "image",
+      "source_file": "web/favicon.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_icon_192",
+      "label": "Web App Icon 192x192",
+      "file_type": "image",
+      "source_file": "web/icons/Icon-192.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_icon_512",
+      "label": "Web App Icon 512x512",
+      "file_type": "image",
+      "source_file": "web/icons/Icon-512.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_icon_maskable_192",
+      "label": "Web Maskable Icon 192x192",
+      "file_type": "image",
+      "source_file": "web/icons/Icon-maskable-192.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "web_icon_maskable_512",
+      "label": "Web Maskable Icon 512x512",
+      "file_type": "image",
+      "source_file": "web/icons/Icon-maskable-512.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "main_dart",
+      "target": "firebase_core",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "main_dart",
+      "target": "app_router_dart",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "app_router_dart",
+      "target": "go_router",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/app/app_router.dart",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "bandwidth_analysis_md",
+      "target": "bandwidth_optimization_implementation_md",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "BANDWIDTH_ANALYSIS.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "documentation_hub_md",
+      "target": "readme_md",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DOCUMENTATION_HUB.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "documentation_hub_md",
+      "target": "backend_security_hardening_md",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DOCUMENTATION_HUB.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "documentation_hub_md",
+      "target": "bandwidth_optimization_summary_md",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "docs/DOCUMENTATION_HUB.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "razorpay_production_setup_md",
+      "target": "razorpay_flutter",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "RAZORPAY_PRODUCTION_SETUP.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "pubspec_yaml",
+      "target": "riverpod",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "pubspec.yaml",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "pubspec_yaml",
+      "target": "go_router",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "pubspec.yaml",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "fcm_production_notification_system_md",
+      "target": "firebase_core",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/FCM_PRODUCTION_NOTIFICATION_SYSTEM.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "doc_firebase_config",
+      "target": "doc_firestore_arch",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/FIREBASE_CONFIGURATION.md"
+    },
+    {
+      "source": "doc_firebase_config",
+      "target": "doc_security_hardening",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/FIREBASE_CONFIGURATION.md"
+    },
+    {
+      "source": "doc_firestore_arch",
+      "target": "doc_security_hardening",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/FIRESTORE_ARCHITECTURE.md"
+    },
+    {
+      "source": "doc_flutter_firebase",
+      "target": "doc_firebase_config",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/FLUTTER_FIREBASE_INTEGRATION.md"
+    },
+    {
+      "source": "doc_flutter_firebase",
+      "target": "doc_firestore_arch",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/FLUTTER_FIREBASE_INTEGRATION.md"
+    },
+    {
+      "source": "doc_flutter_firebase",
+      "target": "doc_security_hardening",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/FLUTTER_FIREBASE_INTEGRATION.md"
+    },
+    {
+      "source": "doc_glassmorphism_guide",
+      "target": "doc_glassmorphism_migration",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/GLASSMORPHISM_GUIDE.md"
+    },
+    {
+      "source": "doc_impl_summary",
+      "target": "doc_quick_start",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/IMPLEMENTATION_SUMMARY.md"
+    },
+    {
+      "source": "doc_logging_optimization",
+      "target": "doc_logging_before_after",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/LOGGING_MONITORING_OPTIMIZATION_IMPLEMENTATION.md"
+    },
+    {
+      "source": "doc_razorpay_checklist",
+      "target": "doc_razorpay_guide",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/RAZORPAY_IMPLEMENTATION_CHECKLIST.md"
+    },
+    {
+      "source": "doc_security_hardening",
+      "target": "doc_security_audit",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/SECURITY_HARDENING_COMPLETE.md"
+    },
+    {
+      "source": "doc_tenant_prod_deploy",
+      "target": "doc_tenant_impl_guide",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/tenant_management/PRODUCTION_DEPLOYMENT_GUIDE.md"
+    },
+    {
+      "source": "linux_cmake",
+      "target": "web_index",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.5,
+      "source_file": "linux/CMakeLists.txt"
+    },
+    {
+      "source": "node_img_android_hdpi",
+      "target": "node_concept_flutter",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 1.0,
+      "source_file": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+      "source": "node_img_android_mdpi",
+      "target": "node_concept_flutter",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 1.0,
+      "source_file": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+      "source": "node_img_android_xhdpi",
+      "target": "node_concept_flutter",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 1.0,
+      "source_file": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+      "source": "node_img_android_xxhdpi",
+      "target": "node_concept_flutter",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 1.0,
+      "source_file": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+      "source": "node_img_android_xxxhdpi",
+      "target": "node_concept_flutter",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 1.0,
+      "source_file": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+      "source": "node_img_ios_1024",
+      "target": "node_concept_flutter",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png"
+    },
+    {
+      "source": "node_img_ios_20",
+      "target": "node_concept_flutter",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png"
+    },
+    {
+      "source": "node_img_asset_rentdone_logo",
+      "target": "node_concept_rentdone_branding",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 1.0,
+      "source_file": "assets/images/rentdone_logo.png"
+    },
+    {
+      "source": "node_img_asset_cash",
+      "target": "node_concept_payments",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "assets/images/cash.png"
+    },
+    {
+      "source": "node_img_asset_upi",
+      "target": "node_concept_payments",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "assets/images/upi.png"
+    },
+    {
+      "source": "node_img_asset_collected",
+      "target": "node_concept_payments",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "assets/images/collected.png"
+    },
+    {
+      "source": "node_img_asset_pending",
+      "target": "node_concept_payments",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "assets/images/pending.png"
+    },
+    {
+      "source": "node_img_asset_owner",
+      "target": "node_concept_user_roles",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "assets/images/owner_final.png"
+    },
+    {
+      "source": "node_img_asset_tenant",
+      "target": "node_concept_user_roles",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "assets/images/tenant_final.png"
+    },
+    {
+      "source": "node_img_asset_property",
+      "target": "node_concept_user_roles",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "assets/images/property.png"
+    },
+    {
+      "source": "ios_app_icon_20x20_2x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_20x20_3x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_29x29_1x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_29x29_2x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_29x29_3x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_40x40_1x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_40x40_2x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_40x40_3x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_60x60_2x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_60x60_3x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_76x76_1x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_76x76_2x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_app_icon_83_5x83_5_2x",
+      "target": "ios_app_icon_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_launch_image_1x",
+      "target": "ios_launch_image_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "ios_launch_image_2x",
+      "target": "ios_launch_image_set",
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "macos_icon_1024",
+      "target": "macos_icon_512",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "web_icon_192",
+      "target": "web_icon_512",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "web/manifest.json",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "app_initialization_flow",
+      "label": "App Initialization Flow",
+      "nodes": [
+        "main_dart",
+        "firebase_core",
+        "app_router_dart"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "lib/main.dart"
+    },
+    {
+      "id": "optimization_documentation_group",
+      "label": "Optimization Documentation",
+      "nodes": [
+        "bandwidth_analysis_md",
+        "bandwidth_before_after_md",
+        "bandwidth_optimization_implementation_md",
+        "bandwidth_optimization_summary_md",
+        "cloud_functions_cost_optimization_md"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DOCUMENTATION_HUB.md"
+    },
+    {
+      "id": "he_firebase_optimization",
+      "label": "Firebase Optimization Suite",
+      "nodes": [
+        "doc_firestore_cost",
+        "doc_opt_arch_guide",
+        "doc_logging_optimization"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "docs/OPTIMIZATION_ARCHITECTURE_GUIDE.md"
+    },
+    {
+      "id": "he_design_system",
+      "label": "RentDone Design System",
+      "nodes": [
+        "doc_glassmorphism_guide",
+        "doc_glassmorphism_migration"
+      ],
+      "relation": "implement",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "docs/GLASSMORPHISM_GUIDE.md"
+    },
+    {
+      "id": "hyperedge_android_launcher_icons",
+      "label": "Android Launcher Icons",
+      "nodes": [
+        "node_img_android_hdpi",
+        "node_img_android_mdpi",
+        "node_img_android_xhdpi",
+        "node_img_android_xxhdpi",
+        "node_img_android_xxxhdpi"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "id": "hyperedge_ios_launcher_icons",
+      "label": "iOS App Icons",
+      "nodes": [
+        "node_img_ios_1024",
+        "node_img_ios_20"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0
+    },
+    {
+      "id": "hyperedge_payment_illustrations",
+      "label": "Payment Method Illustrations",
+      "nodes": [
+        "node_img_asset_cash",
+        "node_img_asset_upi",
+        "node_img_asset_collected"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9
+    },
+    {
+      "id": "hyperedge_user_role_illustrations",
+      "label": "User Role Illustrations",
+      "nodes": [
+        "node_img_asset_owner",
+        "node_img_asset_tenant"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9
+    },
+    {
+      "id": "ios_assets_configuration",
+      "label": "iOS Assets Configuration",
+      "nodes": [
+        "ios_app_icon_set",
+        "ios_launch_image_set"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "ios/Runner/Assets.xcassets"
+    },
+    {
+      "id": "macos_app_icon_set",
+      "label": "macOS App Icon Set",
+      "nodes": [
+        "macos_icon_1024",
+        "macos_icon_512",
+        "macos_icon_256",
+        "macos_icon_128",
+        "macos_icon_64",
+        "macos_icon_32",
+        "macos_icon_16"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json"
+    },
+    {
+      "id": "web_app_icon_set",
+      "label": "Web App Icon Set",
+      "nodes": [
+        "web_icon_192",
+        "web_icon_512",
+        "web_icon_maskable_192",
+        "web_icon_maskable_512"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "web/manifest.json"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart' as gsi;
 import 'package:rentdone/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:rentdone/features/auth/data/services/auth_firebase_services.dart';
 import 'package:rentdone/features/auth/domain/repositories/auth_repository.dart';
@@ -18,11 +18,7 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
   return FirebaseFirestore.instance;
 });
 
-final googleSignInProvider = Provider<GoogleSignIn>((ref) {
-  return GoogleSignIn(
-    serverClientId: '35844123331-ut1le47rn4bc62ev8q1461m8bhboikrd.apps.googleusercontent.com',
-  );
-});
+final googleSignInProvider = Provider<gsi.GoogleSignIn>((ref) => gsi.GoogleSignIn(serverClientId: '35844123331-ut1le47rn4bc62ev8q1461m8bhboikrd.apps.googleusercontent.com'));
 
 final authFirebaseServiceProvider = Provider<AuthFirebaseService>((ref) {
   return AuthFirebaseService(

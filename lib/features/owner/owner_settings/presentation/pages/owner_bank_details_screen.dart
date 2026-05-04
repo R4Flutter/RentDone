@@ -376,12 +376,18 @@ class _OwnerBankDetailsScreenState
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: isDark
-                  ? [Colors.white.withAlpha(20), Colors.white.withAlpha(10)]
-                  : [Colors.white.withAlpha(188), Colors.white.withAlpha(140)],
+                  ? [
+                      Colors.white.withValues(alpha: 0.08),
+                      Colors.white.withValues(alpha: 0.04),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: 0.74),
+                      Colors.white.withValues(alpha: 0.55),
+                    ],
             ),
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: AppTheme.liquidPrimaryStart.withAlpha(48),
+              color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.19),
               width: 1.2,
             ),
             boxShadow: [
@@ -460,9 +466,9 @@ class _OwnerBankDetailsScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withAlpha(24),
+        color: color.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withAlpha(76)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -492,7 +498,7 @@ class _OwnerBankDetailsScreenState
   }) {
     final labelColor = OwnerDashboardColors.managePropertiesHeaderPrimary(
       context,
-    ).withAlpha(235);
+    ).withValues(alpha: 0.92);
     final helperColor = OwnerDashboardColors.managePropertiesHeaderSecondary(
       context,
     );
@@ -508,19 +514,19 @@ class _OwnerBankDetailsScreenState
         color: OwnerDashboardColors.managePropertiesHeaderSecondary(context),
       ),
       filled: true,
-      fillColor: AppTheme.pureWhite.withAlpha(90),
+      fillColor: AppTheme.pureWhite.withValues(alpha: 0.35),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: AppTheme.liquidPrimaryStart.withAlpha(44),
+          color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.17),
           width: 1.0,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: AppTheme.liquidPrimaryEnd.withAlpha(190),
+          color: AppTheme.liquidPrimaryEnd.withValues(alpha: 0.75),
           width: 1.2,
         ),
       ),
@@ -553,8 +559,8 @@ class _OwnerBankDetailsScreenState
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDark
-              ? AppTheme.liquidPrimaryStart.withAlpha(20)
-              : AppTheme.liquidPrimaryStart.withAlpha(30),
+              ? AppTheme.liquidPrimaryStart.withValues(alpha: 0.08)
+              : AppTheme.liquidPrimaryStart.withValues(alpha: 0.12),
         ),
       ),
     );

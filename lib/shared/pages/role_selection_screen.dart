@@ -134,12 +134,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.pureWhite.withAlpha(
-                                isDark ? 30 : 140,
+                              color: AppTheme.pureWhite.withValues(
+                                alpha: isDark ? 0.12 : 0.55,
                               ),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: AppTheme.liquidPrimaryStart.withAlpha(40),
+                                color: AppTheme.liquidPrimaryStart.withValues(alpha: 0.16),
                               ),
                             ),
                             child: Row(
