@@ -13,59 +13,61 @@ class PaymentsOverview extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final monthLabel = _monthLabel();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Payment Overview',
-          style: textTheme.titleLarge?.copyWith(
-            color: OwnerDashboardColors.textPrimary(context),
-            fontWeight: FontWeight.w700,
+    return RepaintBoundary(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Payment Overview',
+            style: textTheme.titleLarge?.copyWith(
+              color: OwnerDashboardColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Collected in $monthLabel',
-          style: textTheme.bodySmall?.copyWith(
-            color: OwnerDashboardColors.textSecondary(context),
+          const SizedBox(height: 6),
+          Text(
+            'Collected in $monthLabel',
+            style: textTheme.bodySmall?.copyWith(
+              color: OwnerDashboardColors.textSecondary(context),
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 520;
-            final cashCard = _PaymentMethodCard(
-              label: 'Cash',
-              amount: summary.cashAmount,
-              tone: OwnerDashboardColors.cashTone(context),
-              assetPath: 'assets/images/cash.png',
-              subtitle: 'Cash collected',
-            );
-            final upiCard = _PaymentMethodCard(
-              label: 'UPI',
-              amount: summary.onlineAmount,
-              tone: OwnerDashboardColors.upiTone(context),
-              assetPath: 'assets/images/upi.png',
-              subtitle: 'UPI collected',
-            );
-
-            if (isWide) {
-              return Row(
-                children: [
-                  Expanded(child: cashCard),
-                  const SizedBox(width: 12),
-                  Expanded(child: upiCard),
-                ],
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 520;
+              final cashCard = _PaymentMethodCard(
+                label: 'Cash',
+                amount: summary.cashAmount,
+                tone: OwnerDashboardColors.cashTone(context),
+                assetPath: 'assets/images/cash.png',
+                subtitle: 'Cash collected',
               );
-            }
+              final upiCard = _PaymentMethodCard(
+                label: 'UPI',
+                amount: summary.onlineAmount,
+                tone: OwnerDashboardColors.upiTone(context),
+                assetPath: 'assets/images/upi.png',
+                subtitle: 'UPI collected',
+              );
 
-            return Column(
-              children: [cashCard, const SizedBox(height: 12), upiCard],
-            );
-          },
-        ),
-      ],
-    ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.12, end: 0);
+              if (isWide) {
+                return Row(
+                  children: [
+                    Expanded(child: cashCard),
+                    const SizedBox(width: 12),
+                    Expanded(child: upiCard),
+                  ],
+                );
+              }
+
+              return Column(
+                children: [cashCard, const SizedBox(height: 12), upiCard],
+              );
+            },
+          ),
+        ],
+      ).animate().fadeIn(duration: 450.ms).slideY(begin: 0.12, end: 0),
+    );
   }
 
   String _monthLabel() {

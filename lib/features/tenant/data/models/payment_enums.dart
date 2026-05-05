@@ -1,4 +1,4 @@
-import 'package:rentdone/features/tenant/payment_module/services/payment_constants.dart';
+import 'package:rentdone/features/tenant/data/services/payment_constants.dart';
 
 enum PaymentMethodType { razorpay, cash, upi }
 

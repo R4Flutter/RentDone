@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as functions from "firebase-functions";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { db, FieldValue, Timestamp } from "../utils/firebase";
@@ -373,7 +374,8 @@ export const verifyPayment = onCall(
       throw new HttpsError("permission-denied", "unauthorized");
     }
 
-    const razorpaySecret = asString(process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET);
+    const razorConfig = functions.config().razorpay;
+    const razorpaySecret = asString(razorConfig?.key_secret || razorConfig?.secret);
     if (!razorpaySecret) {
       throw new HttpsError("failed-precondition", "razorpay-secret-missing");
     }

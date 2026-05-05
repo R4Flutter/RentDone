@@ -1,12 +1,12 @@
 import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
-import 'package:rentdone/features/owner/owners_properties/domain/repositories/property_repository.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/repositories/tenant_repository.dart';
 
 class WatchAllTenantsUseCase {
-  final PropertyRepository _repository;
+  final TenantRepository repository;
 
-  const WatchAllTenantsUseCase(this._repository);
+  WatchAllTenantsUseCase(this.repository);
 
-  Stream<List<Tenant>> call() {
-    return _repository.watchAllTenants();
+  Stream<List<Tenant>> call(String ownerId) {
+    return repository.watchAllTenants(ownerId);
   }
 }

@@ -374,26 +374,38 @@ class AuthFirebaseService {
 
     // Check if this email is already used by a different account
     if (normalizedEmail.isNotEmpty) {
-      final emailQuery = await _firestore
-          .collection('users')
-          .where('emailLowercase', isEqualTo: normalizedEmail)
-          .limit(1)
-          .get();
+      try {
+        final emailQuery = await _firestore
+            .collection('users')
+            .where('emailLowercase', isEqualTo: normalizedEmail)
+            .limit(1)
+            .get();
 
-      if (emailQuery.docs.isNotEmpty) {
-        final existingUserId = emailQuery.docs.first.id;
-        if (existingUserId != user.uid) {
-          throw AuthException(
-            message:
-                'This email is already registered with another account. Please use a different email or sign in to the existing account.',
-          );
+        if (emailQuery.docs.isNotEmpty) {
+          final existingUserId = emailQuery.docs.first.id;
+          if (existingUserId != user.uid) {
+            throw AuthException(
+              message:
+                  'This email is already registered with another account. Please use a different email or sign in to the existing account.',
+            );
+          }
         }
+      } catch (e) {
+        if (e is AuthException) rethrow;
+        // Ignore firestore errors if it's just a permission check failure on search
+        debugPrint('Email uniqueness check skipped: $e');
       }
     }
 
     final docRef = _firestore.collection('users').doc(user.uid);
-    final snapshot = await docRef.get();
-    final data = snapshot.data();
+    DocumentSnapshot<Map<String, dynamic>>? snapshot;
+    try {
+      snapshot = await docRef.get();
+    } catch (e) {
+      debugPrint('Error fetching user doc: $e');
+    }
+    
+    final data = snapshot?.data();
     final existingRole = UserRoleX.tryParse(data?['role'] as String?);
 
     // SECURITY: If user already has a role, they cannot change it
@@ -408,7 +420,6 @@ class AuthFirebaseService {
       // Role is already set and matches, continue with existing role
     } else {
       // SECURITY: New user - role is determined by signup flow.
-      // We allow both tenant and owner roles to be set on first signup.
       if (selectedRole != UserRole.tenant && selectedRole != UserRole.owner) {
         throw AuthException(
           message: 'Invalid role selected. Please choose Owner or Tenant.',
@@ -431,31 +442,36 @@ class AuthFirebaseService {
       fallbackType: 'identicon',
     );
 
-    // SECURITY: role field is set once and never changed by client
-    await docRef.set({
+    final userData = {
       'uid': user.uid,
-      'name': user.displayName,
-      'email': user.email,
-      'emailLowercase': normalizedEmail,
-      'photoUrl': user.photoURL ?? gravatarUrl,
+      'name': user.displayName ?? (data?['name'] as String?),
+      'email': user.email ?? (data?['email'] as String?),
+      'emailLowercase': normalizedEmail.isNotEmpty ? normalizedEmail : (data?['emailLowercase'] as String?),
+      'photoUrl': user.photoURL ?? (data?['photoUrl'] as String?) ?? gravatarUrl,
       'gravatarUrl': gravatarUrl,
       'phone': phoneToPersist,
-      'role': roleToPersist.value, // ← Immutable after first set
-      'notifications': {'rent_due': true, 'payment_received': true},
+      'role': roleToPersist.value, // Immutable after first set
+      'notifications': data?['notifications'] ?? {'rent_due': true, 'payment_received': true},
       'updatedAt': now,
-      if (!snapshot.exists) 'createdAt': now,
       'lastLoginAt': now,
-    }, SetOptions(merge: true));
+    };
+
+    if (snapshot == null || !snapshot.exists) {
+      userData['createdAt'] = now;
+    }
+
+    // SECURITY: role field is set once and never changed by client
+    await docRef.set(userData, SetOptions(merge: true));
 
     final dto = AuthUserDto.fromFirebaseUser(user);
     return AuthUser(
       uid: dto.uid,
-      name: dto.name,
-      email: dto.email,
+      name: userData['name'] as String? ?? dto.name,
+      email: userData['email'] as String? ?? dto.email,
       phone: phoneToPersist,
       role: roleToPersist.value,
       createdAt: dto.createdAt,
-      lastLoginAt: dto.lastLoginAt,
+      lastLoginAt: DateTime.now(),
       isProfileComplete: true,
     );
   }

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'package:rentdone/features/tenant/payment_module/services/payment_constants.dart';
-import 'package:rentdone/features/tenant/payment_module/services/payment_service.dart';
+import 'package:rentdone/features/tenant/data/services/payment_constants.dart';
+import 'package:rentdone/features/tenant/data/services/payment_service.dart';
 
 class RazorpayOrderData {
   const RazorpayOrderData({

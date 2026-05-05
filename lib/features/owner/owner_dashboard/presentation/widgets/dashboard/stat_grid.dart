@@ -60,19 +60,21 @@ class StatsGrid extends StatelessWidget {
       ),
     ];
 
-    return GridView.count(
-      shrinkWrap: true,
-      crossAxisCount: columns,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: aspect,
-      children: List.generate(cards.length, (index) {
-        return cards[index]
-            .animate()
-            .fadeIn(duration: 400.ms, delay: (90 * index).ms)
-            .slideY(begin: 0.15, end: 0);
-      }),
+    return RepaintBoundary(
+      child: GridView.count(
+        shrinkWrap: true,
+        crossAxisCount: columns,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: aspect,
+        children: List.generate(cards.length, (index) {
+          return cards[index]
+              .animate()
+              .fadeIn(duration: 400.ms, delay: (90 * index).ms)
+              .slideY(begin: 0.15, end: 0);
+        }),
+      ),
     );
   }
 

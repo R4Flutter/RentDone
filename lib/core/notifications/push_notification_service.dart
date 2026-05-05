@@ -66,8 +66,10 @@ class PushNotificationService {
 
         await _syncCurrentToken(uid: user.uid);
       } catch (error, stackTrace) {
-        debugPrint('Push token sync failed on auth change: $error');
-        debugPrint('$stackTrace');
+        if (kDebugMode) {
+          debugPrint('Push token sync failed on auth change: $error');
+          debugPrint('$stackTrace');
+        }
       }
     });
 
@@ -81,15 +83,19 @@ class PushNotificationService {
         }
         await _saveToken(uid: uid, token: token.trim());
       } catch (error, stackTrace) {
-        debugPrint('Push token refresh sync failed: $error');
-        debugPrint('$stackTrace');
+        if (kDebugMode) {
+          debugPrint('Push token refresh sync failed: $error');
+          debugPrint('$stackTrace');
+        }
       }
     });
 
     _foregroundSubscription = FirebaseMessaging.onMessage.listen((
       message,
     ) async {
-      debugPrint('Foreground FCM: ${message.messageId} ${message.data}');
+      if (kDebugMode) {
+        debugPrint('Foreground FCM: ${message.messageId} ${message.data}');
+      }
       await _showForegroundNotification(message);
     });
 
@@ -233,7 +239,9 @@ class PushNotificationService {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } on FirebaseException catch (error) {
-      debugPrint('Legacy token fallback skipped: ${error.code}');
+      if (kDebugMode) {
+        debugPrint('Legacy token fallback skipped: ${error.code}');
+      }
     }
   }
 
@@ -250,7 +258,9 @@ class PushNotificationService {
         await batch.commit();
       }
     } on FirebaseException catch (error) {
-      debugPrint('Device token cleanup skipped: ${error.code}');
+      if (kDebugMode) {
+        debugPrint('Device token cleanup skipped: ${error.code}');
+      }
     }
 
     try {
@@ -259,7 +269,9 @@ class PushNotificationService {
         'fcmTokenUpdatedAt': FieldValue.delete(),
       }, SetOptions(merge: true));
     } on FirebaseException catch (error) {
-      debugPrint('Legacy token cleanup skipped: ${error.code}');
+      if (kDebugMode) {
+        debugPrint('Legacy token cleanup skipped: ${error.code}');
+      }
     }
 
     _lastKnownToken = null;
@@ -363,7 +375,9 @@ class PushNotificationService {
           }, SetOptions(merge: true));
     } on FirebaseException catch (error) {
       // Snooze is optional UX; ignore permission issues without crashing.
-      debugPrint('Snooze save skipped: ${error.code}');
+      if (kDebugMode) {
+        debugPrint('Snooze save skipped: ${error.code}');
+      }
     }
   }
 

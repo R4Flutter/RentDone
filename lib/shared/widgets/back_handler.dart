@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:rentdone/app/app_theme.dart';
@@ -106,7 +107,9 @@ class _BackHandlerState extends State<BackHandler> {
 
         case BackHandlerMode.rootConfirmExit:
           if (canPop) {
-            debugPrint('[BackHandler] rootConfirmExit: local navigator pop');
+            if (kDebugMode) {
+              debugPrint('[BackHandler] rootConfirmExit: local navigator pop');
+            }
             await navigator.maybePop();
             break;
           }
@@ -115,14 +118,18 @@ class _BackHandlerState extends State<BackHandler> {
           // root navigator still has pages to pop.
           final rootNavigator = Navigator.of(context, rootNavigator: true);
           if (rootNavigator.canPop()) {
-            debugPrint('[BackHandler] rootConfirmExit: root navigator pop');
+            if (kDebugMode) {
+              debugPrint('[BackHandler] rootConfirmExit: root navigator pop');
+            }
             await rootNavigator.maybePop();
             break;
           }
 
-          debugPrint(
-            '[BackHandler] rootConfirmExit: at app root, prompting exit',
-          );
+          if (kDebugMode) {
+            debugPrint(
+              '[BackHandler] rootConfirmExit: at app root, prompting exit',
+            );
+          }
 
           final shouldExit = await _showLiquidConfirmationDialog(
             title: widget.dialogTitle ?? 'Exit App',
@@ -133,9 +140,11 @@ class _BackHandlerState extends State<BackHandler> {
           if (!shouldExit) break;
 
           widget.onRootExitConfirmed?.call();
-          debugPrint(
-            '[BackHandler] rootConfirmExit: exit confirmed, closing app',
-          );
+          if (kDebugMode) {
+            debugPrint(
+              '[BackHandler] rootConfirmExit: exit confirmed, closing app',
+            );
+          }
           await SystemNavigator.pop();
           break;
 

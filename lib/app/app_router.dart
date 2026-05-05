@@ -1,14 +1,11 @@
 import 'package:rentdone/app/app_theme.dart';
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rentdone/app/app_navigation.dart';
+import 'package:rentdone/app/auth_router_state.dart';
 import 'package:rentdone/core/constants/user_role.dart';
-import 'package:rentdone/features/auth/di/auth_di.dart';
 
-import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
 import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/phone_capture_screen.dart';
 import 'package:rentdone/features/auth/presentation/pages/signup_screen.dart';
@@ -47,17 +44,22 @@ import 'package:rentdone/shared/pages/role_selection_screen.dart';
 import 'package:rentdone/shared/pages/splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final firebaseAuth = ref.watch(firebaseAuthProvider);
+  final authState = ref.watch(authRouterStateProvider);
   var hasHandledInitialRouteGuard = false;
 
   return GoRouter(
     navigatorKey: appNavigatorKey,
     initialLocation: '/',
     overridePlatformDefaultLocation: true,
-    refreshListenable: _RouterRefreshNotifier(firebaseAuth.authStateChanges()),
-    redirect: (context, state) async {
-      final isLoggedIn = firebaseAuth.currentUser != null;
+    refreshListenable: authState,
+    redirect: (context, state) {
+      if (authState.isLoading) {
+        return '/'; // Stay on splash screen while loading
+      }
+
+      final isLoggedIn = authState.currentUser != null;
       final path = state.uri.path;
+      
       bool isValidPhone(String? value) {
         final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
         return RegExp(r'^[6-9]\d{9}$').hasMatch(digits);
@@ -83,16 +85,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return '/phone?role=owner';
         }
 
-        if (path == '/login') {
-          final roleParam = state.uri.queryParameters['role'];
-          final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
-          final phone = state.uri.queryParameters['phone'];
-          if (!isValidPhone(phone)) {
-            return '/phone?role=${selectedRole.name}';
-          }
-        }
-
-        if (path == '/signup') {
+        if (path == '/login' || path == '/signup') {
           final roleParam = state.uri.queryParameters['role'];
           final selectedRole = UserRoleX.tryParse(roleParam) ?? UserRole.owner;
           final phone = state.uri.queryParameters['phone'];
@@ -105,8 +98,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // User is authenticated - check their role
-      final uid = firebaseAuth.currentUser!.uid;
-      final role = await ref.read(authRepositoryProvider).getUserRole(uid);
+      final role = authState.role;
 
       // If user has no role yet, only allow /role and /login
       if (role == null) {
@@ -133,24 +125,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           path == '/login' ||
           path == '/signup' ||
           path == '/') {
+            
         // Check whether the user's profile is complete (name + phone required)
-        try {
-          final userDoc = await ref
-              .read(firestoreProvider)
-              .collection('users')
-              .doc(uid)
-              .get();
-          final data = userDoc.data() ?? {};
-          final phone = (data['phone'] as String? ?? '').trim();
-          final name = (data['name'] as String? ?? '').trim();
-          if (phone.isEmpty || name.isEmpty) {
-            return role == UserRole.owner
-                ? '/owner/profile?setup=true'
-                : '/tenant/profile?setup=true';
-          }
-        } catch (_) {
-          // If Firestore check fails, fall through to dashboard normally
+        if (!authState.isProfileComplete) {
+          return role == UserRole.owner
+              ? '/owner/profile?setup=true'
+              : '/tenant/profile?setup=true';
         }
+        
         return role == UserRole.owner
             ? '/owner/dashboard'
             : '/tenant/dashboard';
@@ -577,16 +559,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class _RouterRefreshNotifier extends ChangeNotifier {
-  _RouterRefreshNotifier(Stream<dynamic> stream) {
-    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
-  }
-
-  late final StreamSubscription<dynamic> _subscription;
-
-  @override
-  void dispose() {
-    _subscription.cancel();
-    super.dispose();
-  }
-}

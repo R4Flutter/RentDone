@@ -1,19 +1,19 @@
-import 'package:rentdone/features/owner/owners_properties/domain/repositories/property_repository.dart';
+import 'package:rentdone/features/owner/owners_properties/domain/repositories/tenant_repository.dart';
 
 class RemoveTenantFromRoomUseCase {
-  final PropertyRepository _repository;
+  final TenantRepository repository;
 
-  const RemoveTenantFromRoomUseCase(this._repository);
+  RemoveTenantFromRoomUseCase(this.repository);
 
   Future<void> call({
-    required String tenantId,
     required String propertyId,
     required String roomId,
+    required String tenantId,
   }) {
-    return _repository.removeTenant(
-      tenantId: tenantId,
+    return repository.removeTenantFromRoom(
       propertyId: propertyId,
       roomId: roomId,
+      tenantId: tenantId,
     );
   }
 }

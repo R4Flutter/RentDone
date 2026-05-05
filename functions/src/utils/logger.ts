@@ -1,13 +1,14 @@
 import { logger } from "firebase-functions";
+import { AppLogger } from "../shared/logger";
 
 export const logInfo = (message: string, data: Record<string, unknown> = {}): void => {
-  logger.info(message, data);
+  logger.info(message, AppLogger.sanitize(data));
 };
 
 export const logWarn = (message: string, data: Record<string, unknown> = {}): void => {
-  logger.warn(message, data);
+  logger.warn(message, AppLogger.sanitize(data));
 };
 
 export const logError = (message: string, data: Record<string, unknown> = {}): void => {
-  logger.error(message, data);
+  logger.error(message, AppLogger.sanitize(data));
 };

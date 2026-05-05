@@ -114,7 +114,7 @@ class _LiquidProfileCardState extends State<LiquidProfileCard>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(28),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(

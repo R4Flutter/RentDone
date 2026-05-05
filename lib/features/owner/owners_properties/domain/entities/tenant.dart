@@ -56,8 +56,10 @@ class Tenant {
   final bool backgroundChecked;
 
   // System Fields
-  final bool isActive;
+  final String status; // active, inactive, pending_assignment
   final DateTime createdAt;
+
+  bool get isActive => status == 'active';
 
   const Tenant({
     required this.id,
@@ -101,7 +103,7 @@ class Tenant {
     this.previousLandlordPhone,
     required this.policeVerified,
     required this.backgroundChecked,
-    required this.isActive,
+    required this.status,
     required this.createdAt,
   });
 }

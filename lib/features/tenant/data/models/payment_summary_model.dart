@@ -1,5 +1,5 @@
-import 'package:rentdone/features/tenant/payment_module/models/payment_record_model.dart';
-import 'package:rentdone/features/tenant/payment_module/models/tenant_model.dart';
+import 'package:rentdone/features/tenant/data/models/payment_record_model.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_model.dart';
 
 class PaymentSummaryModel {
   const PaymentSummaryModel({

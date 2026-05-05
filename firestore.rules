@@ -2,6 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Authentication helpers.
     function isAuth() {
       return request.auth != null;
     }
@@ -10,72 +11,333 @@ service cloud.firestore {
       return request.auth.uid;
     }
 
+    function userExists() {
+      return isAuth()
+        && exists(/databases/$(database)/documents/users/$(uid()));
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(uid())).data.role;
+    }
+
+    function isOwner() {
+      return userExists() && userRole() == 'owner';
+    }
+
+    function isTenant() {
+      return userExists() && userRole() == 'tenant';
+    }
+
+    function tenantExists(tenantId) {
+      return exists(/databases/$(database)/documents/tenants/$(tenantId));
+    }
+
+    function tenantData(tenantId) {
+      return get(/databases/$(database)/documents/tenants/$(tenantId)).data;
+    }
+
+    function mappedTenantId() {
+      return get(/databases/$(database)/documents/tenants_mapping/$(uid())).data.tenantId;
+    }
+
+    function hasTenantMapping() {
+      return isAuth()
+        && exists(/databases/$(database)/documents/tenants_mapping/$(uid()));
+    }
+
+    function isMappedTenant(tenantId) {
+      return hasTenantMapping() && mappedTenantId() == tenantId;
+    }
+
+    function isTenantMember(tenantId) {
+      return isAuth()
+        && tenantExists(tenantId)
+        && (
+          tenantId == uid()
+          || tenantData(tenantId).authUid == uid()
+          || tenantData(tenantId).userId == uid()
+          || isMappedTenant(tenantId)
+        );
+    }
+
+    function isTenantOwner(tenantId) {
+      return isAuth()
+        && tenantExists(tenantId)
+        && tenantData(tenantId).ownerId == uid();
+    }
+
+    function canAccessTenant(tenantId) {
+      return isTenantOwner(tenantId) || isTenantMember(tenantId);
+    }
+
+    function tenantOwnerMatches(tenantId, ownerId) {
+      return tenantExists(tenantId) && tenantData(tenantId).ownerId == ownerId;
+    }
+
+    function currentTenantBelongsToOwner(ownerId) {
+      return isTenant()
+        && (
+          (hasTenantMapping() && tenantOwnerMatches(mappedTenantId(), ownerId))
+          || tenantOwnerMatches(uid(), ownerId)
+        );
+    }
+
+    function canReadPayment(data) {
+      return isAuth()
+        && (
+          data.ownerId == uid()
+          || data.tenantAuthUid == uid()
+          || data.tenantId == uid()
+          || (data.tenantId is string && isTenantMember(data.tenantId))
+        );
+    }
+
+    function canReadTransaction(data) {
+      return isAuth()
+        && (
+          data.ownerId == uid()
+          || data.tenantAuthUid == uid()
+          || data.tenantId == uid()
+          || (data.tenantId is string && isTenantMember(data.tenantId))
+        );
+    }
+
+    // User profiles and per-user subcollections such as deviceTokens.
     match /users/{userId} {
       allow read, write: if isAuth() && userId == uid();
-    }
 
-    match /properties/{propertyId} {
-      allow read: if isAuth() && (
-        resource.data.ownerId == uid() ||
-        (get(/databases/$(database)/documents/tenants/$(uid())).data.propertyId == propertyId)
-      );
-
-      allow create: if isAuth()
-        && request.resource.data.ownerId == uid();
-
-      allow update, delete: if isAuth()
-        && resource.data.ownerId == uid();
-    }
-
-    match /tenants/{tenantId} {
-
-      allow read: if isAuth() && (
-        tenantId == uid() ||
-        resource.data.ownerId == uid()
-      );
-
-      allow create: if isAuth()
-        && request.resource.data.ownerId == uid();
-
-      allow update: if isAuth() && (
-        tenantId == uid() ||
-        resource.data.ownerId == uid()
-      );
-
-      allow delete: if isAuth()
-        && resource.data.ownerId == uid();
-
-      match /payments/{paymentId} {
-        allow read: if isAuth();
-
-        allow create: if isAuth()
-          && request.resource.data.amount is int
-          && request.resource.data.amount > 0;
-
-        allow update, delete: if isAuth();
+      match /{allSubcollections=**} {
+        allow read, write: if isAuth() && userId == uid();
       }
     }
 
-    match /payments/{paymentId} {
-      allow read: if isAuth() && (
-        resource.data.ownerId == uid() ||
-        resource.data.tenantId == uid()
-      );
+    // Owner profile/subscription documents.
+    match /owners/{ownerId} {
+      allow read: if isAuth();
+      allow create, update: if isAuth() && ownerId == uid();
+      allow delete: if false;
+    }
 
-      allow create: if isAuth()
-        && request.resource.data.amount is int
-        && request.resource.data.amount > 0
-        && 'ownerId' in request.resource.data
-        && 'tenantId' in request.resource.data;
+    // Owner UPI/bank details. Keep these private to the owner.
+    match /ownerPaymentProfiles/{ownerId} {
+      allow read, create, update, delete: if isAuth() && ownerId == uid();
+    }
 
-      allow update: if isAuth() && (
-        resource.data.ownerId == uid() ||
-        resource.data.tenantId == uid()
-      );
+    // Public app configuration used by client flows.
+    match /appConfig/{configId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Properties are owner-managed; published properties are visible to signed-in tenants.
+    match /properties/{propertyId} {
+      allow read: if isAuth()
+        && (
+          resource.data.ownerId == uid()
+          || resource.data.isPublished == true
+          || (isTenant() && hasTenantMapping() && mappedTenantId() is string
+              && tenantOwnerMatches(mappedTenantId(), resource.data.ownerId))
+        );
+
+      allow create: if isAuth() && request.resource.data.ownerId == uid();
+
+      allow update: if isAuth()
+        && resource.data.ownerId == uid()
+        && request.resource.data.ownerId == resource.data.ownerId;
 
       allow delete: if isAuth() && resource.data.ownerId == uid();
     }
 
+    // Tenants are accessible only to their owner or the linked tenant account.
+    match /tenants/{tenantId} {
+      allow read: if isAuth()
+        && (
+          resource.data.ownerId == uid()
+          || resource.data.authUid == uid()
+          || resource.data.userId == uid()
+          || tenantId == uid()
+          || isMappedTenant(tenantId)
+        );
+
+      allow create: if isAuth()
+        && (
+          request.resource.data.ownerId == uid()
+          || request.resource.data.authUid == uid()
+          || tenantId == uid()
+        );
+
+      allow update: if isAuth()
+        && (
+          resource.data.ownerId == uid()
+          || request.resource.data.ownerId == uid()
+          || resource.data.authUid == uid()
+          || resource.data.userId == uid()
+          || tenantId == uid()
+          || isMappedTenant(tenantId)
+        );
+
+      allow delete: if isAuth() && resource.data.ownerId == uid();
+
+      match /documents/{documentId} {
+        allow read, create, update, delete: if canAccessTenant(tenantId);
+      }
+
+      match /payments/{paymentId} {
+        allow read, create, update, delete: if canAccessTenant(tenantId);
+      }
+
+      match /room_details/{documentId} {
+        allow read, create, update, delete: if canAccessTenant(tenantId);
+      }
+
+      match /owner_details/{documentId} {
+        allow read, create, update, delete: if canAccessTenant(tenantId);
+      }
+
+      match /reminders/{documentId} {
+        allow read, create, update, delete: if canAccessTenant(tenantId);
+      }
+
+      match /complaints/{documentId} {
+        allow read, create, update, delete: if canAccessTenant(tenantId);
+      }
+
+      match /trust_score_events/{eventId} {
+        allow read: if canAccessTenant(tenantId);
+        allow create: if isTenantOwner(tenantId)
+          && request.resource.data.ownerId == uid();
+        allow update, delete: if false;
+      }
+    }
+
+    // Link from Firebase Auth uid to tenant document id.
+    match /tenants_mapping/{authUid} {
+      allow read: if isAuth()
+        && (
+          authUid == uid()
+          || (resource.data.ownerId == uid())
+        );
+
+      allow create, update: if isAuth()
+        && request.resource.data.ownerId == uid();
+
+      allow delete: if isAuth() && resource.data.ownerId == uid();
+    }
+
+    // Top-level payments used by owner dashboard/payment screens.
+    match /payments/{paymentId} {
+      allow read: if canReadPayment(resource.data);
+
+      allow create: if isAuth()
+        && (
+          request.resource.data.ownerId == uid()
+          || request.resource.data.tenantAuthUid == uid()
+          || request.resource.data.tenantId == uid()
+          || (request.resource.data.tenantId is string
+              && isTenantMember(request.resource.data.tenantId))
+        );
+
+      allow update: if isAuth()
+        && (
+          resource.data.ownerId == uid()
+          || (
+            canReadPayment(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'paymentProofUrl',
+              'receiptUrl',
+              'status',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    // Payment/transaction history.
+    match /transactions/{transactionId} {
+      allow read: if canReadTransaction(resource.data);
+      allow create, update, delete: if false;
+    }
+
+    // Owner dashboard summary is produced by backend triggers.
+    match /owners_summary/{ownerId} {
+      allow read: if isAuth()
+        && (
+          ownerId == uid()
+          || currentTenantBelongsToOwner(ownerId)
+        );
+      allow write: if false;
+    }
+
+    // Timeline messages and notifications.
+    match /messages/{messageId} {
+      allow read: if isAuth()
+        && (
+          resource.data.ownerId == uid()
+          || resource.data.tenantAuthUid == uid()
+          || resource.data.recipientId == uid()
+          || resource.data.senderId == uid()
+          || (resource.data.tenantId is string
+              && isTenantMember(resource.data.tenantId))
+        );
+
+      allow create: if isAuth()
+        && (
+          request.resource.data.ownerId == uid()
+          || request.resource.data.tenantAuthUid == uid()
+          || request.resource.data.recipientId == uid()
+          || request.resource.data.senderId == uid()
+          || (request.resource.data.tenantId is string
+              && isTenantMember(request.resource.data.tenantId))
+        );
+
+      allow update: if isAuth()
+        && (
+          resource.data.ownerId == uid()
+          || resource.data.tenantAuthUid == uid()
+          || resource.data.recipientId == uid()
+          || resource.data.senderId == uid()
+        );
+
+      allow delete: if false;
+    }
+
+    // Metadata written after tenant document uploads.
+    match /user_images/{imageId} {
+      allow read: if isAuth()
+        && (
+          resource.data.userId == uid()
+          || (resource.data.tenantId is string && canAccessTenant(resource.data.tenantId))
+        );
+
+      allow create: if isAuth()
+        && request.resource.data.userId == uid()
+        && request.resource.data.tenantId is string
+        && canAccessTenant(request.resource.data.tenantId);
+
+      allow update, delete: if isAuth() && resource.data.userId == uid();
+    }
+
+    // Owner-only trust lookup by normalized phone.
+    match /tenantTrust/{phoneKey} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
+
+    // Lease documents are normally backend-owned but readable by involved users.
+    match /leases/{leaseId} {
+      allow read: if isAuth()
+        && (
+          resource.data.ownerId == uid()
+          || resource.data.tenantAuthUid == uid()
+          || resource.data.tenantId == uid()
+          || (resource.data.tenantId is string && isTenantMember(resource.data.tenantId))
+        );
+      allow write: if false;
+    }
+
+    // Default deny.
     match /{document=**} {
       allow read, write: if false;
     }

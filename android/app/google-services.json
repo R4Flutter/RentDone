@@ -12,7 +12,20 @@
           "package_name": "com.example.rentdone"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "35844123331-vtfi7uabok7s8ruuek1c2mek35sd76rr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.rentdone",
+            "certificate_hash": "14185b6908b37c59edafc36fbc5ef6075b08602d"
+          }
+        },
+        {
+          "client_id": "35844123331-ut1le47rn4bc62ev8q1461m8bhboikrd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDoBj8qlBknm-g4wsAHNz_tCyQAWfG3jx0"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "35844123331-ut1le47rn4bc62ev8q1461m8bhboikrd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "35844123331-dfrasqok5vi55rtrl4gni106ji5mjd59.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.rentdone"
+              }
+            }
+          ]
         }
       }
     }

@@ -10,66 +10,52 @@ import 'dart:async';
 class DashboardRepositoryImpl implements DashboardRepository {
   final DashboardFirebaseService _service;
 
+  // In-memory cache for instant loading
+  static DashboardSummary? _cachedSummary;
+
   DashboardRepositoryImpl(this._service);
 
   @override
-  Future<DashboardSummary> getDashboardSummary() {
-    return _buildSummary();
-  }
-
-  @override
-  Future<DashboardSummary> refreshDashboard() {
-    return _buildSummary();
-  }
-
-  @override
-  Stream<DashboardSummary> watchDashboardSummary() {
-    final controller = StreamController<DashboardSummary>();
-
-    List<DashboardPropertyDto> latestProperties = const [];
-    List<DashboardPaymentDto> latestPayments = const [];
-    int latestTenantCount = 0;
-    bool hasProperties = false;
-    bool hasPayments = false;
-    bool hasTenants = false;
-
-    void pushSummaryIfReady() {
-      if (!hasProperties || !hasPayments || !hasTenants) return;
-
-      controller.add(
-        _toSummary(
-          properties: latestProperties,
-          payments: latestPayments,
-          totalTenants: latestTenantCount,
-        ),
-      );
+  Future<DashboardSummary> getDashboardSummary() async {
+    if (_cachedSummary != null) return _cachedSummary!;
+    try {
+      final summary = await _buildSummary();
+      _cachedSummary = summary;
+      return summary;
+    } catch (_) {
+      return DashboardSummary.empty;
     }
+  }
 
-    final propertiesSub = _service.watchProperties().listen((properties) {
-      latestProperties = properties;
-      hasProperties = true;
-      pushSummaryIfReady();
-    }, onError: controller.addError);
+  @override
+  Future<DashboardSummary> refreshDashboard() async {
+    try {
+      final summary = await _buildSummary();
+      _cachedSummary = summary;
+      return summary;
+    } catch (_) {
+      return _cachedSummary ?? DashboardSummary.empty;
+    }
+  }
 
-    final paymentsSub = _service.watchPayments().listen((payments) {
-      latestPayments = payments;
-      hasPayments = true;
-      pushSummaryIfReady();
-    }, onError: controller.addError);
+  @override
+  Stream<DashboardSummary> watchDashboardSummary() async* {
+    await for (final data in _service.watchDashboardSummary()) {
+      try {
+        if (data != null && data.isNotEmpty) {
+          final summary = DashboardSummary.fromMap(data);
+          _cachedSummary = summary;
+          yield summary;
+          continue;
+        }
 
-    final tenantCountSub = _service.watchTenantCount().listen((tenantCount) {
-      latestTenantCount = tenantCount;
-      hasTenants = true;
-      pushSummaryIfReady();
-    }, onError: controller.addError);
-
-    controller.onCancel = () async {
-      await propertiesSub.cancel();
-      await paymentsSub.cancel();
-      await tenantCountSub.cancel();
-    };
-
-    return controller.stream;
+        final summary = await _buildSummary();
+        _cachedSummary = summary;
+        yield summary;
+      } catch (_) {
+        yield _cachedSummary ?? DashboardSummary.empty;
+      }
+    }
   }
 
   @override
@@ -95,23 +81,52 @@ class DashboardRepositoryImpl implements DashboardRepository {
       );
     }
 
-    final messagesSub = _service.watchRecentMessages(limit: 20).listen((items) {
-      latestMessages = items.map((item) => item.toEntity()).toList();
+    void markMessagesReady([List<AppMessage> items = const []]) {
+      latestMessages = items;
       hasMessages = true;
       pushIfReady();
-    }, onError: controller.addError);
+    }
 
-    final paymentsSub = _service.watchPayments().listen((items) {
+    void markPaymentsReady([List<DashboardPaymentDto> items = const []]) {
       latestPayments = items;
       hasPayments = true;
       pushIfReady();
-    }, onError: controller.addError);
+    }
 
-    final tenantsSub = _service.watchTenantActivity(limit: 20).listen((items) {
+    void markTenantsReady([List<DashboardTenantDto> items = const []]) {
       latestTenants = items;
       hasTenants = true;
       pushIfReady();
-    }, onError: controller.addError);
+    }
+
+    final messagesSub = _service
+        .watchRecentMessages(limit: 20)
+        .listen(
+          (items) =>
+              markMessagesReady(items.map((item) => item.toEntity()).toList()),
+          onError: (_, _) => markMessagesReady(),
+          onDone: () {
+            if (!hasMessages) markMessagesReady();
+          },
+        );
+
+    final paymentsSub = _service.watchPayments().listen(
+      markPaymentsReady,
+      onError: (_, _) => markPaymentsReady(),
+      onDone: () {
+        if (!hasPayments) markPaymentsReady();
+      },
+    );
+
+    final tenantsSub = _service
+        .watchTenantActivity(limit: 20)
+        .listen(
+          markTenantsReady,
+          onError: (_, _) => markTenantsReady(),
+          onDone: () {
+            if (!hasTenants) markTenantsReady();
+          },
+        );
 
     controller.onCancel = () async {
       await messagesSub.cancel();

@@ -1,25 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
-import 'package:rentdone/core/trust/tenant_trust_score.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/property_dto.dart';
-import 'package:rentdone/features/owner/owners_properties/data/models/tenant_dto.dart';
 
 class PropertyFirebaseService {
   final FirebaseFirestore _db;
   final FirebaseAuth _auth;
   final FirebaseFunctions _functions;
 
-  static const String _defaultPlan = 'free';
-  static const int _defaultTenantLimit = 2;
-
   PropertyFirebaseService({
     FirebaseFirestore? firestore,
     FirebaseFunctions? functions,
+    FirebaseAuth? auth,
   }) : _db = firestore ?? FirebaseFirestore.instance,
-       _auth = FirebaseAuth.instance,
+       _auth = auth ?? FirebaseAuth.instance,
        _functions = functions ?? FirebaseFunctions.instance;
 
   String _requireOwnerId() {
@@ -31,92 +26,118 @@ class PropertyFirebaseService {
   }
 
   Stream<List<PropertyDto>> watchAllProperties() {
-    final ownerId = _auth.currentUser?.uid;
-    if (ownerId == null || ownerId.isEmpty) {
-      return const Stream<List<PropertyDto>>.empty();
-    }
+    try {
+      final ownerId = _auth.currentUser?.uid;
+      if (ownerId == null || ownerId.isEmpty) {
+        return const Stream<List<PropertyDto>>.empty();
+      }
 
-    return _db
-        .collection('properties')
-        .where('ownerId', isEqualTo: ownerId)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => PropertyDto.fromMap({'id': doc.id, ...doc.data()}))
-              .toList();
-        });
+      return _db
+          .collection('properties')
+          .where('ownerId', isEqualTo: ownerId)
+          .snapshots()
+          .map((snapshot) {
+            return snapshot.docs
+                .map((doc) => PropertyDto.fromMap({'id': doc.id, ...doc.data()}))
+                .toList();
+          });
+    } catch (e, stack) {
+      AppLogger.exception(e, stackTrace: stack, context: 'Error watching all properties');
+      return Stream.error(e);
+    }
   }
 
   Stream<PropertyDto> watchProperty(String propertyId) {
-    return _db.collection('properties').doc(propertyId).snapshots().map((doc) {
-      final data = doc.data();
-      if (data == null) {
-        throw StateError('Property $propertyId not found');
-      }
-      return PropertyDto.fromMap({'id': doc.id, ...data});
-    });
+    try {
+      return _db.collection('properties').doc(propertyId).snapshots().map((doc) {
+        final data = doc.data();
+        if (data == null) {
+          throw StateError('Property $propertyId not found');
+        }
+        return PropertyDto.fromMap({'id': doc.id, ...data});
+      });
+    } catch (e, stack) {
+      AppLogger.exception(e, stackTrace: stack, context: 'Error watching property');
+      return Stream.error(e);
+    }
   }
 
   Future<void> addProperty(PropertyDto property) async {
-    final ownerId = _requireOwnerId();
-    final ownerCoordinates = await _readOwnerCoordinates(ownerId);
-    final resolvedCoords = await _resolveCoordinates(
-      ownerId: ownerId,
-      propertyLat: property.lat,
-      propertyLng: property.lng,
-      cachedOwnerCoordinates: ownerCoordinates,
-    );
+    try {
+      final ownerId = _requireOwnerId();
+      final ownerCoordinates = await _readOwnerCoordinates(ownerId);
+      final resolvedCoords = await _resolveCoordinates(
+        ownerId: ownerId,
+        propertyLat: property.lat,
+        propertyLng: property.lng,
+        cachedOwnerCoordinates: ownerCoordinates,
+      );
 
-    await _db.collection('properties').doc(property.id).set({
-      ...property.toMap(),
-      'lat': resolvedCoords.$1,
-      'lng': resolvedCoords.$2,
-      if (ownerCoordinates != null) 'ownerLocationLatitude': ownerCoordinates.$1,
-      if (ownerCoordinates != null) 'ownerLocationLongitude': ownerCoordinates.$2,
-      'ownerId': ownerId,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+      await _db.collection('properties').doc(property.id).set({
+        ...property.toMap(),
+        'lat': resolvedCoords.$1,
+        'lng': resolvedCoords.$2,
+        if (ownerCoordinates != null) 'ownerLocationLatitude': ownerCoordinates.$1,
+        if (ownerCoordinates != null) 'ownerLocationLongitude': ownerCoordinates.$2,
+        'ownerId': ownerId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e, stack) {
+      AppLogger.exception(e, stackTrace: stack, context: 'Error adding property');
+      rethrow;
+    }
   }
 
   Future<void> updateProperty(PropertyDto property) async {
-    final ownerId = _requireOwnerId();
-    final ownerCoordinates = await _readOwnerCoordinates(ownerId);
-    final resolvedCoords = await _resolveCoordinates(
-      ownerId: ownerId,
-      propertyLat: property.lat,
-      propertyLng: property.lng,
-      cachedOwnerCoordinates: ownerCoordinates,
-    );
+    try {
+      final ownerId = _requireOwnerId();
+      final ownerCoordinates = await _readOwnerCoordinates(ownerId);
+      final resolvedCoords = await _resolveCoordinates(
+        ownerId: ownerId,
+        propertyLat: property.lat,
+        propertyLng: property.lng,
+        cachedOwnerCoordinates: ownerCoordinates,
+      );
 
-    await _db.collection('properties').doc(property.id).update({
-      ...property.toMap(),
-      'lat': resolvedCoords.$1,
-      'lng': resolvedCoords.$2,
-      if (ownerCoordinates != null) 'ownerLocationLatitude': ownerCoordinates.$1,
-      if (ownerCoordinates != null) 'ownerLocationLongitude': ownerCoordinates.$2,
-      'ownerId': ownerId,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      await _db.collection('properties').doc(property.id).update({
+        ...property.toMap(),
+        'lat': resolvedCoords.$1,
+        'lng': resolvedCoords.$2,
+        if (ownerCoordinates != null) 'ownerLocationLatitude': ownerCoordinates.$1,
+        if (ownerCoordinates != null) 'ownerLocationLongitude': ownerCoordinates.$2,
+        'ownerId': ownerId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e, stack) {
+      AppLogger.exception(e, stackTrace: stack, context: 'Error updating property');
+      rethrow;
+    }
   }
 
   Future<void> deleteProperty(String propertyId) async {
     try {
-      final callable = _functions.httpsCallable('deleteOwnerPropertyCascade');
-      await callable.call(<String, dynamic>{'propertyId': propertyId});
-      return;
-    } on FirebaseFunctionsException catch (error) {
-      const terminalCodes = {
-        'permission-denied',
-        'unauthenticated',
-        'invalid-argument',
-      };
-      if (terminalCodes.contains(error.code)) {
-        throw StateError(error.message ?? 'Property delete not allowed.');
+      try {
+        final callable = _functions.httpsCallable('deleteOwnerPropertyCascade');
+        await callable.call(<String, dynamic>{'propertyId': propertyId});
+        return;
+      } on FirebaseFunctionsException catch (error) {
+        const terminalCodes = {
+          'permission-denied',
+          'unauthenticated',
+          'invalid-argument',
+        };
+        if (terminalCodes.contains(error.code)) {
+          throw StateError(error.message ?? 'Property delete not allowed.');
+        }
+        AppLogger.warning('Cascade delete failed, falling back to client-side delete: ${error.message}');
       }
-    }
 
-    await _deletePropertyClientSide(propertyId);
+      await _deletePropertyClientSide(propertyId);
+    } catch (e, stack) {
+      AppLogger.exception(e, stackTrace: stack, context: 'Error deleting property');
+      rethrow;
+    }
   }
 
   Future<void> _deletePropertyClientSide(String propertyId) async {
@@ -158,186 +179,6 @@ class PropertyFirebaseService {
 
     await propertyRef.delete();
   }
-
-  Stream<List<TenantDto>> watchAllTenants() {
-    final ownerId = _auth.currentUser?.uid;
-    if (ownerId == null || ownerId.isEmpty) {
-      return const Stream<List<TenantDto>>.empty();
-    }
-
-    return _db
-        .collection('tenants')
-        .where('ownerId', isEqualTo: ownerId)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map(TenantDto.fromDoc).toList();
-        });
-  }
-
-  Stream<List<TenantDto>> watchPropertyTenants(String propertyId) {
-    final ownerId = _auth.currentUser?.uid;
-    if (ownerId == null || ownerId.isEmpty) {
-      return const Stream<List<TenantDto>>.empty();
-    }
-
-    return _db
-        .collection('tenants')
-        .where('ownerId', isEqualTo: ownerId)
-        .where('propertyId', isEqualTo: propertyId)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map(TenantDto.fromDoc).toList());
-  }
-
-  Future<TenantDto?> getTenantById(String tenantId) async {
-    final doc = await _db.collection('tenants').doc(tenantId).get();
-    if (!doc.exists) return null;
-    return TenantDto.fromMap(doc.id, doc.data() ?? const <String, dynamic>{});
-  }
-
-  Future<void> addTenant(TenantDto tenant) async {
-    final tenantRef = _db.collection('tenants').doc(tenant.id);
-    final propertyRef = _db.collection('properties').doc(tenant.propertyId);
-    final ownerId = (tenant.ownerId ?? '').trim();
-    if (ownerId.isEmpty) {
-      throw StateError('Owner ID is required to add tenant');
-    }
-    final ownerRef = _db.collection('owners').doc(ownerId);
-    final tenantMap = tenant.toMap();
-    final normalizedPhone = _normalizePhone(tenant.phone);
-    tenantMap['phoneHash'] = _hashPhone(normalizedPhone);
-    final trustScore = TenantTrustScore.clamp(
-      (tenantMap['trustScore'] as num?)?.toInt() ??
-          TenantTrustScore.defaultScore,
-    );
-    tenantMap['trustScore'] = trustScore;
-    tenantMap['trustBadge'] = TenantTrustScore.badgeFor(trustScore).label;
-    tenantMap['onTimePayments'] =
-        (tenantMap['onTimePayments'] as num?)?.toInt() ?? 0;
-    tenantMap['latePayments'] =
-        (tenantMap['latePayments'] as num?)?.toInt() ?? 0;
-    tenantMap['missedPayments'] =
-        (tenantMap['missedPayments'] as num?)?.toInt() ?? 0;
-    tenantMap['consecutiveOnTimeMonths'] =
-        (tenantMap['consecutiveOnTimeMonths'] as num?)?.toInt() ?? 0;
-    tenantMap['lastTrustScoreDelta'] =
-        (tenantMap['lastTrustScoreDelta'] as num?)?.toInt() ?? 0;
-
-    await _db.runTransaction((txn) async {
-      final propertyDoc = await txn.get(propertyRef);
-      if (!propertyDoc.exists) {
-        throw StateError('Selected property does not exist');
-      }
-
-      final ownerDoc = await txn.get(ownerRef);
-      final ownerData = ownerDoc.data() ?? <String, dynamic>{};
-      final currentCount =
-          (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
-
-      final data = propertyDoc.data();
-      final rooms = _normalizeRooms(data?['rooms']);
-      final roomIndex = rooms.indexWhere((room) => room['id'] == tenant.roomId);
-
-      if (roomIndex == -1) {
-        throw StateError('Selected room does not exist in this property');
-      }
-
-      final room = rooms[roomIndex];
-      final currentTenantId = room['tenantId']?.toString();
-      if (room['isOccupied'] == true &&
-          currentTenantId != null &&
-          currentTenantId.isNotEmpty) {
-        throw StateError('Selected room is already occupied');
-      }
-
-      rooms[roomIndex] = {...room, 'isOccupied': true, 'tenantId': tenant.id};
-
-      txn.set(tenantRef, tenantMap);
-      txn.update(propertyRef, {'rooms': rooms});
-
-      final nextCount = currentCount + 1;
-      final tenantLimit =
-          (ownerData['tenantLimit'] as num?)?.toInt() ?? _defaultTenantLimit;
-      txn.set(ownerRef, {
-        'ownerId': ownerId,
-        'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
-        'tenantLimit': tenantLimit,
-        'currentTenantCount': nextCount,
-        'paymentStatus': ownerData['paymentStatus'] ?? 'active',
-        'subscriptionStartDate':
-            ownerData['subscriptionStartDate'] ?? FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    });
-  }
-
-  Future<void> removeTenant({
-    required String tenantId,
-    required String propertyId,
-    required String roomId,
-  }) async {
-    final tenantRef = _db.collection('tenants').doc(tenantId);
-    final propertyRef = _db.collection('properties').doc(propertyId);
-
-    await _db.runTransaction((txn) async {
-      final tenantDoc = await txn.get(tenantRef);
-      final tenantData = tenantDoc.data() ?? <String, dynamic>{};
-      final ownerId = (tenantData['ownerId'] as String? ?? '').trim();
-      final ownerRef = ownerId.isEmpty
-          ? null
-          : _db.collection('owners').doc(ownerId);
-      Map<String, dynamic>? ownerData;
-
-      if (ownerRef != null) {
-        final ownerDoc = await txn.get(ownerRef);
-        ownerData = ownerDoc.data() ?? <String, dynamic>{};
-      }
-
-      final propertyDoc = await txn.get(propertyRef);
-      if (!propertyDoc.exists) {
-        throw StateError('Selected property does not exist');
-      }
-
-      final data = propertyDoc.data();
-      final rooms = _normalizeRooms(data?['rooms']);
-      final roomIndex = rooms.indexWhere((room) => room['id'] == roomId);
-
-      if (roomIndex == -1) {
-        throw StateError('Selected room does not exist in this property');
-      }
-
-      final room = rooms[roomIndex];
-      rooms[roomIndex] = {...room, 'isOccupied': false, 'tenantId': null};
-
-      txn.update(propertyRef, {'rooms': rooms});
-
-      if (ownerRef != null && ownerData != null) {
-        final currentCount =
-            (ownerData['currentTenantCount'] as num?)?.toInt() ?? 0;
-        final nextCount = currentCount > 0 ? currentCount - 1 : 0;
-
-        txn.set(ownerRef, {
-          'ownerId': ownerId,
-          'subscriptionPlan': ownerData['subscriptionPlan'] ?? _defaultPlan,
-          'tenantLimit':
-              (ownerData['tenantLimit'] as num?)?.toInt() ??
-              _defaultTenantLimit,
-          'currentTenantCount': nextCount,
-          'paymentStatus': ownerData['paymentStatus'] ?? 'active',
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      }
-    });
-
-    try {
-      await tenantRef.delete();
-    } on FirebaseException catch (error) {
-      if (error.code == 'permission-denied' || error.code == 'not-found') {
-        return;
-      }
-      rethrow;
-    }
-  }
-
 
   Future<(double, double)?> _readOwnerCoordinates(String ownerId) async {
     final snapshot = await _db.collection('users').doc(ownerId).get();
@@ -388,22 +229,5 @@ class PropertyFirebaseService {
         lng >= -180 &&
         lng <= 180 &&
         !(lat == 0.0 && lng == 0.0);
-  }
-
-  List<Map<String, dynamic>> _normalizeRooms(dynamic roomsRaw) {
-    if (roomsRaw is! List) return <Map<String, dynamic>>[];
-
-    return roomsRaw
-        .whereType<Map>()
-        .map((room) => Map<String, dynamic>.from(room))
-        .toList();
-  }
-
-  String _normalizePhone(String phone) {
-    return phone.replaceAll(RegExp(r'[^0-9+]'), '').trim();
-  }
-
-  String _hashPhone(String normalizedPhone) {
-    return sha256.convert(utf8.encode(normalizedPhone)).toString();
   }
 }

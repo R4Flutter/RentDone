@@ -23,13 +23,18 @@ class DashboardFirebaseService {
     final ownerId = _ownerId;
     if (ownerId == null || ownerId.isEmpty) return <DashboardPropertyDto>[];
 
-    final snapshot = await _firestore
-        .collection('properties')
-        .where('ownerId', isEqualTo: ownerId)
-        .get(const GetOptions(source: Source.serverAndCache));
-    return snapshot.docs
-        .map((doc) => DashboardPropertyDto.fromMap(doc.id, doc.data()))
-        .toList();
+    try {
+      final snapshot = await _firestore
+          .collection('properties')
+          .where('ownerId', isEqualTo: ownerId)
+          .get(const GetOptions(source: Source.serverAndCache));
+      return snapshot.docs
+          .map((doc) => DashboardPropertyDto.fromMap(doc.id, doc.data()))
+          .toList();
+    } on FirebaseException catch (e) {
+      debugPrint('Error fetching dashboard properties: ${e.code}');
+      return <DashboardPropertyDto>[];
+    }
   }
 
   Stream<List<DashboardPropertyDto>> watchProperties() {
@@ -41,8 +46,8 @@ class DashboardFirebaseService {
     return _firestore
         .collection('properties')
         .where('ownerId', isEqualTo: ownerId)
-      .orderBy('createdAt', descending: true)
-      .limit(_dashboardPropertiesLimit)
+        .orderBy('createdAt', descending: true)
+        .limit(_dashboardPropertiesLimit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
@@ -68,10 +73,12 @@ class DashboardFirebaseService {
     } on FirebaseException catch (e) {
       // Return empty on permission denied (shouldn't happen)
       if (e.code == 'permission-denied') return <DashboardPaymentDto>[];
-      // For network errors, rethrow to be handled upstream
-      rethrow;
+      debugPrint('Error fetching dashboard payments: ${e.code}');
+      return <DashboardPaymentDto>[];
     } catch (e) {
-      debugPrint('Error fetching payments: $e');
+      if (kDebugMode) {
+        debugPrint('Error fetching payments: $e');
+      }
       rethrow;
     }
   }
@@ -87,8 +94,8 @@ class DashboardFirebaseService {
     return _firestore
         .collection('payments')
         .where('ownerId', isEqualTo: ownerId)
-      .orderBy('createdAt', descending: true)
-      .limit(_dashboardPaymentsLimit)
+        .orderBy('createdAt', descending: true)
+        .limit(_dashboardPaymentsLimit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
@@ -115,8 +122,8 @@ class DashboardFirebaseService {
           .get(const GetOptions(source: Source.serverAndCache));
       return snapshot.size;
     } on FirebaseException catch (e) {
-      if (e.code == 'permission-denied') return 0;
-      rethrow;
+      debugPrint('Error fetching dashboard tenant count: ${e.code}');
+      return 0;
     } catch (e) {
       debugPrint('Error fetching tenant count: $e');
       return 0;
@@ -145,6 +152,25 @@ class DashboardFirebaseService {
           debugPrint('Error in watchTenantCount stream: $error');
           return 0;
         });
+  }
+
+  /// Watch the complete denormalized dashboard summary
+  Stream<Map<String, dynamic>?> watchDashboardSummary() async* {
+    final ownerId = _ownerId;
+    if (ownerId == null || ownerId.isEmpty) {
+      yield null;
+      return;
+    }
+
+    try {
+      await for (final snapshot
+          in _firestore.collection('owners_summary').doc(ownerId).snapshots()) {
+        yield snapshot.data();
+      }
+    } catch (error) {
+      debugPrint('Error in watchDashboardSummary stream: $error');
+      yield null;
+    }
   }
 
   /// Watch recent messages with error handling

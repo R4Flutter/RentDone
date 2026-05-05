@@ -43,7 +43,7 @@ class TenantDto {
   final String? previousLandlordPhone;
   final bool policeVerified;
   final bool backgroundChecked;
-  final bool isActive;
+  final String status;
   final int trustScore;
   final String? phoneHash;
   final DateTime createdAt;
@@ -90,7 +90,7 @@ class TenantDto {
     required this.previousLandlordPhone,
     required this.policeVerified,
     required this.backgroundChecked,
-    required this.isActive,
+    required this.status,
     this.trustScore = 50,
     this.phoneHash,
     required this.createdAt,
@@ -139,7 +139,7 @@ class TenantDto {
       previousLandlordPhone: tenant.previousLandlordPhone,
       policeVerified: tenant.policeVerified,
       backgroundChecked: tenant.backgroundChecked,
-      isActive: tenant.isActive,
+      status: tenant.status,
       trustScore: 50,
       phoneHash: null,
       createdAt: tenant.createdAt,
@@ -151,6 +151,13 @@ class TenantDto {
   }
 
   factory TenantDto.fromMap(String id, Map<String, dynamic> data) {
+    // Backward compatibility: use status if exists, else map isActive to status
+    String status = data['status']?.toString() ?? '';
+    if (status.isEmpty) {
+      final bool isActive = data['isActive'] != false;
+      status = isActive ? 'active' : 'inactive';
+    }
+
     return TenantDto(
       id: id,
       ownerId: data['ownerId']?.toString(),
@@ -193,7 +200,7 @@ class TenantDto {
       previousLandlordPhone: data['previousLandlordPhone']?.toString(),
       policeVerified: data['policeVerified'] == true,
       backgroundChecked: data['backgroundChecked'] == true,
-      isActive: data['isActive'] != false,
+      status: status,
       trustScore: _toInt(data['trustScore'], fallback: 50),
       phoneHash: data['phoneHash']?.toString(),
       createdAt: _toDateTime(data['createdAt']) ?? DateTime.now(),
@@ -243,7 +250,7 @@ class TenantDto {
       previousLandlordPhone: previousLandlordPhone,
       policeVerified: policeVerified,
       backgroundChecked: backgroundChecked,
-      isActive: isActive,
+      status: status,
       createdAt: createdAt,
     );
   }
@@ -291,7 +298,8 @@ class TenantDto {
       'previousLandlordPhone': previousLandlordPhone,
       'policeVerified': policeVerified,
       'backgroundChecked': backgroundChecked,
-      'isActive': isActive,
+      'status': status,
+      'isActive': status == 'active', // Backward compatibility
       'trustScore': trustScore,
       'phoneHash': phoneHash,
       'createdAt': createdAt,

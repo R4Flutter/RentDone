@@ -62,30 +62,32 @@ class GlassContainer extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient:
-                  gradient ??
-                  LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      (glassColor ?? defaultColor).withValues(alpha: opacity),
-                      (glassColor ?? defaultColor).withValues(alpha: opacity * 0.5),
-                    ],
-                  ),
-              borderRadius: BorderRadius.circular(borderRadius),
-              border: Border.all(
-                color: borderColor ?? defaultBorderColor,
-                width: borderWidth,
+      child: RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient:
+                    gradient ??
+                    LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        (glassColor ?? defaultColor).withValues(alpha: opacity),
+                        (glassColor ?? defaultColor).withValues(alpha: opacity * 0.5),
+                      ],
+                    ),
+                borderRadius: BorderRadius.circular(borderRadius),
+                border: Border.all(
+                  color: borderColor ?? defaultBorderColor,
+                  width: borderWidth,
+                ),
               ),
+              padding: padding,
+              child: child,
             ),
-            padding: padding,
-            child: child,
           ),
         ),
       ),

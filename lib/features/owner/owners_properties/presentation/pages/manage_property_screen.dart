@@ -237,63 +237,65 @@ class ManagePropertiesScreen extends ConsumerWidget {
 
   Widget _emptyState(BuildContext context, ThemeData theme) {
     return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            width: 460,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.white.withValues(alpha: 0.14),
-                  OwnerDashboardColors.brandPrimary(
-                    context,
-                  ).withValues(alpha: 0.08),
+      child: RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              width: 460,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.white.withValues(alpha: 0.14),
+                    OwnerDashboardColors.brandPrimary(
+                      context,
+                    ).withValues(alpha: 0.08),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: OwnerDashboardColors.border(context)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.home_work_outlined,
+                    size: 58,
+                    color: OwnerDashboardColors.iconPrimary(context),
+                  ),
+                  const SizedBox(height: 14),
+                  Text("No properties yet", style: theme.textTheme.titleLarge),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Create your first property to get started",
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: OwnerDashboardColors.textSecondary(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: OwnerDashboardColors.brandPrimary(context),
+                      foregroundColor: AppColors.white,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddPropertyScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text("Create Property"),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: OwnerDashboardColors.border(context)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.home_work_outlined,
-                  size: 58,
-                  color: OwnerDashboardColors.iconPrimary(context),
-                ),
-                const SizedBox(height: 14),
-                Text("No properties yet", style: theme.textTheme.titleLarge),
-                const SizedBox(height: 6),
-                Text(
-                  "Create your first property to get started",
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: OwnerDashboardColors.textSecondary(context),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: OwnerDashboardColors.brandPrimary(context),
-                    foregroundColor: AppColors.white,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AddPropertyScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text("Create Property"),
-                ),
-              ],
             ),
           ),
         ),
@@ -361,134 +363,135 @@ class ManagePropertiesScreen extends ConsumerWidget {
     dynamic property,
   ) {
     final isDark = OwnerDashboardColors.isDark(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(30),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 24),
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.white.withValues(alpha: isDark ? 0.14 : 0.88),
-                OwnerDashboardColors.managePropertiesCardTint(
-                  context,
-                ).withValues(alpha: 0.08),
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.white.withValues(alpha: isDark ? 0.14 : 0.88),
+                  OwnerDashboardColors.managePropertiesCardTint(
+                    context,
+                  ).withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: OwnerDashboardColors.border(context)),
+              boxShadow: [
+                BoxShadow(
+                  color: OwnerDashboardColors.managePropertiesShadowColor(
+                    context,
+                  ),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
               ],
             ),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: OwnerDashboardColors.border(context)),
-            boxShadow: [
-              BoxShadow(
-                color: OwnerDashboardColors.managePropertiesShadowColor(
-                  context,
-                ),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          property.name,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            property.name,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          const SizedBox(height: 6),
+                          Text(
+                            property.address,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: OwnerDashboardColors.textSecondary(context),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton(
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          child: const Text("Edit"),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    AddPropertyScreen(propertyId: property.id),
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          property.address,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: OwnerDashboardColors.textSecondary(context),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        PopupMenuItem(
+                          child: const Text("Delete"),
+                          onTap: () {
+                            _confirmDelete(context, ref, property);
+                          },
                         ),
                       ],
                     ),
-                  ),
-                  PopupMenuButton(
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        child: const Text("Edit"),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  AddPropertyScreen(propertyId: property.id),
-                            ),
-                          );
-                        },
-                      ),
-                      PopupMenuItem(
-                        child: const Text("Delete"),
-                        onTap: () {
-                          _confirmDelete(context, ref, property);
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _statChip(
-                    context,
-                    theme,
-                    "Total Rooms",
-                    property.totalRooms.toString(),
-                  ),
-                  _statChip(
-                    context,
-                    theme,
-                    "Occupied",
-                    property.occupiedRooms.toString(),
-                  ),
-                  _statChip(
-                    context,
-                    theme,
-                    "Vacant",
-                    property.vacantRooms.toString(),
-                  ),
-                ],
-              ),
-              if (property.rooms.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text(
-                  "Rooms",
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: OwnerDashboardColors.textSecondary(context),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                ..._buildRoomsList(context, ref, theme, property),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _statChip(
+                      context,
+                      theme,
+                      "Total Rooms",
+                      property.totalRooms.toString(),
+                    ),
+                    _statChip(
+                      context,
+                      theme,
+                      "Occupied",
+                      property.occupiedRooms.toString(),
+                    ),
+                    _statChip(
+                      context,
+                      theme,
+                      "Vacant",
+                      property.vacantRooms.toString(),
+                    ),
+                  ],
+                ),
+                if (property.rooms.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    "Rooms",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: OwnerDashboardColors.textSecondary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ..._buildRoomsList(context, ref, theme, property),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
-
   List<Widget> _buildRoomsList(
     BuildContext context,
     WidgetRef ref,

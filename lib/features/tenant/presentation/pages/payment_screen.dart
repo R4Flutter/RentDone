@@ -2,10 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:rentdone/features/tenant/payment_module/models/payment_summary_model.dart';
-import 'package:rentdone/features/tenant/payment_module/services/payment_constants.dart';
-import 'package:rentdone/features/tenant/payment_module/services/payment_providers.dart';
-import 'package:rentdone/features/tenant/payment_module/widgets/payment_widgets.dart';
+import 'package:rentdone/features/tenant/data/models/payment_summary_model.dart';
+import 'package:rentdone/features/tenant/data/services/payment_constants.dart';
+import 'package:rentdone/features/tenant/presentation/providers/payment_providers.dart';
+import 'package:rentdone/features/tenant/presentation/widgets/payment_widgets.dart';
 
 class PaymentScreen extends ConsumerStatefulWidget {
   const PaymentScreen({super.key, required this.tenantId});

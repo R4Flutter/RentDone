@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/owner/owners_properties/di/property_di.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
@@ -15,7 +16,7 @@ export 'package:rentdone/features/owner/owners_properties/di/property_di.dart'
 
 final allPropertiesProvider = StreamProvider<List<Property>>((ref) {
   final useCase = ref.watch(watchAllPropertiesUseCaseProvider);
-  return useCase();
+  return useCase.call();
 });
 
 final propertyProvider = StreamProvider.family<Property, String>((
@@ -23,12 +24,18 @@ final propertyProvider = StreamProvider.family<Property, String>((
   propertyId,
 ) {
   final useCase = ref.watch(watchPropertyUseCaseProvider);
-  return useCase(propertyId);
+  return useCase.call(propertyId);
 });
 
 final allTenantsProvider = StreamProvider<List<Tenant>>((ref) {
   final useCase = ref.watch(watchAllTenantsUseCaseProvider);
-  return useCase();
+  final user = ref.watch(firebaseAuthProvider).currentUser;
+  
+  if (user == null || user.uid.isEmpty) {
+    return Stream.value([]);
+  }
+  
+  return useCase.call(user.uid);
 });
 
 final propertyTenantsProvider = StreamProvider.family<List<Tenant>, String>((
@@ -36,12 +43,12 @@ final propertyTenantsProvider = StreamProvider.family<List<Tenant>, String>((
   propertyId,
 ) {
   final useCase = ref.watch(watchPropertyTenantsUseCaseProvider);
-  return useCase(propertyId);
+  return useCase.call(propertyId);
 });
 
 final tenantByIdProvider = FutureProvider.family<Tenant?, String>((ref, id) {
   final useCase = ref.watch(getTenantByIdUseCaseProvider);
-  return useCase(id);
+  return useCase.call(id);
 });
 
 // ===== ACTION STATE =====
@@ -91,7 +98,7 @@ class RemoveTenantNotifier extends Notifier<TenantActionState> {
     );
 
     try {
-      await _useCase(
+      await _useCase.call(
         tenantId: tenantId,
         propertyId: propertyId,
         roomId: roomId,

@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rentdone/features/tenant/payment_module/models/payment_enums.dart';
+import 'package:rentdone/features/tenant/data/models/payment_enums.dart';
 
 class PaymentRecordModel {
   const PaymentRecordModel({

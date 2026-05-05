@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/features/auth/di/auth_di.dart';
-import 'package:rentdone/features/tenant/payment_module/models/payment_summary_model.dart';
-import 'package:rentdone/features/tenant/payment_module/models/tenant_model.dart';
-import 'package:rentdone/features/tenant/payment_module/services/payment_service.dart';
-import 'package:rentdone/features/tenant/payment_module/services/razorpay_service.dart';
+import 'package:rentdone/features/tenant/data/models/payment_summary_model.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_model.dart';
+import 'package:rentdone/features/tenant/data/services/payment_service.dart';
+import 'package:rentdone/features/tenant/data/services/razorpay_service.dart';
 
 final paymentServiceProvider = Provider<PaymentService>((ref) {
   return PaymentService(firestore: ref.watch(firestoreProvider));

@@ -37,4 +37,34 @@ class DashboardSummary {
     cashAmount: 0,
     onlineAmount: 0,
   );
+
+  factory DashboardSummary.fromMap(Map<String, dynamic> map) {
+    return DashboardSummary(
+      totalProperties: (map['totalProperties'] as num?)?.toInt() ?? 0,
+      vacantProperties: (map['vacantProperties'] as num?)?.toInt() ?? 0,
+      totalTenants: (map['totalTenants'] as num?)?.toInt() ?? 0,
+      collectedAmount: (map['collectedAmount'] as num?)?.toInt() ?? 0,
+      collectedPayments: (map['collectedPayments'] as num?)?.toInt() ?? 0,
+      pendingAmount: (map['pendingAmount'] as num?)?.toInt() ?? 0,
+      pendingPayments: (map['pendingPayments'] as num?)?.toInt() ?? 0,
+      pendingTenants: (map['pendingTenants'] as num?)?.toInt() ?? 0,
+      cashAmount: (map['cashAmount'] as num?)?.toInt() ?? 0,
+      onlineAmount: (map['onlineAmount'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'totalProperties': totalProperties,
+      'vacantProperties': vacantProperties,
+      'totalTenants': totalTenants,
+      'collectedAmount': collectedAmount,
+      'collectedPayments': collectedPayments,
+      'pendingAmount': pendingAmount,
+      'pendingPayments': pendingPayments,
+      'pendingTenants': pendingTenants,
+      'cashAmount': cashAmount,
+      'onlineAmount': onlineAmount,
+    };
+  }
 }

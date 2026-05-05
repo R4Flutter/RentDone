@@ -5,7 +5,11 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function isAllowedContentType() {
+    function isOwnerPath(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocumentContentType() {
       return request.resource != null
         && request.resource.contentType != null
         && (
@@ -14,7 +18,7 @@ service firebase.storage {
         );
     }
 
-    function fileSizeWithinLimit() {
+    function documentSizeWithinLimit() {
       return request.resource != null
         && request.resource.size != null
         && (
@@ -23,13 +27,44 @@ service firebase.storage {
         );
     }
 
-    // Users can only access files under their own folder.
+    function isReportContentType() {
+      return request.resource != null
+        && request.resource.contentType != null
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+    }
+
+    function reportSizeWithinLimit() {
+      return request.resource != null
+        && request.resource.size != null
+        && request.resource.size <= 10 * 1024 * 1024;
+    }
+
+    // Profile images and tenant document files are stored under the signed-in user's folder.
+    match /images/users/{userId}/tenants/{tenantId}/documents/{allPaths=**} {
+      allow read, delete: if isOwnerPath(userId);
+      allow create, update: if isOwnerPath(userId)
+        && request.resource != null
+        && request.resource.size != null
+        && request.resource.size <= 2 * 1024 * 1024;
+    }
+
     match /images/users/{userId}/{allPaths=**} {
-      allow read: if isAuthenticated() && request.auth.uid == userId;
-      allow write: if isAuthenticated()
-        && request.auth.uid == userId
-        && isAllowedContentType()
-        && fileSizeWithinLimit();
+      allow read: if isOwnerPath(userId);
+      allow create, update: if isOwnerPath(userId)
+        && isDocumentContentType()
+        && documentSizeWithinLimit();
+      allow delete: if isOwnerPath(userId);
+    }
+
+    // Owner report exports are best-effort uploads used after local export generation.
+    match /reports/{userId}/{allPaths=**} {
+      allow read, delete: if isOwnerPath(userId);
+      allow create, update: if isOwnerPath(userId)
+        && isReportContentType()
+        && reportSizeWithinLimit();
     }
 
     match /{allPaths=**} {

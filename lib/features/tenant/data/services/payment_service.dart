@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
-import 'package:rentdone/features/tenant/payment_module/models/payment_enums.dart';
-import 'package:rentdone/features/tenant/payment_module/models/payment_record_model.dart';
-import 'package:rentdone/features/tenant/payment_module/models/payment_summary_model.dart';
-import 'package:rentdone/features/tenant/payment_module/models/tenant_model.dart';
-import 'package:rentdone/features/tenant/payment_module/services/payment_constants.dart';
+import 'package:rentdone/features/tenant/data/models/payment_enums.dart';
+import 'package:rentdone/features/tenant/data/models/payment_record_model.dart';
+import 'package:rentdone/features/tenant/data/models/payment_summary_model.dart';
+import 'package:rentdone/features/tenant/data/models/tenant_model.dart';
+import 'package:rentdone/features/tenant/data/services/payment_constants.dart';
 
 class PaymentService {
   PaymentService({FirebaseFirestore? firestore})

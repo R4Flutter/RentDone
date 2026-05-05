@@ -863,7 +863,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
       maintenanceCharge: 0,
       policeVerified: policeVerified,
       backgroundChecked: backgroundChecked,
-      isActive: true,
+      status: 'active',
       createdAt: DateTime.now(),
       monthlyIncome: incomeCtrl.text.isNotEmpty
           ? double.parse(incomeCtrl.text)
