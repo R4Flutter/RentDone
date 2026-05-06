@@ -15,6 +15,8 @@ class AuthStateNotifier extends ChangeNotifier {
   UserRole? role;
   bool isProfileComplete = false;
   bool isLoading = true;
+  /// Which profile fields are still empty — used to show targeted feedback.
+  List<String> missingProfileFields = [];
 
   StreamSubscription<User?>? _authSub;
   StreamSubscription<DocumentSnapshot>? _userDocSub;
@@ -29,14 +31,19 @@ class AuthStateNotifier extends ChangeNotifier {
           if (snapshot.exists) {
             userData = snapshot.data();
             role = UserRoleX.tryParse(userData?['role'] as String?);
-            
+
             final phone = (userData?['phone'] as String? ?? '').trim();
             final name = (userData?['name'] as String? ?? '').trim();
-            isProfileComplete = phone.isNotEmpty && name.isNotEmpty;
+            final missing = <String>[];
+            if (name.isEmpty) missing.add('name');
+            if (phone.isEmpty) missing.add('phone');
+            missingProfileFields = missing;
+            isProfileComplete = missing.isEmpty;
           } else {
             userData = null;
             role = null;
             isProfileComplete = false;
+            missingProfileFields = ['name', 'phone'];
           }
           isLoading = false;
           notifyListeners();
@@ -49,6 +56,7 @@ class AuthStateNotifier extends ChangeNotifier {
         userData = null;
         role = null;
         isProfileComplete = false;
+        missingProfileFields = [];
         isLoading = false;
         notifyListeners();
       }
@@ -64,8 +72,11 @@ class AuthStateNotifier extends ChangeNotifier {
 }
 
 final authRouterStateProvider = Provider<AuthStateNotifier>((ref) {
-  return AuthStateNotifier(
+  final notifier = AuthStateNotifier(
     ref.watch(firebaseAuthProvider),
     ref.watch(firestoreProvider),
   );
+  // BUG-05 fix: ensure stream subscriptions are cancelled when provider disposes.
+  ref.onDispose(notifier.dispose);
+  return notifier;
 });

@@ -13,9 +13,10 @@ class DashboardFirebaseService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
-  DashboardFirebaseService({FirebaseFirestore? firestore})
+  DashboardFirebaseService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    // BUG-08 fix: FirebaseAuth is now injectable for testability.
     : _firestore = firestore ?? FirebaseFirestore.instance,
-      _auth = FirebaseAuth.instance;
+      _auth = auth ?? FirebaseAuth.instance;
 
   String? get _ownerId => _auth.currentUser?.uid;
 
@@ -76,10 +77,9 @@ class DashboardFirebaseService {
       debugPrint('Error fetching dashboard payments: ${e.code}');
       return <DashboardPaymentDto>[];
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Error fetching payments: $e');
-      }
-      rethrow;
+      // BUG-09 fix: return empty list on all errors, consistent with fetchProperties.
+      debugPrint('Error fetching payments: $e');
+      return <DashboardPaymentDto>[];
     }
   }
 
@@ -130,7 +130,13 @@ class DashboardFirebaseService {
     }
   }
 
-  /// Watch tenant count stream with error recovery
+  /// Watch tenant count stream with error recovery.
+  ///
+  /// NOTE (BUG-10): This reads from the `owners_summary` denormalized cache,
+  /// while [fetchTenantCount] reads directly from the `tenants` collection.
+  /// The two can temporarily diverge if the Cloud Function that updates
+  /// `owners_summary` fails. Prefer this stream for real-time UI; use
+  /// [fetchTenantCount] only for one-shot reports/exports.
   Stream<int> watchTenantCount() {
     final ownerId = _ownerId;
     if (ownerId == null || ownerId.isEmpty) {

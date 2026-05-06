@@ -121,13 +121,23 @@ class AuthFirebaseService {
       UserCredential credential;
 
       if (kIsWeb) {
+        // Sign out any existing Firebase session first
+        await _auth.signOut();
         credential = await _auth.signInWithPopup(GoogleAuthProvider());
       } else {
-        // Force account picker by signing out first if already signed in
-        if (await _googleSignIn.isSignedIn()) {
+        // Always force the Google account picker by signing out + disconnecting.
+        // This prevents the cached account (e.g. naikraj116@gmail.com) from
+        // being silently reused when the user wants to switch accounts.
+        try {
           await _googleSignIn.signOut();
+          await _googleSignIn.disconnect();
+        } catch (_) {
+          // disconnect() throws if no account is cached — safe to ignore.
         }
-        
+        // Also sign out of Firebase so the router doesn't redirect prematurely
+        // to the previous user's dashboard while the picker is open.
+        await _auth.signOut();
+
         final googleUser = await _googleSignIn.signIn();
         if (googleUser == null) {
           throw const AuthException(message: 'Google sign-in was cancelled.');
@@ -192,6 +202,13 @@ class AuthFirebaseService {
     required String phone,
   }) async {
     try {
+      // Sign out any existing session so Firebase doesn't reuse the old
+      // user's token and the router doesn't redirect prematurely.
+      final currentFirebaseUser = _auth.currentUser;
+      if (currentFirebaseUser != null && currentFirebaseUser.email?.toLowerCase() != email.trim().toLowerCase()) {
+        await _auth.signOut();
+      }
+
       final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
@@ -224,6 +241,12 @@ class AuthFirebaseService {
     required String phone,
   }) async {
     try {
+      // If a different user is already signed in, sign them out first.
+      final currentFirebaseUser = _auth.currentUser;
+      if (currentFirebaseUser != null && currentFirebaseUser.email?.toLowerCase() != email.trim().toLowerCase()) {
+        await _auth.signOut();
+      }
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
@@ -235,8 +258,7 @@ class AuthFirebaseService {
         );
       }
 
-      // Fix: Immediately create user doc to satisfy security rules and ensure role existence.
-      // Rules depend on /users/{userId} existing for role-based access.
+      // Immediately create user doc to satisfy security rules and ensure role existence.
       await _firestore.collection('users').doc(user.uid).set({
         'uid': user.uid,
         'email': user.email,
@@ -464,15 +486,19 @@ class AuthFirebaseService {
     await docRef.set(userData, SetOptions(merge: true));
 
     final dto = AuthUserDto.fromFirebaseUser(user);
+    final resolvedName = (userData['name'] as String? ?? dto.name ?? '').trim();
+    final resolvedPhone = phoneToPersist.trim();
+    // BUG-12 fix: compute isProfileComplete from actual data, not hardcoded true.
+    final profileComplete = resolvedName.isNotEmpty && resolvedPhone.isNotEmpty;
     return AuthUser(
       uid: dto.uid,
-      name: userData['name'] as String? ?? dto.name,
+      name: resolvedName.isEmpty ? null : resolvedName,
       email: userData['email'] as String? ?? dto.email,
-      phone: phoneToPersist,
+      phone: resolvedPhone,
       role: roleToPersist.value,
       createdAt: dto.createdAt,
       lastLoginAt: DateTime.now(),
-      isProfileComplete: true,
+      isProfileComplete: profileComplete,
     );
   }
 

@@ -118,12 +118,15 @@ class OwnerSideDrawer extends ConsumerWidget {
                             case 8:
                               context.goNamed('ownerSettings');
                               break;
-                            case 9:
-                              await ref.read(firebaseAuthProvider).signOut();
-                              if (context.mounted) {
-                                context.go('/login?role=owner');
-                              }
-                              break;
+                          case 9:
+                            // BUG-03 fix: use the repository signOut which also
+                            // calls googleSignIn.signOut() to clear the Google session.
+                            // BUG-04 fix: redirect to /role, not /login?role=owner.
+                            await ref.read(authRepositoryProvider).signOut();
+                            if (context.mounted) {
+                              context.go('/role');
+                            }
+                            break;
                           }
                         },
                       ),

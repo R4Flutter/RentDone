@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
 import 'package:rentdone/app/app_theme.dart';
+import 'package:rentdone/app/auth_router_state.dart';
+import 'package:rentdone/features/auth/di/auth_di.dart';
 import 'package:rentdone/features/owner/owner_payment/data/services/owner_razorpay_payment_service.dart';
 import 'package:rentdone/features/owner/owner_payment/data/services/razorpay_service.dart';
 import 'package:rentdone/features/owner/owner_payment/domain/exceptions/payment_exceptions.dart';
@@ -757,14 +760,28 @@ class _RazorpayCheckoutScreenState
       return;
     }
 
+    // BUG-01 fix: use the real owner's email and phone instead of hardcoded placeholders.
+    final authState = ref.read(authRouterStateProvider);
+    final ownerEmail =
+        ref.read(firebaseAuthProvider).currentUser?.email ??
+        (authState.userData?['email'] as String? ?? '');
+    final ownerPhone =
+        (authState.userData?['phone'] as String? ?? '').trim();
+    // Format phone for Razorpay: must start with +91 for Indian numbers.
+    final razorpayPhone = ownerPhone.length == 10
+        ? '+91$ownerPhone'
+        : ownerPhone.isNotEmpty
+            ? ownerPhone
+            : '';
+
     final paymentRequest = PaymentRequest(
       orderId: intent.orderId,
       amount: intent.totalPayableInPaise,
       currency: intent.currency,
       key: intent.keyId,
       description: 'Rent payment for ${widget.tenantName}',
-      email: 'owner@rentdone.app',
-      phone: '+919999999999',
+      email: ownerEmail,
+      phone: razorpayPhone,
       metadata: {
         'paymentId': intent.paymentId,
         'idempotencyKey': intent.idempotencyKey,

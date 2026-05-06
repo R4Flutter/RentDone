@@ -49,8 +49,10 @@ class AuthNotifier extends Notifier<AuthState> {
     final normalizedPhone = _validatePhone(phone);
 
     final emailText = email.trim();
-    if (emailText.isEmpty || !emailText.contains('@')) {
-      final message = 'Enter a valid email address.';
+    // BUG-06 fix: use proper email regex instead of just checking '@'.
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$');
+    if (emailText.isEmpty || !emailRegex.hasMatch(emailText)) {
+      const message = 'Enter a valid email address.';
       state = state.copyWith(errorMessage: message);
       throw StateError(message);
     }

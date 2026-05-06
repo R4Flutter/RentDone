@@ -6,9 +6,9 @@ import 'package:rentdone/app/app_navigation.dart';
 import 'package:rentdone/app/auth_router_state.dart';
 import 'package:rentdone/core/constants/user_role.dart';
 
-import 'package:rentdone/features/auth/presentation/pages/login_screen.dart';
-import 'package:rentdone/features/auth/presentation/pages/phone_capture_screen.dart';
-import 'package:rentdone/features/auth/presentation/pages/signup_screen.dart';
+import 'package:rentdone/features/auth/presentation/pages/login_screen_v2.dart';
+import 'package:rentdone/features/auth/presentation/pages/phone_capture_screen_v2.dart';
+import 'package:rentdone/features/auth/presentation/pages/signup_screen_v2.dart';
 import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_property.dart'
     as owner_add_tenant;
 import 'package:rentdone/features/owner/owner_dashboard/presentation/pages/dashboard/dashboard_screen.dart';
@@ -178,7 +178,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return BackHandler.root(
             dialogTitle: 'Exit RentDone?',
             dialogMessage: 'Are you sure you want to exit?',
-            child: LoginPage(selectedRole: selectedRole, phoneNumber: phone),
+            child: LoginPageV2(selectedRole: selectedRole, phoneNumber: phone),
           );
         },
       ),
@@ -193,7 +193,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return BackHandler.root(
             dialogTitle: 'Exit RentDone?',
             dialogMessage: 'Are you sure you want to exit?',
-            child: PhoneCapturePage(selectedRole: selectedRole),
+            child: PhoneCapturePageV2(selectedRole: selectedRole),
           );
         },
       ),
@@ -209,7 +209,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return BackHandler.root(
             dialogTitle: 'Exit RentDone?',
             dialogMessage: 'Are you sure you want to exit?',
-            child: SignupPage(selectedRole: selectedRole, phoneNumber: phone),
+            child: SignupPageV2(selectedRole: selectedRole, phoneNumber: phone),
           );
         },
       ),

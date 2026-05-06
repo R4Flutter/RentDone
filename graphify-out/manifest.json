@@ -35,29 +35,53 @@
     "mtime": 1774681624.6053882,
     "hash": "0d29c9a0e062295f4178d937a372e10d"
   },
-  "C:\\flutter projects\\rentdone\\functions\\index.js": {
-    "mtime": 1777862246.426301,
-    "hash": "973092b0b2ec30aa75485a3c12b7c966"
-  },
   "C:\\flutter projects\\rentdone\\functions\\lib\\index.js": {
-    "mtime": 1777909661.6804545,
-    "hash": "2331d95eb30f6acaf135fe7d169bc1b4"
+    "mtime": 1777975979.1338525,
+    "hash": "4f7087c9ffbb7613e597585b05e0471e"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\lib\\legacy.js": {
+    "mtime": 1777975980.9961927,
+    "hash": "2cee17cba648991f632197ad4a8d842d"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\lib\\notifications\\sendNotification.js": {
+    "mtime": 1777975978.8310344,
+    "hash": "4601cf6e335ee736e14aa2fb2627eed4"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\lib\\payments\\createOrder.js": {
+    "mtime": 1777975978.7396166,
+    "hash": "ea031df260f7ea3d951e7145fa947a44"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\lib\\payments\\paymentUtils.js": {
+    "mtime": 1777975978.7019265,
+    "hash": "0e3e95e9ba22a38d31f473a8ebcb3b19"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\lib\\schedulers\\rentReminder.js": {
+    "mtime": 1777975978.8553188,
+    "hash": "90ab9d997188e4b3d46bad9c630565b9"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\schedulers\\rentReminderScheduler.js": {
-    "mtime": 1777909661.632462,
+    "mtime": 1777975981.0121982,
     "hash": "360ea62764e93793a5d982aa8f69f217"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\services\\notificationService.js": {
-    "mtime": 1777909661.567108,
+    "mtime": 1777975978.9358194,
     "hash": "091558822a09f9fc4f7f1836a3843312"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\services\\rateLimitService.js": {
-    "mtime": 1777909661.5323353,
+    "mtime": 1777975978.8742955,
     "hash": "68c1c15dfe0a3dc11e86ce0b8dcbc5d5"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\services\\validationService.js": {
-    "mtime": 1777909661.5912116,
+    "mtime": 1777975978.986195,
     "hash": "77f6841e9c6b1732c02505d323d43795"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\lib\\shared\\logger.js": {
+    "mtime": 1777975978.6689928,
+    "hash": "2ba98b20d77a09f9703e52c15fbe024a"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\lib\\shared\\types.js": {
+    "mtime": 1777975978.7436583,
+    "hash": "9e3fa9db5d4c134349185b8ac35ac371"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\src\\index.js": {
     "mtime": 1774948430.8136039,
@@ -99,33 +123,57 @@
     "mtime": 1774948430.828518,
     "hash": "9cb7e8bc95b4546464f6eb1e915ae466"
   },
+  "C:\\flutter projects\\rentdone\\functions\\lib\\tenants\\linkTenantAccount.js": {
+    "mtime": 1777975978.7727447,
+    "hash": "255f64f71e483e74417939edaa324068"
+  },
   "C:\\flutter projects\\rentdone\\functions\\lib\\triggers\\paymentCallable.js": {
-    "mtime": 1777909661.674234,
+    "mtime": 1777975979.1033258,
     "hash": "95b166dcce15d9857dd1bd0ec4c81759"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\triggers\\paymentTrigger.js": {
-    "mtime": 1777909661.6082072,
+    "mtime": 1777975979.0065236,
     "hash": "a8f67bcb7a21c1116f30d1d2cf5cf350"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\types\\domain.js": {
-    "mtime": 1777909661.5344665,
+    "mtime": 1777975978.8768153,
     "hash": "5ae5ddf113909c3e9e3afc5a8daf7be5"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\utils\\firebase.js": {
-    "mtime": 1777909661.5149693,
+    "mtime": 1777975978.628371,
     "hash": "6e4f999a2d6e3e2001031a83e47045ea"
   },
   "C:\\flutter projects\\rentdone\\functions\\lib\\utils\\logger.js": {
-    "mtime": 1777909661.5374427,
+    "mtime": 1777975978.8905652,
     "hash": "fa7e1ccdef6428edd83dd1f92ff7fd3d"
   },
   "C:\\flutter projects\\rentdone\\functions\\src\\index.ts": {
-    "mtime": 1777807782.1527264,
-    "hash": "e844a08dcab7ea7f17965499e4a42364"
+    "mtime": 1777973135.5374882,
+    "hash": "838f04e05f1b5811e62a36ff59746ac7"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\src\\legacy.ts": {
+    "mtime": 1777978119.166675,
+    "hash": "98cdb91037bdf6787d039d41ea52afe1"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\src\\notifications\\sendNotification.ts": {
+    "mtime": 1777973135.5374882,
+    "hash": "b79b9c7a0078c4efad6db6f85db4958b"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\src\\payments\\createOrder.ts": {
+    "mtime": 1777978345.615867,
+    "hash": "3ab9eb18928c03832dcbb43984e23150"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\src\\payments\\paymentUtils.ts": {
+    "mtime": 1777973086.7753868,
+    "hash": "a94d82a18b017baca7d10ad6f2c97b36"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\src\\schedulers\\rentReminder.ts": {
+    "mtime": 1777978475.6518438,
+    "hash": "05f03bd21f7ac1bcf0c86935536e5c4a"
   },
   "C:\\flutter projects\\rentdone\\functions\\src\\schedulers\\rentReminderScheduler.ts": {
-    "mtime": 1777807782.1537256,
-    "hash": "f2ad7665467c048a034d8317e5332c27"
+    "mtime": 1777978526.5353093,
+    "hash": "98b079119e353a1bbcad5c92fbaa5eaf"
   },
   "C:\\flutter projects\\rentdone\\functions\\src\\services\\notificationService.ts": {
     "mtime": 1777807782.1558144,
@@ -139,9 +187,21 @@
     "mtime": 1774248611.5026584,
     "hash": "bb12ecfb820d871e3840d1e1601053e9"
   },
+  "C:\\flutter projects\\rentdone\\functions\\src\\shared\\logger.ts": {
+    "mtime": 1777979052.122754,
+    "hash": "c5d4720842b63de6f79fcc888d2fc242"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\src\\shared\\types.ts": {
+    "mtime": 1777979040.436795,
+    "hash": "9af40f1f76d9e0639b10139d226e0ac6"
+  },
+  "C:\\flutter projects\\rentdone\\functions\\src\\tenants\\linkTenantAccount.ts": {
+    "mtime": 1777973086.7753868,
+    "hash": "24d5ddecd4e0c031f6c798550e28808f"
+  },
   "C:\\flutter projects\\rentdone\\functions\\src\\triggers\\paymentCallable.ts": {
-    "mtime": 1777807782.1600296,
-    "hash": "0262752e93c4b1fc8fc41f14e824c3d6"
+    "mtime": 1777979149.8132231,
+    "hash": "3ccdcf350b085bdf2c6ce9be85b852ab"
   },
   "C:\\flutter projects\\rentdone\\functions\\src\\triggers\\paymentTrigger.ts": {
     "mtime": 1777807782.1610298,
@@ -156,8 +216,8 @@
     "hash": "f06d8024a2455e5f7919d5a9e16c763a"
   },
   "C:\\flutter projects\\rentdone\\functions\\src\\utils\\logger.ts": {
-    "mtime": 1774248611.5120084,
-    "hash": "43740ff8877008d077e5f255a5a08bdf"
+    "mtime": 1777979087.7661984,
+    "hash": "b0f03d3082f7711d94e59dabafd57a25"
   },
   "C:\\flutter projects\\rentdone\\ios\\Flutter\\ephemeral\\flutter_lldb_helper.py": {
     "mtime": 1777801897.9392333,
@@ -196,12 +256,16 @@
     "hash": "6836a28351e179f3f08a5ea47d181a72"
   },
   "C:\\flutter projects\\rentdone\\lib\\app\\app_router.dart": {
-    "mtime": 1777864891.7114396,
-    "hash": "bbc6c312851064565f1b019e304ef317"
+    "mtime": 1777985044.9810157,
+    "hash": "baddbdfcba12b97464a2c1f603908602"
   },
   "C:\\flutter projects\\rentdone\\lib\\app\\app_theme.dart": {
     "mtime": 1774248611.5201783,
     "hash": "b519f73428642405ec002bcb7cc42d08"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\app\\auth_router_state.dart": {
+    "mtime": 1777985029.7796664,
+    "hash": "9f6dcb91b345833108d6db9202447d2f"
   },
   "C:\\flutter projects\\rentdone\\lib\\app\\theme_mode_provider.dart": {
     "mtime": 1774622809.0248978,
@@ -244,8 +308,8 @@
     "hash": "7be1977e2be3ae2a70913ef930ff4c51"
   },
   "C:\\flutter projects\\rentdone\\lib\\core\\notifications\\push_notification_service.dart": {
-    "mtime": 1777807782.1878557,
-    "hash": "dab158b1a3f38ee8f50acd40f3c64caa"
+    "mtime": 1777970257.16566,
+    "hash": "4142da607d0a1a2996b20643a6a423ce"
   },
   "C:\\flutter projects\\rentdone\\lib\\core\\services\\gravatar_service.dart": {
     "mtime": 1771740844.0923908,
@@ -268,8 +332,8 @@
     "hash": "d6792ee4ddd12f9ef79934d8f394f4d6"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\auth\\data\\services\\auth_firebase_services.dart": {
-    "mtime": 1777915194.3538032,
-    "hash": "2502f5ac2753b7d46ebaa9f359d027a3"
+    "mtime": 1777983240.9540193,
+    "hash": "cccacf5143af5663275116732d02e5d3"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\auth\\di\\auth_di.dart": {
     "mtime": 1777912945.8819036,
@@ -300,16 +364,16 @@
     "hash": "23a39c9d42a54407f49086fa9ad844b5"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\auth\\presentation\\pages\\login_screen.dart": {
-    "mtime": 1777808443.9637713,
-    "hash": "7f697ee4d728f6dc501f2e664cb99887"
+    "mtime": 1777996420.0860744,
+    "hash": "44f980ea1c56938b140939175b0d66e1"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\auth\\presentation\\pages\\phone_capture_screen.dart": {
-    "mtime": 1777808219.1500342,
-    "hash": "80a15b098ab0aa59b066b7de40ed745b"
+    "mtime": 1777995845.3461826,
+    "hash": "4c38f403839957a6a0d05bbd5645724e"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\auth\\presentation\\pages\\signup_screen.dart": {
-    "mtime": 1777808520.6970983,
-    "hash": "dc7e887b5120d8595f559eef240ef127"
+    "mtime": 1777996420.1667235,
+    "hash": "2356a49da7638ab615592031d032826f"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\auth\\presentation\\providers\\auth_notifier.dart": {
     "mtime": 1777807782.2085483,
@@ -364,8 +428,8 @@
     "hash": "bbab756e0d6ef2b6d5b15b976a7f26ae"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\add_tenant\\presentation\\pages\\owner_add_property.dart": {
-    "mtime": 1777807782.214967,
-    "hash": "1c51d4502d319b6fba9cdf4e6cb36933"
+    "mtime": 1777982805.2011828,
+    "hash": "1f16161a40aced86388d64edeff9371e"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\add_tenant\\presentation\\providers\\add_tenant_provider.dart": {
     "mtime": 1774248611.5398796,
@@ -388,80 +452,92 @@
     "hash": "7890e2977f24a606d9bbdcffccabf6a5"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\data\\models\\tenant_dto.dart": {
-    "mtime": 1772949998.521901,
-    "hash": "137fccfd54a2a751c92187d813030d98"
+    "mtime": 1777979290.6761382,
+    "hash": "052ea01987192496000dc4593990c6f0"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\data\\repositories\\property_repository_impl.dart": {
-    "mtime": 1773547207.635259,
-    "hash": "41c1ac91ccd5418a43cd9da7502557d2"
+    "mtime": 1777973383.7351274,
+    "hash": "66f22d792e75dd9c03866fba2aa36db8"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\data\\repositories\\tenant_repository_impl.dart": {
+    "mtime": 1777974920.1517842,
+    "hash": "e936e573d5e5f42e864ac170a642f93b"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\data\\services\\property_firebase_service.dart": {
-    "mtime": 1777807782.2605286,
-    "hash": "d52bf5fc3e7c0f0690bca9498aa5bdf7"
+    "mtime": 1777973365.0960088,
+    "hash": "95d5d6190c6393dd234b80354297309b"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\data\\services\\tenant_firebase_service.dart": {
+    "mtime": 1777975650.109149,
+    "hash": "75f3a2e4e49d0146262d4b8dd011b5dc"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\di\\property_di.dart": {
-    "mtime": 1773547207.7466433,
-    "hash": "b6b871ccda89fefb7af4e8acd167dac6"
+    "mtime": 1777973461.0051522,
+    "hash": "a3a5c8765988b0615df0bcec46a6168c"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\entities\\property.dart": {
     "mtime": 1774759564.7050183,
     "hash": "b57bf0dea5f2e8ae31f5c5ae67a34149"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\entities\\tenant.dart": {
-    "mtime": 1771603717.6627252,
-    "hash": "89334f724a3a6c2ded288da5e7e35d2b"
+    "mtime": 1777979203.9979575,
+    "hash": "9723547820adef4cb000d47780a5141b"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\repositories\\property_repository.dart": {
-    "mtime": 1771204195.6272106,
-    "hash": "378bc9df9c180ea782055ea4484b796e"
+    "mtime": 1777975650.109149,
+    "hash": "62f3d67bb543d952d1aaf36b5a6e3e2b"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\repositories\\tenant_repository.dart": {
+    "mtime": 1777974352.8788574,
+    "hash": "d12b091674337129653e8189272f35f4"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\add_property.dart": {
     "mtime": 1771204221.225206,
     "hash": "1592dc34b3c7e9b8476f1303dc353a85"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\add_tenant_to_room.dart": {
-    "mtime": 1771204272.521562,
-    "hash": "d06585542fb1039b1c539cd0a395fe3c"
+    "mtime": 1777978661.2128663,
+    "hash": "25fa73c92e76724712116da21fa4b0cd"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\delete_property.dart": {
     "mtime": 1771204237.0297673,
     "hash": "44f11b6eb428e0de50fa7754e7bdbaef"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\get_tenant_by_id.dart": {
-    "mtime": 1771204263.3667989,
-    "hash": "f77b3f8ab40d107f8f04620c07ade975"
+    "mtime": 1777978661.2128663,
+    "hash": "53c436aa8421ca09fe205f801d677496"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\remove_tenant_from_room.dart": {
-    "mtime": 1771204281.5961988,
-    "hash": "a69fbea4c6e36dd2706391130a055093"
+    "mtime": 1777978661.2128663,
+    "hash": "f79191976dcfd06e16af83a2016aeed5"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\update_property.dart": {
     "mtime": 1771204229.3610566,
     "hash": "6a491bca65bbd52f894b301a3d77a9aa"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\watch_all_properties.dart": {
-    "mtime": 1771204204.8472345,
+    "mtime": 1777978661.2128663,
     "hash": "3999da8563443a49433102e153aa2ecc"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\watch_all_tenants.dart": {
-    "mtime": 1771204245.1695695,
-    "hash": "3647a5ef708a76e710b3f0ac3dc54f36"
+    "mtime": 1777978661.2128663,
+    "hash": "3d7dfd2d1dc3dfcab6c3e53d136c52cb"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\watch_property.dart": {
-    "mtime": 1771204213.8619895,
+    "mtime": 1777978661.2311995,
     "hash": "3c0aac45de9f868cc5b614aaf344d130"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\domain\\usecases\\watch_property_tenants.dart": {
-    "mtime": 1771204254.7563808,
-    "hash": "6a9d4fb8136b63571f67c718c14e5c66"
+    "mtime": 1777978661.2311995,
+    "hash": "5a95b5ab63dc0fe7560ba37d0f698fd0"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\presentation\\pages\\add_property_screen.dart": {
-    "mtime": 1777821684.7453341,
-    "hash": "442e4d6bcbc300ba172a030acf8fa16c"
+    "mtime": 1777982197.8396525,
+    "hash": "7a5b45ff0c4d80091146005b866fb0a2"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\presentation\\pages\\manage_property_screen.dart": {
-    "mtime": 1777821684.7453341,
-    "hash": "76dfd6a0ebd7e92e949c4b92600f1f1f"
+    "mtime": 1777982275.6357543,
+    "hash": "3031ae4b1f2df0a26088b5083a97420f"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\presentation\\pages\\owners_properties.dart": {
     "mtime": 1773547207.9824579,
@@ -472,8 +548,8 @@
     "hash": "28fc50469e9f813cd93990a59eec1734"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\presentation\\providers\\property_tenant_provider.dart": {
-    "mtime": 1773547208.0285327,
-    "hash": "87f889bc1feec218c7d81b1092f9015d"
+    "mtime": 1777978923.7054036,
+    "hash": "20d42377d378a1b57fad513965586bc2"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owners_properties\\ui_models\\property_model.dart": {
     "mtime": 1771204549.2813046,
@@ -496,16 +572,16 @@
     "hash": "f0aa045dbfb3aa3cdabc2cb1d65c305b"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\data\\repositories\\dashboard_repository_impl.dart": {
-    "mtime": 1777807782.215967,
-    "hash": "73c8fe479b83c5db622eea7e149ac3e2"
+    "mtime": 1777995919.37576,
+    "hash": "0cebf3c3221285bc341dea84ec091dc2"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\data\\repositories\\session_repository_impl.dart": {
     "mtime": 1771204925.869637,
     "hash": "dbf2b1f2cc2b224128f5437f694224df"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\data\\services\\dashboard_firebase_service.dart": {
-    "mtime": 1777807782.2179666,
-    "hash": "0c2ec48c39346e3903d0ff96511b49e8"
+    "mtime": 1777995919.2581959,
+    "hash": "4397dd187ed7aa5a1ab2e5bfa9f82829"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\data\\services\\session_auth_service.dart": {
     "mtime": 1773546934.0469513,
@@ -520,8 +596,8 @@
     "hash": "e127dade12adebbd0850f143bfdd0d7b"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\domain\\entities\\dashboard_summary.dart": {
-    "mtime": 1774248611.5523293,
-    "hash": "6c156110058eaeed8a440628660c8f78"
+    "mtime": 1777982029.8805628,
+    "hash": "028255fd948fd1617384d6ea5c694490"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\domain\\repositories\\dashboard_repository.dart": {
     "mtime": 1774248611.5543392,
@@ -564,16 +640,16 @@
     "hash": "5d27b3c06b9b0bb30a50836074f4e843"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\providers\\dashboard_data_provider.dart": {
-    "mtime": 1774412804.1069973,
-    "hash": "df614d3a839a1cf57f89f41bb5af02c3"
+    "mtime": 1777995919.0162413,
+    "hash": "f5fb3845c7b5200063f3d427713a65f6"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\providers\\dashboard_layout_provider.dart": {
     "mtime": 1773546934.2727652,
     "hash": "40358d85cb18791406475394fdb2bed0"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\providers\\messages_provider.dart": {
-    "mtime": 1771206326.2498946,
-    "hash": "26cc5a6f179321f4f9b05934b5edbe5a"
+    "mtime": 1777995805.4914646,
+    "hash": "f6b663b28cf5fc83bf9db9446a14a24d"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\ui_models\\sidebar_item.dart": {
     "mtime": 1773546934.3005977,
@@ -600,8 +676,8 @@
     "hash": "63c8ded4b91447ba22f0de7fe992d469"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\dashboard_card.dart": {
-    "mtime": 1777807782.2224705,
-    "hash": "2883bb961a95bda90eae49cb4fcbfe4a"
+    "mtime": 1777982060.3909512,
+    "hash": "4cc219cf20b552fb2799e2d78b4ef22c"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\dashboard_error.dart": {
     "mtime": 1773546934.430731,
@@ -616,8 +692,8 @@
     "hash": "20d609b47c3becaea647dc50d36cbf5b"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\header.dart": {
-    "mtime": 1773554761.6831086,
-    "hash": "84b9628489bcd40fa43e59b5a2ec7246"
+    "mtime": 1777982093.21162,
+    "hash": "3ccd50ce9bd5b41b568548b103027e32"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\messages_panel.dart": {
     "mtime": 1777807782.2244794,
@@ -636,12 +712,12 @@
     "hash": "1ecf4286d86f82d5cd1d7d15866ae9d4"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\owner_profile_card.dart": {
-    "mtime": 1774248611.5783577,
-    "hash": "6173fdf49fcfad3449b5c9f22e13b80d"
+    "mtime": 1777982874.7949154,
+    "hash": "3d693dd1dc647e60ebd89c94ab0aaab4"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\payment_overview.dart": {
-    "mtime": 1774248611.5803604,
-    "hash": "9b41333aa7dc1aa2585f26d1111c4cb3"
+    "mtime": 1777982125.0638418,
+    "hash": "fc44ab922159968b6a6593fd449c7e5d"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\profile_header.dart": {
     "mtime": 1774248611.5833588,
@@ -652,8 +728,8 @@
     "hash": "eef421671b3da2ea30ec819bd255ac6f"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\stat_grid.dart": {
-    "mtime": 1774248611.587738,
-    "hash": "a9220edaa04183c9209b285ed7ec9ee8"
+    "mtime": 1777982115.8010998,
+    "hash": "88cda7424fcf3d6afa4f28c5945f0e23"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_dashboard\\presentation\\widgets\\dashboard\\user_menu.dart": {
     "mtime": 1773554494.6288052,
@@ -699,17 +775,33 @@
     "mtime": 1771207559.6356716,
     "hash": "113585c2928aea0772fa292153621b7b"
   },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\data\\models\\tenant_payment_record_dto.dart": {
+    "mtime": 1777973678.6146824,
+    "hash": "aa2ac52565fddd6cc1191254840a2b57"
+  },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\data\\repositories\\payment_repository_impl.dart": {
-    "mtime": 1773300979.2780535,
-    "hash": "d3742ea44c3c7f31589eb1a73d19afb6"
+    "mtime": 1777974418.294225,
+    "hash": "2d4a6b5c229fcdcb32ad653720270050"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\data\\services\\owner_razorpay_payment_service.dart": {
     "mtime": 1775366309.399522,
     "hash": "7d7290f2118578c9b4e89544b2c3d82f"
   },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\data\\services\\payment_analytics_service.dart": {
+    "mtime": 1777973733.405522,
+    "hash": "a76fa1b722d5c741af1608fc73845f4c"
+  },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\data\\services\\payment_firebase_service.dart": {
     "mtime": 1775366309.4005244,
     "hash": "908ee267ced63e6f80ca2b7bcc513476"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\data\\services\\payment_query_service.dart": {
+    "mtime": 1777985114.713468,
+    "hash": "25b6abb923f2cabc139df187f6a5efdb"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\data\\services\\payment_write_service.dart": {
+    "mtime": 1777973755.826007,
+    "hash": "d4388440b632acf8927d494f1125e50a"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\data\\services\\razorpay_service.dart": {
     "mtime": 1777807782.2309942,
@@ -720,12 +812,28 @@
     "hash": "b8b84d0984ecd3448b0097753f45c1f1"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\di\\payment_di.dart": {
-    "mtime": 1773300996.5125954,
-    "hash": "398f9e8c918843f24cae17ed03fe5a36"
+    "mtime": 1777974056.7981374,
+    "hash": "56a13d6a494377060ecc71a5ca7df65e"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\domain\\entities\\owner_property_summary.dart": {
+    "mtime": 1777973636.431991,
+    "hash": "5e6ba33da3810749c5b608f2fd506378"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\domain\\entities\\owner_tenant_summary.dart": {
+    "mtime": 1777973644.2825596,
+    "hash": "9b84acee36df26d71e238681b2cddb71"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\domain\\entities\\payment.dart": {
     "mtime": 1771207559.843091,
     "hash": "2bc7461eaa8d110c88e91407bf161c49"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\domain\\entities\\tenant_payment_history_page.dart": {
+    "mtime": 1777973658.451798,
+    "hash": "d57932b31a64d950f742226967f5f846"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\domain\\entities\\tenant_payment_record.dart": {
+    "mtime": 1777973651.7354875,
+    "hash": "6db15149bff68b7e251c014abe9a2097"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\owner\\owner_payment\\domain\\exceptions\\payment_exceptions.dart": {
     "mtime": 1777807782.2356062,
@@ -1259,6 +1367,18 @@
     "mtime": 1774590508.1574395,
     "hash": "b0b42b5e189b50dd3aa1a2852b032ecb"
   },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\models\\payment_enums.dart": {
+    "mtime": 1777972328.453018,
+    "hash": "6588387d0144f20d518ef6e30b9df7fd"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\models\\payment_record_model.dart": {
+    "mtime": 1777972336.7235239,
+    "hash": "a21eb73d9400d9830faec8f68e70ba5b"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\models\\payment_summary_model.dart": {
+    "mtime": 1777972345.1024094,
+    "hash": "e2038eca1b2f6a5992f2d709c14e97a2"
+  },
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\models\\tenant_complaint.dart": {
     "mtime": 1772949998.5391755,
     "hash": "bc9e1b3177ac2aa67d93f3d8970ec59a"
@@ -1266,6 +1386,10 @@
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\models\\tenant_document.dart": {
     "mtime": 1774605991.165884,
     "hash": "e06f8e009520d524d5a96637dbd5b27d"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\models\\tenant_model.dart": {
+    "mtime": 1775366309.430909,
+    "hash": "b51e271873b12905064880b971e355cc"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\models\\tenant_owner_details.dart": {
     "mtime": 1772949998.5411818,
@@ -1330,6 +1454,18 @@
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\services\\firebase_document_storage_service.dart": {
     "mtime": 1774681407.6933846,
     "hash": "a33f5d2407ba0041e9bfa7db172e38d1"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\services\\payment_constants.dart": {
+    "mtime": 1775366309.4348714,
+    "hash": "9f1ee907a01f2d6638decb09a0577c56"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\services\\payment_service.dart": {
+    "mtime": 1777972351.6391938,
+    "hash": "95e0bd68e20fc12df3604d2e6a8bbfb7"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\services\\razorpay_service.dart": {
+    "mtime": 1777972372.1751833,
+    "hash": "34668b6494b76424979a00bb469b0b14"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\data\\services\\tenant_firestore_service.dart": {
     "mtime": 1773319148.0757525,
@@ -1467,45 +1603,9 @@
     "mtime": 1774605997.2308857,
     "hash": "e0c9ab6fcd3fac2abea9afeca8fd113d"
   },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\models\\payment_enums.dart": {
-    "mtime": 1775366309.4294078,
-    "hash": "110c5c6f6a5ea28d193c2a7539057864"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\models\\payment_record_model.dart": {
-    "mtime": 1774767178.2413952,
-    "hash": "cae409b84d24ff10e46e2cb3e461a568"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\models\\payment_summary_model.dart": {
-    "mtime": 1774948423.26921,
-    "hash": "8caaa93bfe9aeaba1891c5a8012a8177"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\models\\tenant_model.dart": {
-    "mtime": 1775366309.430909,
-    "hash": "b51e271873b12905064880b971e355cc"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\screens\\payment_screen.dart": {
-    "mtime": 1777807782.2806697,
-    "hash": "362b4dfc49c90b438562a3f962ca686f"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\services\\payment_constants.dart": {
-    "mtime": 1775366309.4348714,
-    "hash": "9f1ee907a01f2d6638decb09a0577c56"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\services\\payment_providers.dart": {
-    "mtime": 1774767283.3292108,
-    "hash": "47ac9510cd4d7c21cb831ac6ffa6eab2"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\services\\payment_service.dart": {
-    "mtime": 1777807782.283566,
-    "hash": "4a8728bdbe808f8d73fd84cb93736b9b"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\services\\razorpay_service.dart": {
-    "mtime": 1777807782.2860198,
-    "hash": "b54d0d65b81d88ffbef908ff99e3345a"
-  },
-  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\payment_module\\widgets\\payment_widgets.dart": {
-    "mtime": 1777807782.2870152,
-    "hash": "a7a5177fb89f9d277e9aded90f4fbfa4"
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\presentation\\pages\\payment_screen.dart": {
+    "mtime": 1777972385.2480507,
+    "hash": "3256721e64a21b076c2c31e412f8180f"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\presentation\\pages\\tenant_dashboard_screen.dart": {
     "mtime": 1777807782.2900147,
@@ -1527,6 +1627,10 @@
     "mtime": 1777807782.2962658,
     "hash": "9ffc5eb954483f1989370c4ec01c96b1"
   },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\presentation\\providers\\payment_providers.dart": {
+    "mtime": 1777972415.8740997,
+    "hash": "ab392b12ed42d7b02e6efd4abc85a402"
+  },
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\presentation\\providers\\tenant_dashboard_provider.dart": {
     "mtime": 1777807782.298275,
     "hash": "39463b63a5a3e2d7f3aac4c16864db96"
@@ -1538,6 +1642,10 @@
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\presentation\\widgets\\native_ad_widget.dart": {
     "mtime": 1777807782.2997339,
     "hash": "1e18da79473ac0822d8c8c98f6b61cb2"
+  },
+  "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\presentation\\widgets\\payment_widgets.dart": {
+    "mtime": 1777807782.2870152,
+    "hash": "a7a5177fb89f9d277e9aded90f4fbfa4"
   },
   "C:\\flutter projects\\rentdone\\lib\\features\\tenant\\presentation\\widgets\\tenant_glass.dart": {
     "mtime": 1774513003.4856231,
@@ -1576,8 +1684,8 @@
     "hash": "47b54c49764e6be7fbd6a572222fdf9b"
   },
   "C:\\flutter projects\\rentdone\\lib\\shared\\design\\glassmorphism.dart": {
-    "mtime": 1777807782.3191893,
-    "hash": "43c96474cb5a42f4954dcd2c939b5716"
+    "mtime": 1777982251.1709275,
+    "hash": "14a3a6511d6b048891c2f9aa04f95fc8"
   },
   "C:\\flutter projects\\rentdone\\lib\\shared\\pages\\role_selection_screen.dart": {
     "mtime": 1777864030.6608975,
@@ -1604,8 +1712,8 @@
     "hash": "1d7ff7c3baf5329c15f7240b7ede992e"
   },
   "C:\\flutter projects\\rentdone\\lib\\shared\\widgets\\back_handler.dart": {
-    "mtime": 1777807782.325513,
-    "hash": "ae0ee3e597c91c634a82e1337caec910"
+    "mtime": 1777970114.2697804,
+    "hash": "e06e52c134939ccc8b6272a0a2d671a3"
   },
   "C:\\flutter projects\\rentdone\\lib\\shared\\widgets\\glass_role.dart": {
     "mtime": 1777864429.9375436,
@@ -1724,8 +1832,8 @@
     "hash": "89da7b48c0c50587c6ef1224877004a8"
   },
   "C:\\flutter projects\\rentdone\\current_analysis.txt": {
-    "mtime": 1777910719.9316714,
-    "hash": "e6e9abdaa8cf86eb614c9745cc8bad97"
+    "mtime": 1777968713.5731792,
+    "hash": "4188ae3b95f8432646def2352189f95a"
   },
   "C:\\flutter projects\\rentdone\\EMAIL_UNIQUENESS_FIX.md": {
     "mtime": 1773594740.4079447,
@@ -1750,6 +1858,10 @@
   "C:\\flutter projects\\rentdone\\README.md": {
     "mtime": 1777807782.0430632,
     "hash": "e5a2086d6b4cbf3f4aab147e475830b1"
+  },
+  "C:\\flutter projects\\rentdone\\reportofbug.md": {
+    "mtime": 1777997528.109506,
+    "hash": "7cf08d8cdcd40138c9bf9b53a46772bf"
   },
   "C:\\flutter projects\\rentdone\\TENANT_MODULE_SUMMARY.md": {
     "mtime": 1774507146.962007,
