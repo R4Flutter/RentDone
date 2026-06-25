@@ -1,11 +1,10 @@
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/core/constants/user_role.dart';
+import 'package:rentdone/features/auth/presentation/widgets/auth_aurora_background.dart';
 
 class PhoneCapturePageV2 extends StatefulWidget {
   const PhoneCapturePageV2({super.key, required this.selectedRole});
@@ -20,14 +19,13 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _phoneController;
   late final FocusNode _phoneFocus;
-  late final AnimationController _bgController;
-  late final AnimationController _pulseController;
-  late final AnimationController _shimmerController;
+  late final AnimationController _bgCtrl;
+  late final AnimationController _entryCtrl;
   bool _confirmed = false;
   bool _phoneHasFocus = false;
 
-  static const _brand = AppTheme.darkPrimaryBlue;
-  static const _brandEnd = AppTheme.liquidPrimaryEnd;
+  static const _brand = AppTheme.primaryBlue;
+  static const _brandDark = AppTheme.primaryHoverBlue;
 
   @override
   void initState() {
@@ -35,16 +33,18 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
     _phoneController = TextEditingController();
     _phoneFocus = FocusNode()
       ..addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
-    _bgController = AnimationController(vsync: this, duration: const Duration(seconds: 20))..repeat();
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat(reverse: true);
-    _shimmerController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat();
+    _bgCtrl = AnimationController(
+        vsync: this, duration: const Duration(seconds: 20))
+      ..repeat();
+    _entryCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900))
+      ..forward();
   }
 
   @override
   void dispose() {
-    _bgController.dispose();
-    _pulseController.dispose();
-    _shimmerController.dispose();
+    _bgCtrl.dispose();
+    _entryCtrl.dispose();
     _phoneController.dispose();
     _phoneFocus.dispose();
     super.dispose();
@@ -53,216 +53,207 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          AuthMeshBackground(controller: _bgController, isDark: isDark),
-          _buildContent(isDark),
+          AuthAuroraBackground(controller: _bgCtrl, isDark: isDark),
+          SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(isDark),
+                Expanded(child: _buildGlassCard(isDark)),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildContent(bool isDark) {
-    return SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              children: [
-                _buildLogo(isDark)
-                    .animate()
-                    .fadeIn(duration: 700.ms)
-                    .slideY(begin: -0.3, end: 0, curve: Curves.easeOutCubic),
-                const SizedBox(height: 32),
-                _buildCard(isDark)
-                    .animate()
-                    .fadeIn(delay: 150.ms, duration: 600.ms)
-                    .scale(begin: const Offset(0.96, 0.96), curve: Curves.easeOutCubic),
-                const SizedBox(height: 28),
-                _buildBackButton(isDark)
-                    .animate()
-                    .fadeIn(delay: 900.ms),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogo(bool isDark) {
-    return Column(
-      children: [
-        AnimatedBuilder(
-          animation: _pulseController,
-          builder: (_, child) {
-            return Container(
-              width: 96,
-              height: 96,
+  Widget _buildHeader(bool isDark) {
+    final isOwner = widget.selectedRole == UserRole.owner;
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.28,
+      child: FadeTransition(
+        opacity: CurvedAnimation(
+            parent: _entryCtrl, curve: const Interval(0.0, 0.45)),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            _buildChip(isOwner),
+            const Spacer(),
+            Container(
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [_brand, _brandDark]),
                 boxShadow: [
                   BoxShadow(
-                    color: _brand.withValues(alpha: 0.15 + 0.10 * _pulseController.value),
-                    blurRadius: 30 + 15 * _pulseController.value,
-                    spreadRadius: 4,
-                  ),
+                      color: _brand.withValues(alpha: 0.30),
+                      blurRadius: 24,
+                      spreadRadius: 2),
                 ],
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [_brand, _brandEnd],
-                ),
               ),
-              child: child,
-            );
-          },
-          child: const Icon(Icons.apartment_rounded, color: Colors.white, size: 46),
-        ),
-        const SizedBox(height: 18),
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [_brand, Color(0xFF60A5FA), _brandEnd],
-          ).createShader(bounds),
-          child: const Text(
-            'RENTDONE',
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: 5.0,
+              child: const Icon(Icons.phone_android_rounded,
+                  color: Colors.white, size: 30),
             ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          widget.selectedRole == UserRole.owner ? '🏢 Owner Portal' : '🏠 Tenant Portal',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.white.withValues(alpha: isDark ? 0.5 : 0.55),
-            letterSpacing: 0.5,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCard(bool isDark) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? [
-                      Colors.white.withValues(alpha: 0.08),
-                      Colors.white.withValues(alpha: 0.04),
-                    ]
-                  : [
-                      Colors.white.withValues(alpha: 0.85),
-                      Colors.white.withValues(alpha: 0.70),
-                    ],
-            ),
-            border: Border.all(
-              color: isDark
-                  ? _brand.withValues(alpha: 0.25)
-                  : _brand.withValues(alpha: 0.15),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: _brand.withValues(alpha: isDark ? 0.12 : 0.08),
-                blurRadius: 40,
-                offset: const Offset(0, 16),
+            const SizedBox(height: 16),
+            const Text(
+              'Enter your mobile number',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: -0.5,
               ),
-            ],
-          ),
-          padding: const EdgeInsets.all(28),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildCardHeader(isDark),
-                const SizedBox(height: 28),
-                _buildPhoneField(isDark),
-                const SizedBox(height: 18),
-                _buildSecurityNote(isDark),
-                const SizedBox(height: 22),
-                _buildConfirmTile(isDark),
-                const SizedBox(height: 26),
-                _buildContinueButton(),
-              ],
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              "We'll use this to secure your account",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withValues(alpha: 0.70),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildCardHeader(bool isDark) {
-    final textColor = isDark ? Colors.white : AppTheme.lightTextPrimary;
-    final subColor = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
+  Widget _buildChip(bool isOwner) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+            color: Colors.white.withValues(alpha: 0.20), width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+              isOwner ? Icons.domain_rounded : Icons.home_rounded,
+              size: 16,
+              color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            isOwner ? 'Owner Portal' : 'Tenant Portal',
+            style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: Colors.white,
+                letterSpacing: 0.3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassCard(bool isDark) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+          parent: _entryCtrl, curve: const Interval(0.15, 0.65)),
+      child: SlideTransition(
+        position: Tween(begin: const Offset(0, 0.06), end: Offset.zero)
+            .animate(CurvedAnimation(
+                parent: _entryCtrl,
+                curve:
+                    const Interval(0.15, 0.65, curve: Curves.easeOutCubic))),
+        child: ClipRRect(
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+            child: Container(
+              width: double.infinity,
               decoration: BoxDecoration(
-                color: _brand.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: isDark
+                    ? AppTheme.darkCard.withValues(alpha: 0.78)
+                    : Colors.white.withValues(alpha: 0.86),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border.all(
+                  color: _brand.withValues(alpha: isDark ? 0.14 : 0.10),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _brand
+                        .withValues(alpha: isDark ? 0.10 : 0.06),
+                    blurRadius: 44,
+                    offset: const Offset(0, 18),
+                  ),
+                  BoxShadow(
+                    color:
+                        Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.phone_android_rounded, color: _brand, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Phone Verification',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-                letterSpacing: -0.3,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(28, 32, 28, 36),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildPhoneField(isDark),
+                      const SizedBox(height: 16),
+                      _buildSecurityNote(isDark),
+                      const SizedBox(height: 22),
+                      _buildConfirmTile(isDark),
+                      const SizedBox(height: 26),
+                      _buildContinueButton(),
+                      const SizedBox(height: 16),
+                      _buildBackButton(isDark),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
-        ).animate().fadeIn(delay: 250.ms).moveY(begin: 8, end: 0),
-        const SizedBox(height: 8),
-        Text(
-          'Enter your mobile number to get started',
-          style: TextStyle(fontSize: 13, color: subColor, fontWeight: FontWeight.w500),
-          textAlign: TextAlign.center,
-        ).animate().fadeIn(delay: 350.ms),
-      ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildPhoneField(bool isDark) {
-    final borderColor = _phoneHasFocus ? _brand : (isDark ? Colors.white.withValues(alpha: 0.10) : AppTheme.lightBorder);
+    final borderColor = _phoneHasFocus
+        ? _brand
+        : (isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : _brand.withValues(alpha: 0.12));
     final fillColor = isDark
-        ? (_phoneHasFocus ? _brand.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.05))
-        : (_phoneHasFocus ? _brand.withValues(alpha: 0.04) : AppTheme.lightSurface);
+        ? (_phoneHasFocus
+            ? _brand.withValues(alpha: 0.06)
+            : Colors.white.withValues(alpha: 0.04))
+        : (_phoneHasFocus
+            ? _brand.withValues(alpha: 0.03)
+            : Colors.white.withValues(alpha: 0.65));
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: _phoneHasFocus
-            ? [BoxShadow(color: _brand.withValues(alpha: 0.18), blurRadius: 16, offset: const Offset(0, 4))]
+            ? [
+                BoxShadow(
+                    color: _brand.withValues(alpha: 0.18),
+                    blurRadius: 22,
+                    offset: const Offset(0, 4)),
+              ]
             : [],
       ),
       child: TextFormField(
@@ -270,9 +261,9 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
         focusNode: _phoneFocus,
         keyboardType: TextInputType.phone,
         style: TextStyle(
-          fontSize: 20,
+          fontSize: 22,
           fontWeight: FontWeight.w900,
-          letterSpacing: 3,
+          letterSpacing: 3.5,
           color: isDark ? Colors.white : AppTheme.lightTextPrimary,
         ),
         inputFormatters: [
@@ -283,15 +274,21 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
         decoration: InputDecoration(
           labelText: 'Mobile Number',
           labelStyle: TextStyle(
-            color: _phoneHasFocus ? _brand : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+            color: _phoneHasFocus
+                ? _brand
+                : (isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary),
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
           hintText: '00000 00000',
           hintStyle: TextStyle(
-            color: isDark ? Colors.white.withValues(alpha: 0.20) : Colors.black.withValues(alpha: 0.20),
-            letterSpacing: 3,
-            fontSize: 18,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.14)
+                : Colors.black.withValues(alpha: 0.14),
+            letterSpacing: 3.5,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
           prefixIcon: Padding(
@@ -299,148 +296,176 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('🇮🇳', style: TextStyle(fontSize: 20)),
-                const SizedBox(width: 8),
+                const Text('\u{1F1EE}\u{1F1F3}',
+                    style: TextStyle(fontSize: 22)),
+                const SizedBox(width: 10),
                 Text(
                   '+91',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                    color: _phoneHasFocus ? _brand : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                    fontSize: 17,
+                    color: _phoneHasFocus
+                        ? _brand
+                        : (isDark
+                            ? AppTheme.darkTextSecondary
+                            : AppTheme.lightTextSecondary),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Container(
                   width: 1.5,
-                  height: 22,
-                  color: isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.12),
+                  height: 24,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.10),
                 ),
               ],
             ),
           ),
           filled: true,
           fillColor: fillColor,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(24),
+              borderSide: BorderSide.none),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: BorderSide(color: borderColor, width: 1.5),
+            borderRadius: BorderRadius.circular(24),
+            borderSide: BorderSide(color: borderColor, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: _brand, width: 2.0),
+            borderRadius: BorderRadius.circular(24),
+            borderSide: const BorderSide(color: _brand, width: 2),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: AppTheme.errorRed, width: 1.5),
+            borderRadius: BorderRadius.circular(24),
+            borderSide:
+                const BorderSide(color: AppTheme.errorRed, width: 1.5),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: AppTheme.errorRed, width: 2.0),
+            borderRadius: BorderRadius.circular(24),
+            borderSide:
+                const BorderSide(color: AppTheme.errorRed, width: 2),
           ),
         ),
       ),
-    ).animate().fadeIn(delay: 450.ms).slideX(begin: -0.08);
+    );
   }
 
   Widget _buildSecurityNote(bool isDark) {
+    final muted = isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted;
     return Row(
       children: [
-        Icon(Icons.lock_outline_rounded, size: 13, color: AppTheme.successGreen.withValues(alpha: 0.8)),
-        const SizedBox(width: 6),
+        Icon(Icons.shield_outlined,
+            size: 15,
+            color: AppTheme.successGreen.withValues(alpha: 0.80)),
+        const SizedBox(width: 8),
         Text(
-          'End-to-end encrypted · Never shared',
+          'Encrypted end-to-end · Never shared with third parties',
           style: TextStyle(
-            fontSize: 12,
-            color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-            fontWeight: FontWeight.w500,
-          ),
+              fontSize: 12, color: muted, fontWeight: FontWeight.w500),
         ),
       ],
-    ).animate().fadeIn(delay: 550.ms);
+    );
   }
 
   Widget _buildConfirmTile(bool isDark) {
     final textColor = isDark ? Colors.white : AppTheme.lightTextPrimary;
+    final isOwner = widget.selectedRole == UserRole.owner;
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
       decoration: BoxDecoration(
         color: _confirmed
-            ? _brand.withValues(alpha: isDark ? 0.12 : 0.06)
-            : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02)),
-        borderRadius: BorderRadius.circular(16),
+            ? _brand.withValues(alpha: isDark ? 0.10 : 0.05)
+            : (isDark
+                ? Colors.white.withValues(alpha: 0.04)
+                : _brand.withValues(alpha: 0.02)),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: _confirmed ? _brand.withValues(alpha: 0.35) : (isDark ? Colors.white.withValues(alpha: 0.08) : AppTheme.lightBorder),
-          width: 1.5,
+          color: _confirmed
+              ? _brand.withValues(alpha: 0.30)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : _brand.withValues(alpha: 0.10)),
+          width: 1.2,
         ),
       ),
       child: InkWell(
         onTap: () => setState(() => _confirmed = !_confirmed),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
           child: Row(
             children: [
               AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 22,
-                height: 22,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   color: _confirmed ? _brand : Colors.transparent,
                   border: Border.all(
-                    color: _confirmed ? _brand : (isDark ? Colors.white.withValues(alpha: 0.25) : AppTheme.lightBorder),
+                    color: _confirmed
+                        ? _brand
+                        : (isDark
+                            ? Colors.white.withValues(alpha: 0.22)
+                            : _brand.withValues(alpha: 0.25)),
                     width: 2,
                   ),
                 ),
                 child: _confirmed
-                    ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                    ? const Icon(Icons.check_rounded,
+                        size: 16, color: Colors.white)
                     : null,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  'I confirm this is my correct mobile number',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+                  isOwner
+                      ? 'I confirm this is my correct mobile number as a property owner'
+                      : 'I confirm this is my correct mobile number as a tenant',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                      height: 1.4),
                 ),
               ),
             ],
           ),
         ),
       ),
-    ).animate().fadeIn(delay: 650.ms);
+    );
   }
 
   Widget _buildContinueButton() {
-    return AnimatedBuilder(
-      animation: _shimmerController,
-      builder: (_, child) {
-        return Container(
-          height: 58,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: const [_brand, Color(0xFF2563EB)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: _brand.withValues(alpha: 0.40),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: child,
-        );
-      },
+    return Container(
+      height: 58,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_brand, _brandDark]),
+        boxShadow: [
+          BoxShadow(
+              color: _brand.withValues(alpha: 0.35),
+              blurRadius: 22,
+              offset: const Offset(0, 10)),
+          BoxShadow(
+              color: _brand.withValues(alpha: 0.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
+        ],
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: _goToLogin,
-          borderRadius: BorderRadius.circular(18),
-          splashColor: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(24),
+          splashColor: Colors.white.withValues(alpha: 0.10),
           child: Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -448,34 +473,32 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
                 const Text(
                   'Continue',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                const Icon(Icons.arrow_forward_rounded,
+                    color: Colors.white, size: 20),
               ],
             ),
           ),
         ),
       ),
-    ).animate().fadeIn(delay: 750.ms).scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOutBack);
+    );
   }
 
   Widget _buildBackButton(bool isDark) {
-    return TextButton.icon(
-      onPressed: () => context.goNamed('roleSelection'),
-      icon: Icon(Icons.arrow_back_ios_new_rounded, size: 14,
-          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-      label: Text(
-        'Back to role selection',
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
-          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-        ),
+    final sub =
+        isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    return Center(
+      child: TextButton.icon(
+        onPressed: () => context.goNamed('roleSelection'),
+        icon: Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: sub),
+        label: Text('Back to role selection',
+            style: TextStyle(
+                fontWeight: FontWeight.w600, fontSize: 13, color: sub)),
       ),
     );
   }
@@ -484,7 +507,8 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
     final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return 'Mobile number is required';
     if (digits.length != 10) return 'Enter a valid 10-digit number';
-    if (!RegExp(r'^[6-9]\d{9}$').hasMatch(digits)) return 'Enter a valid Indian mobile number';
+    if (!RegExp(r'^[6-9]\d{9}$').hasMatch(digits))
+      return 'Enter a valid Indian mobile number';
     return null;
   }
 
@@ -495,14 +519,17 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
         SnackBar(
           content: const Row(
             children: [
-              Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+              Icon(Icons.info_outline_rounded,
+                  color: Colors.white, size: 18),
               SizedBox(width: 10),
-              Text('Please confirm your mobile number first', style: TextStyle(fontWeight: FontWeight.w600)),
+              Text('Please confirm your mobile number first',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
             ],
           ),
-          backgroundColor: AppTheme.darkPrimaryBlue,
+          backgroundColor: _brand,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       );
       return;
@@ -516,87 +543,134 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
 
   Future<bool?> _showConfirmDialog(String digits) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : AppTheme.lightTextPrimary;
+    final subColor =
+        isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+
     return showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.6),
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Dialog(
           backgroundColor: Colors.transparent,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(28),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
               child: Container(
-                padding: const EdgeInsets.all(28),
+                padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(28),
-                  color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.92) : Colors.white.withValues(alpha: 0.95),
-                  border: Border.all(color: _brand.withValues(alpha: 0.25), width: 1.5),
+                  color: isDark
+                      ? AppTheme.darkCard.withValues(alpha: 0.92)
+                      : Colors.white.withValues(alpha: 0.94),
+                  border: Border.all(
+                      color: _brand.withValues(alpha: 0.18), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                        color: _brand.withValues(alpha: 0.10),
+                        blurRadius: 44,
+                        offset: const Offset(0, 14)),
+                    BoxShadow(
+                        color: Colors.black
+                            .withValues(alpha: isDark ? 0.3 : 0.04),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6)),
+                  ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(14),
+                      width: 60,
+                      height: 60,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _brand.withValues(alpha: 0.12),
+                        gradient: const LinearGradient(
+                            colors: [_brand, _brandDark]),
+                        boxShadow: [
+                          BoxShadow(
+                              color: _brand.withValues(alpha: 0.28),
+                              blurRadius: 18),
+                        ],
                       ),
-                      child: const Icon(Icons.verified_rounded, color: _brand, size: 28),
+                      child: const Icon(Icons.verified_rounded,
+                          color: Colors.white, size: 30),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     Text('Confirm Number',
                         style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                        )),
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: textColor)),
                     const SizedBox(height: 8),
                     Text('Proceed with this mobile number?',
                         style: TextStyle(
-                          fontSize: 13, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                        ),
+                            fontSize: 14, color: subColor),
                         textAlign: TextAlign.center),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 18),
                       decoration: BoxDecoration(
-                        color: _brand.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: _brand.withValues(alpha: 0.20)),
+                        color: _brand.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: _brand.withValues(alpha: 0.15)),
                       ),
                       child: Text(
                         '+91  $digits',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 3, color: _brand),
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 4,
+                          color: _brand,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                              side: BorderSide(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: SizedBox(
+                            height: 52,
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: subColor,
+                                side: BorderSide(
+                                    color: isDark
+                                        ? AppTheme.darkBorder
+                                        : AppTheme.lightBorder),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(16)),
+                              ),
+                              child: const Text('Edit',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w700)),
                             ),
-                            child: const Text('Edit', style: TextStyle(fontWeight: FontWeight.w700)),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 14),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _brand,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: SizedBox(
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _brand,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(16)),
+                              ),
+                              child: const Text('Confirm',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800)),
                             ),
-                            child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.w800)),
                           ),
                         ),
                       ],
@@ -610,77 +684,4 @@ class _PhoneCapturePageV2State extends State<PhoneCapturePageV2>
       ),
     );
   }
-}
-
-// ── Animated Mesh Background (shared across auth screens) ────────────────────
-
-class AuthMeshBackground extends StatelessWidget {
-  const AuthMeshBackground({required this.controller, required this.isDark, super.key});
-  final AnimationController controller;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, child) => CustomPaint(
-        painter: _AuthMeshPainter(controller.value, isDark),
-        child: Container(),
-      ),
-    );
-  }
-}
-
-class _AuthMeshPainter extends CustomPainter {
-  final double t;
-  final bool isDark;
-  _AuthMeshPainter(this.t, this.isDark);
-
-  static const _brand = AppTheme.darkPrimaryBlue;
-  static const _brandEnd = AppTheme.liquidPrimaryEnd;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Base gradient
-    final bgPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: isDark
-            ? [const Color(0xFF020617), const Color(0xFF0A1628)]
-            : [const Color(0xFFF0F4FF), const Color(0xFFE8F0FE)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
-
-    // Animated blobs
-    _drawBlob(canvas, size,
-        cx: size.width * 0.15 + 40 * math.sin(t * 2 * math.pi),
-        cy: size.height * 0.15 + 30 * math.cos(t * 2 * math.pi * 0.7),
-        radius: size.width * 0.55,
-        color: _brand.withValues(alpha: isDark ? 0.18 : 0.12));
-
-    _drawBlob(canvas, size,
-        cx: size.width * 0.85 + 35 * math.cos(t * 2 * math.pi * 1.3 + 1),
-        cy: size.height * 0.75 + 40 * math.sin(t * 2 * math.pi * 0.9 + 2),
-        radius: size.width * 0.50,
-        color: _brandEnd.withValues(alpha: isDark ? 0.14 : 0.10));
-
-    _drawBlob(canvas, size,
-        cx: size.width * 0.5 + 25 * math.sin(t * 2 * math.pi * 0.5 + 0.5),
-        cy: size.height * 0.5 + 20 * math.cos(t * 2 * math.pi * 0.8 + 1),
-        radius: size.width * 0.30,
-        color: AppTheme.tenantTeal.withValues(alpha: isDark ? 0.08 : 0.06));
-  }
-
-  void _drawBlob(Canvas canvas, Size size,
-      {required double cx, required double cy, required double radius, required Color color}) {
-    final paint = Paint()
-      ..shader = RadialGradient(
-        colors: [color, color.withValues(alpha: 0)],
-      ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: radius));
-    canvas.drawCircle(Offset(cx, cy), radius, paint);
-  }
-
-  @override
-  bool shouldRepaint(_AuthMeshPainter old) => old.t != t;
 }

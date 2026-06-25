@@ -7,6 +7,7 @@ import 'package:rentdone/features/owner/add_tenant/presentation/pages/owner_add_
 import 'package:rentdone/features/owner/owners_properties/domain/entities/property.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart';
 import 'package:rentdone/features/owner/owners_properties/presentation/providers/property_tenant_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PropertyDetailScreen extends ConsumerStatefulWidget {
   final String propertyId;
@@ -583,12 +584,32 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                         onPressed: room.isOccupied
                             ? () async {
                                 final tenantId = room.tenantId!;
-                                final confirmed = await _showVacateRoomDialog(
+                                
+                                // Fetch tenant to check for documents
+                                final tenant = await ref
+                                    .read(getTenantByIdUseCaseProvider)
+                                    .call(tenantId);
+                                
+                                final hasDocs = tenant != null && (
+                                  (tenant.photoUrl ?? '').isNotEmpty ||
+                                  (tenant.idDocumentUrl ?? '').isNotEmpty ||
+                                  tenant.documentUrls.isNotEmpty
+                                );
+
+                                if (!context.mounted) return;
+
+                                final result = await _showVacateRoomDialog(
                                   context,
                                   roomNumber: room.roomNumber,
+                                  hasDocuments: hasDocs,
                                 );
-                                if (confirmed == true) {
+                                
+                                if (result?.confirmed == true) {
                                   try {
+                                    if (result?.downloadDocs == true && tenant != null) {
+                                      await _downloadTenantDocuments(tenant);
+                                    }
+
                                     await ref
                                         .read(
                                           removeTenantNotifierProvider.notifier,
@@ -661,19 +682,41 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
     );
   }
 
-  Future<bool?> _showVacateRoomDialog(
+  Future<void> _downloadTenantDocuments(Tenant tenant) async {
+    final urls = <String>[];
+    if ((tenant.photoUrl ?? '').isNotEmpty) urls.add(tenant.photoUrl!);
+    if ((tenant.idDocumentUrl ?? '').isNotEmpty) urls.add(tenant.idDocumentUrl!);
+    urls.addAll(tenant.documentUrls.where((u) => u.isNotEmpty));
+
+    if (urls.isEmpty) return;
+
+    for (final url in urls) {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        // Add a small delay between launches to avoid browser issues
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    }
+  }
+
+  Future<({bool confirmed, bool downloadDocs})?> _showVacateRoomDialog(
     BuildContext context, {
     required String roomNumber,
+    bool hasDocuments = false,
   }) {
     final isDark = OwnerDashboardColors.isDark(context);
-    return showGeneralDialog<bool>(
+    return showGeneralDialog<({bool confirmed, bool downloadDocs})>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
       barrierColor: AppColors.black.withValues(alpha: isDark ? 0.48 : 0.24),
       transitionDuration: const Duration(milliseconds: 360),
       pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        return _LiquidVacateDialog(roomNumber: roomNumber);
+        return _LiquidVacateDialog(
+          roomNumber: roomNumber,
+          hasDocuments: hasDocuments,
+        );
       },
       transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
         final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
@@ -865,10 +908,18 @@ class _LiquidStatusSnackBar extends StatelessWidget {
   }
 }
 
-class _LiquidVacateDialog extends StatelessWidget {
-  const _LiquidVacateDialog({required this.roomNumber});
+class _LiquidVacateDialog extends StatefulWidget {
+  const _LiquidVacateDialog({required this.roomNumber, this.hasDocuments = false});
 
   final String roomNumber;
+  final bool hasDocuments;
+
+  @override
+  State<_LiquidVacateDialog> createState() => _LiquidVacateDialogState();
+}
+
+class _LiquidVacateDialogState extends State<_LiquidVacateDialog> {
+  bool _downloadDocs = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1037,7 +1088,7 @@ class _LiquidVacateDialog extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
-                                  'Are you sure you want to vacate Room $roomNumber?',
+                                  'Are you sure you want to vacate Room ${widget.roomNumber}?',
                                   textAlign: TextAlign.center,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: textSecondary.withValues(
@@ -1072,6 +1123,34 @@ class _LiquidVacateDialog extends StatelessWidget {
                                         ),
                                   ),
                                 ),
+                                if (widget.hasDocuments) ...[
+                                  const SizedBox(height: 16),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: CheckboxListTile(
+                                      value: _downloadDocs,
+                                      onChanged: (v) => setState(() => _downloadDocs = v ?? false),
+                                      title: Text(
+                                        'Download tenant documents before deleting',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: textPrimary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        'Documents will be permanently removed from server after vacating.',
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                      controlAffinity: ListTileControlAffinity.leading,
+                                      contentPadding: EdgeInsets.zero,
+                                      activeColor: brand,
+                                      checkColor: Colors.white,
+                                      dense: true,
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 20),
                                 Row(
                                   children: [
@@ -1080,7 +1159,7 @@ class _LiquidVacateDialog extends StatelessWidget {
                                         label: 'Cancel',
                                         isPrimary: false,
                                         onTap: () =>
-                                            Navigator.of(context).pop(false),
+                                            Navigator.of(context).pop((confirmed: false, downloadDocs: false)),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -1089,7 +1168,7 @@ class _LiquidVacateDialog extends StatelessWidget {
                                         label: 'Vacate',
                                         isPrimary: true,
                                         onTap: () =>
-                                            Navigator.of(context).pop(true),
+                                            Navigator.of(context).pop((confirmed: true, downloadDocs: _downloadDocs)),
                                       ),
                                     ),
                                   ],

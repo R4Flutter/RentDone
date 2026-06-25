@@ -8,7 +8,6 @@ import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/das
 import 'package:rentdone/features/owner/owner_dashboard/presentation/providers/dashboard_layout_provider.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/shared/widgets/back_handler.dart';
-import 'dart:ui';
 
 class OwnerDashboardPage extends ConsumerWidget {
   const OwnerDashboardPage({super.key, required this.child});
@@ -65,10 +64,6 @@ class OwnerDashboardPage extends ConsumerWidget {
                   size: 260,
                   color: OwnerDashboardColors.ownerBottomBlobColor(context),
                 ),
-              ),
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(color: AppColors.transparent),
               ),
               Row(
                 children: [

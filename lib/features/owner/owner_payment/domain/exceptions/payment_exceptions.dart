@@ -10,7 +10,12 @@ abstract class PaymentException implements Exception {
   PaymentException({required this.message, this.code, this.originalException});
 
   @override
-  String toString() => message;
+  String toString() {
+    if (originalException != null) {
+      return '$message ($originalException)';
+    }
+    return message;
+  }
 }
 
 /// Thrown when payment amount validation fails

@@ -36,7 +36,7 @@ class OwnerPaymentTenantListScreen extends ConsumerWidget {
           ref.invalidate(ownerPropertyTenantsProvider(propertyId));
         },
         child: tenantsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const _TenantSkeletonLoader(),
           error: (error, _) => _TenantListError(
             message: error.toString(),
             onRetry: () =>
@@ -57,27 +57,29 @@ class OwnerPaymentTenantListScreen extends ConsumerWidget {
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               itemCount: tenants.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              separatorBuilder: (_, idx) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final tenant = tenants[index];
-                return TenantCard(
-                  tenant: tenant,
-                  onTap: () {
-                    context.goNamed(
-                      'ownerTenantPaymentHistory',
-                      pathParameters: {
-                        'propertyId': propertyId,
-                        'tenantId': tenant.id,
-                      },
-                      queryParameters: {
-                        'propertyName': propertyName ?? '',
-                        'tenantName': tenant.name,
-                        'roomNumber': tenant.roomNumber,
-                        'rentAmount': tenant.rentAmount.toString(),
-                        'phone': tenant.phone,
-                      },
-                    );
-                  },
+                return RepaintBoundary(
+                  child: TenantCard(
+                    tenant: tenant,
+                    onTap: () {
+                      context.goNamed(
+                        'ownerTenantPaymentHistory',
+                        pathParameters: {
+                          'propertyId': propertyId,
+                          'tenantId': tenant.id,
+                        },
+                        queryParameters: {
+                          'propertyName': propertyName ?? '',
+                          'tenantName': tenant.name,
+                          'roomNumber': tenant.roomNumber,
+                          'rentAmount': tenant.rentAmount.toString(),
+                          'phone': tenant.phone,
+                        },
+                      );
+                    },
+                  ),
                 );
               },
             );
@@ -112,6 +114,109 @@ class _TenantListError extends StatelessWidget {
           child: FilledButton(onPressed: onRetry, child: const Text('Retry')),
         ),
       ],
+    );
+  }
+}
+
+/// Shimmer skeleton loader for tenant list.
+class _TenantSkeletonLoader extends StatefulWidget {
+  const _TenantSkeletonLoader();
+
+  @override
+  State<_TenantSkeletonLoader> createState() => _TenantSkeletonLoaderState();
+}
+
+class _TenantSkeletonLoaderState extends State<_TenantSkeletonLoader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final baseColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
+
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (context, _) {
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          children: List.generate(4, (index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Opacity(
+                opacity: _opacity.value,
+                child: Container(
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: baseColor,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: baseColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              height: 12,
+                              width: 120,
+                              decoration: BoxDecoration(
+                                color: baseColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              height: 10,
+                              width: 80,
+                              decoration: BoxDecoration(
+                                color: baseColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

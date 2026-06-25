@@ -31,8 +31,8 @@ const loadDueTenants = async (today) => {
     const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
     const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
     const [dueDaySnap, dueDateSnap] = await Promise.all([
-        firebase_1.db.collection("tenants").where("isActive", "==", true).where("rentDueDay", "==", day).get(),
-        firebase_1.db.collection("tenants").where("isActive", "==", true).where("dueDate", ">=", start).where("dueDate", "<=", end).get(),
+        firebase_1.db.collection("tenants").where("status", "==", "active").where("rentDueDay", "==", day).get(),
+        firebase_1.db.collection("tenants").where("status", "==", "active").where("dueDate", ">=", start).where("dueDate", "<=", end).get(),
     ]);
     const deduped = new Map();
     dueDaySnap.docs.forEach((doc) => deduped.set(doc.id, doc));
@@ -56,73 +56,79 @@ exports.sendRentDueReminders = (0, scheduler_1.onSchedule)({
         }
         let sentCount = 0;
         let processed = 0;
-        for (const tenantDoc of dueTenantDocs) {
-            const tenant = tenantDoc.data();
-            const tenantUserId = getTenantUserId(tenant, tenantDoc.id);
-            const ownerId = String(tenant.ownerId ?? "").trim();
-            const tenantStatus = statusString(tenant.status);
-            if (!tenantUserId || !ownerId || (tenantStatus && tenantStatus !== "active")) {
-                continue;
-            }
-            const eventId = `rent_due_${tenantDoc.id}_${dateKey}`;
-            const reserved = await (0, notificationService_1.reserveNotificationEvent)(eventId, {
-                type: "RENT_DUE_REMINDER",
-                tenantId: tenantDoc.id,
-                tenantUserId,
-                ownerId,
-                dateKey,
-            });
-            if (!reserved) {
-                continue;
-            }
-            const withinRateLimit = await (0, rateLimitService_1.checkAndIncrementRateLimit)(tenantUserId, "RENT_DUE_REMINDER");
-            if (!withinRateLimit) {
-                (0, logger_1.logWarn)("Tenant rent reminder rate-limited", { tenantUserId, eventId });
-                continue;
-            }
-            const tokenBundle = await (0, tokenService_1.getUserDeviceTokens)(tenantUserId);
-            if (tokenBundle.tokens.length === 0) {
-                continue;
-            }
-            const amount = Number(tenant.rentAmount ?? tenant.monthlyRent ?? 0);
-            const payload = {
-                type: "RENT_DUE_REMINDER",
-                title: "Rent Due Reminder",
-                body: buildRentDueBody(amount),
-                data: {
+        (0, logger_1.logInfo)("Processing rent reminders in batches", { total: dueTenantDocs.length, batchSize: 50 });
+        // Process in chunks of 50 to improve scalability
+        const chunkSize = 50;
+        for (let i = 0; i < dueTenantDocs.length; i += chunkSize) {
+            const chunk = dueTenantDocs.slice(i, i + chunkSize);
+            await Promise.all(chunk.map(async (tenantDoc) => {
+                const tenant = tenantDoc.data();
+                const tenantUserId = getTenantUserId(tenant, tenantDoc.id);
+                const ownerId = String(tenant.ownerId ?? "").trim();
+                const tenantStatus = statusString(tenant.status);
+                if (!tenantUserId || !ownerId || (tenantStatus && tenantStatus !== "active")) {
+                    return;
+                }
+                const eventId = `rent_due_${tenantDoc.id}_${dateKey}`;
+                const reserved = await (0, notificationService_1.reserveNotificationEvent)(eventId, {
                     type: "RENT_DUE_REMINDER",
                     tenantId: tenantDoc.id,
+                    tenantUserId,
                     ownerId,
-                    targetRole: "tenant",
-                    action: "pay_now",
-                    actionLabel: "Pay",
-                    actionRoute: "/tenant/payments",
-                    click_action: "FLUTTER_NOTIFICATION_CLICK",
-                },
-            };
-            const dispatch = await (0, notificationService_1.sendMulticastWithRetry)(tokenBundle.tokens, payload);
-            await (0, tokenService_1.cleanupInvalidTokens)(tokenBundle.tokenRefs, dispatch.invalidTokens);
-            await Promise.all([
-                firebase_1.db.collection("messages").doc(eventId).set({
+                    dateKey,
+                });
+                if (!reserved) {
+                    return;
+                }
+                const withinRateLimit = await (0, rateLimitService_1.checkAndIncrementRateLimit)(tenantUserId, "RENT_DUE_REMINDER");
+                if (!withinRateLimit) {
+                    (0, logger_1.logWarn)("Tenant rent reminder rate-limited", { tenantUserId, eventId });
+                    return;
+                }
+                const tokenBundle = await (0, tokenService_1.getUserDeviceTokens)(tenantUserId);
+                if (tokenBundle.tokens.length === 0) {
+                    return;
+                }
+                const amount = Number(tenant.rentAmount ?? tenant.monthlyRent ?? 0);
+                const payload = {
                     type: "RENT_DUE_REMINDER",
-                    title: payload.title,
-                    body: payload.body,
-                    ownerId,
-                    tenantId: tenantDoc.id,
-                    read: false,
-                    severity: "warning",
-                    createdAt: firebase_1.FieldValue.serverTimestamp(),
-                }),
-                (0, notificationService_1.trackNotificationAnalytics)({
-                    userId: tenantUserId,
-                    type: "RENT_DUE_REMINDER",
-                    eventId,
-                    sentCount: dispatch.sentCount,
-                    invalidTokenCount: dispatch.invalidTokens.length,
-                }),
-            ]);
-            sentCount += dispatch.sentCount;
-            processed += 1;
+                    title: "Rent Due Reminder",
+                    body: buildRentDueBody(amount),
+                    data: {
+                        type: "RENT_DUE_REMINDER",
+                        tenantId: tenantDoc.id,
+                        ownerId,
+                        targetRole: "tenant",
+                        action: "pay_now",
+                        actionLabel: "Pay",
+                        actionRoute: "/tenant/payments",
+                        click_action: "FLUTTER_NOTIFICATION_CLICK",
+                    },
+                };
+                const dispatch = await (0, notificationService_1.sendMulticastWithRetry)(tokenBundle.tokens, payload);
+                await (0, tokenService_1.cleanupInvalidTokens)(tokenBundle.tokenRefs, dispatch.invalidTokens);
+                await Promise.all([
+                    firebase_1.db.collection("messages").doc(eventId).set({
+                        type: "RENT_DUE_REMINDER",
+                        title: payload.title,
+                        body: payload.body,
+                        ownerId,
+                        tenantId: tenantDoc.id,
+                        read: false,
+                        severity: "warning",
+                        createdAt: firebase_1.FieldValue.serverTimestamp(),
+                    }),
+                    (0, notificationService_1.trackNotificationAnalytics)({
+                        userId: tenantUserId,
+                        type: "RENT_DUE_REMINDER",
+                        eventId,
+                        sentCount: dispatch.sentCount,
+                        invalidTokenCount: dispatch.invalidTokens.length,
+                    }),
+                ]);
+                sentCount += dispatch.sentCount;
+                processed += 1;
+            }));
         }
         (0, logger_1.logInfo)("sendRentDueReminders completed", {
             dateKey,

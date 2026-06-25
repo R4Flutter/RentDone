@@ -583,7 +583,9 @@ class _TopBar extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  'C',
+                  summary.tenantName.trim().isEmpty
+                      ? 'T'
+                      : summary.tenantName.trim().substring(0, 1).toUpperCase(),
                   style: TextStyle(
                     color: AppColors.white,
                     fontSize: 12,

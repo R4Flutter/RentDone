@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rentdone/app/app_theme.dart';
@@ -188,126 +186,116 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
     final textPrimary = OwnerDashboardColors.textPrimary(context);
     final elevated = OwnerDashboardColors.elevatedBackground(context);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                brand.withValues(alpha: isDark ? 0.84 : 0.72),
-                brandHover.withValues(alpha: isDark ? 0.9 : 0.78),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            brand.withValues(alpha: isDark ? 0.84 : 0.72),
+            brandHover.withValues(alpha: isDark ? 0.9 : 0.78),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: OwnerDashboardColors.border(
+            context,
+          ).withValues(alpha: isDark ? 0.5 : 0.8),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: elevated.withValues(alpha: isDark ? 0.34 : 0.78),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.workspace_premium_rounded,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Subscription',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Current: ${currentPlan.toUpperCase()} • ${status.toUpperCase()}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: OwnerDashboardColors.textSecondary(context),
+                  ),
+                ),
               ],
             ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: OwnerDashboardColors.border(
-                context,
-              ).withValues(alpha: isDark ? 0.5 : 0.8),
-            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: elevated.withValues(alpha: isDark ? 0.34 : 0.78),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.workspace_premium_rounded,
-                  color: textPrimary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Subscription',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Current: ${currentPlan.toUpperCase()} • ${status.toUpperCase()}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: OwnerDashboardColors.textSecondary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
+
 
   Widget _usageCard(BuildContext context, OwnerSubscriptionData subscription) {
     final theme = Theme.of(context);
     final isDark = OwnerDashboardColors.isDark(context);
     final brand = OwnerDashboardColors.brandPrimary(context);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: OwnerDashboardColors.activityCardBackground(
-              context,
-            ).withValues(alpha: isDark ? 0.78 : 0.9),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: OwnerDashboardColors.activityCardBorder(
-                context,
-              ).withValues(alpha: 0.9),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: OwnerDashboardColors.activityCardBackground(
+          context,
+        ).withValues(alpha: isDark ? 0.78 : 0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: OwnerDashboardColors.activityCardBorder(
+            context,
+          ).withValues(alpha: 0.9),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tenant Usage',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: OwnerDashboardColors.textPrimary(context),
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tenant Usage',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: OwnerDashboardColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: subscription.usageRatio,
-                minHeight: 9,
-                borderRadius: BorderRadius.circular(999),
-                backgroundColor: brand.withValues(alpha: 0.18),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  OwnerDashboardColors.brandPrimaryHover(context),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${subscription.currentTenantCount} of ${subscription.tenantLimit} tenants used',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: OwnerDashboardColors.textSecondary(context),
-                ),
-              ),
-            ],
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: subscription.usageRatio,
+            minHeight: 9,
+            borderRadius: BorderRadius.circular(999),
+            backgroundColor: brand.withValues(alpha: 0.18),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              OwnerDashboardColors.brandPrimaryHover(context),
+            ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            '${subscription.currentTenantCount} of ${subscription.tenantLimit} tenants used',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: OwnerDashboardColors.textSecondary(context),
+            ),
+          ),
+        ],
       ),
     );
   }
+
 
   Widget _planCard(
     BuildContext context, {
@@ -321,79 +309,73 @@ class OwnerSubscriptionScreen extends ConsumerWidget {
     final brand = OwnerDashboardColors.brandPrimary(context);
     final brandHover = OwnerDashboardColors.brandPrimaryHover(context);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isCurrent
-                ? brand.withValues(alpha: isDark ? 0.22 : 0.14)
-                : OwnerDashboardColors.cardBackground(
-                    context,
-                  ).withValues(alpha: isDark ? 0.76 : 0.9),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isCurrent
-                  ? brandHover
-                  : OwnerDashboardColors.border(context).withValues(alpha: 0.9),
-              width: isCurrent ? 1.5 : 1,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isCurrent
+            ? brand.withValues(alpha: isDark ? 0.22 : 0.14)
+            : OwnerDashboardColors.cardBackground(
+                context,
+              ).withValues(alpha: isDark ? 0.76 : 0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isCurrent
+              ? brandHover
+              : OwnerDashboardColors.border(context).withValues(alpha: 0.9),
+          width: isCurrent ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            plan.title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: OwnerDashboardColors.textPrimary(context),
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                plan.title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: OwnerDashboardColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                plan.description,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: OwnerDashboardColors.textSecondary(context),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                plan.monthlyPrice == 0
-                    ? 'Free'
-                    : 'Rs ${plan.monthlyPrice}/month',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: brandHover,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Limit: ${plan.tenantLimit} tenants',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: OwnerDashboardColors.textSecondary(context),
-                ),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                height: 40,
-                child: FilledButton(
-                  onPressed: isCurrent ? null : onSelect,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: brandHover,
-                    disabledBackgroundColor: brandHover.withValues(alpha: 0.45),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(isCurrent ? 'Current Plan' : 'Select Plan'),
-                ),
-              ),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            plan.description,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: OwnerDashboardColors.textSecondary(context),
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+          Text(
+            plan.monthlyPrice == 0
+                ? 'Free'
+                : 'Rs ${plan.monthlyPrice}/month',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: brandHover,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Limit: ${plan.tenantLimit} tenants',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: OwnerDashboardColors.textSecondary(context),
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 40,
+            child: FilledButton(
+              onPressed: isCurrent ? null : onSelect,
+              style: FilledButton.styleFrom(
+                backgroundColor: brandHover,
+                disabledBackgroundColor: brandHover.withValues(alpha: 0.45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(isCurrent ? 'Current Plan' : 'Select Plan'),
+            ),
+          ),
+        ],
       ),
     );
   }

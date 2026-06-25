@@ -376,7 +376,7 @@ class _TenantPaymentHistoryScreenState
                 ),
                 const SizedBox(height: 16),
                 if (_isLoading)
-                  const Center(child: CircularProgressIndicator())
+                  const _HistorySkeletonLoader()
                 else if (_error != null && _items.isEmpty)
                   _HistoryError(message: _error!, onRetry: _loadInitial)
                 else if (_items.isEmpty)
@@ -386,7 +386,13 @@ class _TenantPaymentHistoryScreenState
                 if (_isLoadingMore)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      ),
+                    ),
                   ),
                 if (_loadMoreError != null && _items.isNotEmpty)
                   Padding(
@@ -431,9 +437,11 @@ class _TenantPaymentHistoryScreenState
 
       for (final record in monthRecords) {
         widgets.add(
-          PaymentHistoryCard(
-            payment: record,
-            onStatusChanged: _updatePaymentStatus,
+          RepaintBoundary(
+            child: PaymentHistoryCard(
+              payment: record,
+              onStatusChanged: _updatePaymentStatus,
+            ),
           ),
         );
         widgets.add(const SizedBox(height: 10));
@@ -595,3 +603,124 @@ class _EmptyHistory extends StatelessWidget {
     );
   }
 }
+
+/// Shimmer skeleton loader for payment history initial load.
+class _HistorySkeletonLoader extends StatefulWidget {
+  const _HistorySkeletonLoader();
+
+  @override
+  State<_HistorySkeletonLoader> createState() => _HistorySkeletonLoaderState();
+}
+
+class _HistorySkeletonLoaderState extends State<_HistorySkeletonLoader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final baseColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
+
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (context, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Month header skeleton
+            Opacity(
+              opacity: _opacity.value,
+              child: Container(
+                height: 16,
+                width: 120,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: baseColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+            // Payment card skeletons
+            ...List.generate(4, (index) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Opacity(
+                  opacity: _opacity.value,
+                  child: Container(
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: baseColor,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              height: 14,
+                              width: 100,
+                              decoration: BoxDecoration(
+                                color: baseColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            Container(
+                              height: 22,
+                              width: 60,
+                              decoration: BoxDecoration(
+                                color: baseColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Container(
+                              height: 10,
+                              width: 160,
+                              decoration: BoxDecoration(
+                                color: baseColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+}
+

@@ -42,10 +42,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             _Header(initialTenantName: widget.initialTenantName),
             const SizedBox(height: 16),
             propertiesAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.only(top: 100),
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              loading: () => const _PaymentSkeletonLoader(),
               error: (error, _) => _ErrorState(
                 message: error.toString(),
                 onRetry: () => ref.invalidate(ownerPaymentPropertiesProvider),
@@ -78,15 +75,17 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                 return Column(
                   children: [
                     for (final property in properties) ...[
-                      PropertyCard(
-                        property: property,
-                        onTap: () {
-                          context.goNamed(
-                            'ownerPaymentTenants',
-                            pathParameters: {'propertyId': property.id},
-                            queryParameters: {'propertyName': property.name},
-                          );
-                        },
+                      RepaintBoundary(
+                        child: PropertyCard(
+                          property: property,
+                          onTap: () {
+                            context.goNamed(
+                              'ownerPaymentTenants',
+                              pathParameters: {'propertyId': property.id},
+                              queryParameters: {'propertyName': property.name},
+                            );
+                          },
+                        ),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -181,6 +180,109 @@ class _EmptyProperties extends StatelessWidget {
           Text('No properties found for this owner.'),
         ],
       ),
+    );
+  }
+}
+
+/// Shimmer skeleton loader shown while payment data loads.
+/// Shows 3 placeholder cards with a pulse animation for perceived instant loading.
+class _PaymentSkeletonLoader extends StatefulWidget {
+  const _PaymentSkeletonLoader();
+
+  @override
+  State<_PaymentSkeletonLoader> createState() => _PaymentSkeletonLoaderState();
+}
+
+class _PaymentSkeletonLoaderState extends State<_PaymentSkeletonLoader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = OwnerDashboardColors.isDark(context);
+    final baseColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
+
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (context, _) {
+        return Column(
+          children: List.generate(3, (index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Opacity(
+                opacity: _opacity.value,
+                child: Container(
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: baseColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: baseColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              height: 14,
+                              width: 140,
+                              decoration: BoxDecoration(
+                                color: baseColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              height: 10,
+                              width: 200,
+                              decoration: BoxDecoration(
+                                color: baseColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

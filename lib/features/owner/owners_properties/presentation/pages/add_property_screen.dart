@@ -706,6 +706,20 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
       isPublished: isPublished,
     );
 
+    // BUG-03 fix: Validate rooms count vs totalRooms
+    if (property.rooms.length != property.totalRooms) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Room count mismatch! Expected ${property.totalRooms} but got ${property.rooms.length}.',
+          ),
+          backgroundColor: AppColors.red,
+        ),
+      );
+      return;
+    }
+
     try {
       if (activeProperty != null) {
         await ref.read(updatePropertyUseCaseProvider)(property);

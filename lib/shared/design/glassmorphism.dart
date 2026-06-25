@@ -37,6 +37,7 @@ class GlassContainer extends StatelessWidget {
   final double opacity;
   final VoidCallback? onTap;
   final Gradient? gradient;
+  final bool useBlur;
 
   const GlassContainer({
     super.key,
@@ -50,6 +51,7 @@ class GlassContainer extends StatelessWidget {
     this.opacity = GlassmorphismConfig.glassOpacity,
     this.onTap,
     this.gradient,
+    this.useBlur = true,
   });
 
   @override
@@ -60,35 +62,43 @@ class GlassContainer extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.2)
         : Colors.black.withValues(alpha: 0.15);
 
+    Widget content = Container(
+      decoration: BoxDecoration(
+        gradient:
+            gradient ??
+            LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                (glassColor ?? defaultColor).withValues(alpha: opacity),
+                (glassColor ?? defaultColor).withValues(
+                  alpha: opacity * 0.5,
+                ),
+              ],
+            ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: borderColor ?? defaultBorderColor,
+          width: borderWidth,
+        ),
+      ),
+      padding: padding,
+      child: child,
+    );
+
+    if (useBlur) {
+      content = BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
+        child: content,
+      );
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: RepaintBoundary(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(borderRadius),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient:
-                    gradient ??
-                    LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        (glassColor ?? defaultColor).withValues(alpha: opacity),
-                        (glassColor ?? defaultColor).withValues(alpha: opacity * 0.5),
-                      ],
-                    ),
-                borderRadius: BorderRadius.circular(borderRadius),
-                border: Border.all(
-                  color: borderColor ?? defaultBorderColor,
-                  width: borderWidth,
-                ),
-              ),
-              padding: padding,
-              child: child,
-            ),
-          ),
+          child: content,
         ),
       ),
     );
@@ -103,6 +113,7 @@ class GlassCard extends StatelessWidget {
   final double? elevation;
   final EdgeInsets? margin;
   final EdgeInsets? padding;
+  final bool useBlur;
 
   const GlassCard({
     super.key,
@@ -112,6 +123,7 @@ class GlassCard extends StatelessWidget {
     this.elevation = 0,
     this.margin,
     this.padding,
+    this.useBlur = true,
   });
 
   @override
@@ -127,6 +139,7 @@ class GlassCard extends StatelessWidget {
           ? Colors.white.withValues(alpha: 0.15)
           : Colors.black.withValues(alpha: 0.08),
       onTap: onTap,
+      useBlur: useBlur,
       child: child,
     );
   }
@@ -266,6 +279,8 @@ class GlassButton extends StatelessWidget {
   final double? width;
   final EdgeInsets? padding;
   final TextStyle? textStyle;
+  final Color? glassColor;
+  final double? opacity;
 
   const GlassButton({
     super.key,
@@ -277,6 +292,8 @@ class GlassButton extends StatelessWidget {
     this.width,
     this.padding,
     this.textStyle,
+    this.glassColor,
+    this.opacity,
   });
 
   @override
@@ -287,12 +304,13 @@ class GlassButton extends StatelessWidget {
     return SizedBox(
       width: width,
       child: GlassContainer(
-        glassColor: isPrimary
-            ? primaryColor
-            : (isDark ? Colors.white : Colors.black),
+        glassColor: glassColor ??
+            (isPrimary
+                ? primaryColor
+                : (isDark ? Colors.white : Colors.black)),
         borderRadius: GlassmorphismConfig.borderRadiusMedium,
         blurAmount: GlassmorphismConfig.blurAmount,
-        opacity: isPrimary ? 0.2 : GlassmorphismConfig.cardOpacity,
+        opacity: opacity ?? (isPrimary ? 0.2 : GlassmorphismConfig.cardOpacity),
         padding: padding ?? const EdgeInsets.symmetric(vertical: 12),
         onTap: isLoading ? null : onPressed,
         child: Row(
@@ -396,8 +414,8 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                   : null),
           backgroundColor:
               backgroundColor ??
-              (isDark ? Colors.white : Colors.black).withValues(alpha: 
-                GlassmorphismConfig.glassOpacity,
+              (isDark ? Colors.white : Colors.black).withValues(
+                alpha: GlassmorphismConfig.glassOpacity,
               ),
           elevation: elevation ?? 0,
           automaticallyImplyLeading: false,
@@ -463,8 +481,8 @@ class GlassBottomSheet extends StatelessWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 
-                GlassmorphismConfig.glassOpacity,
+              color: (isDark ? Colors.white : Colors.black).withValues(
+                alpha: GlassmorphismConfig.glassOpacity,
               ),
               border: Border(
                 top: BorderSide(
@@ -573,4 +591,3 @@ extension GlassText on TextStyle {
     );
   }
 }
-

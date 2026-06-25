@@ -2,22 +2,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rentdone/core/trust/tenant_trust_score.dart';
+import 'package:rentdone/core/exceptions/security_exceptions.dart';
 import 'package:rentdone/features/owner/owner_payment/domain/exceptions/payment_exceptions.dart';
 
 class PaymentWriteService {
   final FirebaseFirestore _firestore;
   final FirebaseFunctions _functionsAsia;
-  final FirebaseFunctions _functionsUs;
   final FirebaseAuth _auth;
 
   PaymentWriteService({
     FirebaseFirestore? firestore,
     FirebaseFunctions? functionsAsia,
-    FirebaseFunctions? functionsUs,
     FirebaseAuth? auth,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _functionsAsia = functionsAsia ?? FirebaseFunctions.instanceFor(region: 'asia-south1'),
-       _functionsUs = functionsUs ?? FirebaseFunctions.instanceFor(region: 'us-central1'),
+       _functionsAsia = functionsAsia ??
+           FirebaseFunctions.instanceFor(region: 'asia-south1'),
        _auth = auth ?? FirebaseAuth.instance;
 
   static const int _maxPaymentAmount = 5000000;
@@ -50,6 +49,7 @@ class PaymentWriteService {
     required String method,
     String? transactionId,
   }) async {
+    final uid = _currentUserIdOrThrow();
     final paymentRef = _firestore.collection('payments').doc(paymentId);
     final paidAt = DateTime.now();
 
@@ -60,6 +60,13 @@ class PaymentWriteService {
       }
 
       final paymentData = paymentDoc.data() ?? <String, dynamic>{};
+
+      // SECURITY: Verify that the current user is the owner of this payment
+      final ownerId = (paymentData['ownerId'] as String? ?? '').trim();
+      if (ownerId != uid) {
+        throw UnauthorizedException('Unauthorized payment update attempt.');
+      }
+
       final priorStatus = (paymentData['status'] as String? ?? '')
           .trim()
           .toLowerCase();
@@ -143,7 +150,7 @@ class PaymentWriteService {
         'dueDate': Timestamp.fromDate(dueDate),
         'paymentDate': Timestamp.fromDate(paidAt),
         'createdAt': FieldValue.serverTimestamp(),
-        'ownerId': _auth.currentUser?.uid,
+        'ownerId': uid,
       });
     });
   }
@@ -227,7 +234,7 @@ class PaymentWriteService {
       if (e.code == 'already-exists') {
         throw PaymentStorageException.custom('Duplicate payment blocked');
       }
-      throw PaymentStorageException.write(null);
+      throw PaymentStorageException.write(e);
     }
   }
 
@@ -271,7 +278,7 @@ class PaymentWriteService {
           e.message ?? 'invalid',
         );
       }
-      throw PaymentStorageException.update(null);
+      throw PaymentStorageException.update(e);
     }
   }
 
@@ -297,7 +304,7 @@ class PaymentWriteService {
     );
 
     try {
-      final verifyCallable = _functionsUs.httpsCallable('verifyPayment');
+      final verifyCallable = _functionsAsia.httpsCallable('verifyPayment');
       await verifyCallable.call({
         'paymentId': paymentId,
         'razorpayPaymentId': transactionId.trim(),

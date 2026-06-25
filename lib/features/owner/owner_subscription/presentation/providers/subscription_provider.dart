@@ -340,6 +340,8 @@ final ownerSubscriptionServiceProvider = Provider<OwnerSubscriptionService>((
 
 /// Provider for owner subscription data
 final subscriptionProvider = FutureProvider<OwnerSubscriptionData>((ref) async {
+  // Keep alive to avoid re-fetching on every screen visit.
+  ref.keepAlive();
   final auth = ref.watch(firebaseAuthProvider);
   final ownerId = auth.currentUser?.uid;
   if (ownerId == null || ownerId.isEmpty) {
@@ -359,6 +361,7 @@ final subscriptionProvider = FutureProvider<OwnerSubscriptionData>((ref) async {
   final service = ref.watch(ownerSubscriptionServiceProvider);
   return service.getOwnerSubscription(ownerId: ownerId, email: email);
 });
+
 
 /// Provider for active tenant count
 final tenantListProvider = FutureProvider<int>((ref) async {

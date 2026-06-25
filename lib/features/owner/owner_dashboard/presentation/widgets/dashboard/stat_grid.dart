@@ -42,7 +42,7 @@ class StatsGrid extends StatelessWidget {
       ),
       StatCard(
         title: 'Collected',
-        value: '\u20B9${_formatInr(summary.collectedAmount)}',
+        value: '₹${_formatInr(summary.collectedAmount)}',
         subtitle: '$monthLabel - ${summary.collectedPayments} payments',
         icon: Icons.check_circle_rounded,
         tone: OwnerDashboardColors.collectedTone(context),
@@ -50,7 +50,7 @@ class StatsGrid extends StatelessWidget {
       ),
       StatCard(
         title: 'Pending',
-        value: '\u20B9${_formatInr(summary.pendingAmount)}',
+        value: '₹${_formatInr(summary.pendingAmount)}',
         subtitle: summary.pendingTenants > 0
             ? '$monthLabel - ${summary.pendingTenants} tenants pending'
             : '$monthLabel - ${summary.pendingPayments} dues',

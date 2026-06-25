@@ -43,6 +43,7 @@ class _AddPaymentFormState extends State<AddPaymentForm> {
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+  final _amountNotifier = ValueNotifier<int>(0);
 
   DateTime _selectedDate = DateTime.now();
   String _selectedMethod = 'UPI';
@@ -57,6 +58,15 @@ class _AddPaymentFormState extends State<AddPaymentForm> {
     super.initState();
     _calculateCarryForward();
     _initializeAmount();
+    _amountNotifier.value = _enteredAmount;
+    _amountCtrl.addListener(_onAmountChanged);
+  }
+
+  void _onAmountChanged() {
+    final val = int.tryParse(_amountCtrl.text.trim()) ?? 0;
+    if (_amountNotifier.value != val) {
+      _amountNotifier.value = val;
+    }
   }
 
   void _calculateCarryForward() {
@@ -101,11 +111,6 @@ class _AddPaymentFormState extends State<AddPaymentForm> {
     }
     if (widget.rentAmount > 0) return widget.rentAmount;
     return _enteredAmount;
-  }
-
-  int _remainingAfterPartial() {
-    final next = _baseForStatus() - _enteredAmount;
-    return next < 0 ? 0 : next;
   }
 
   @override
@@ -206,7 +211,6 @@ class _AddPaymentFormState extends State<AddPaymentForm> {
                 TextFormField(
                   controller: _amountCtrl,
                   keyboardType: TextInputType.number,
-                  onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     labelText: _selectedStatus == 'unpaid'
                         ? 'Rent Amount Due'
@@ -233,38 +237,48 @@ class _AddPaymentFormState extends State<AddPaymentForm> {
                 ),
                 if (_selectedStatus == 'partial') ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: OwnerDashboardColors.border(context),
-                      ),
-                      color: brandColor.withValues(alpha: isDark ? 0.08 : 0.05),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _calcRow(
-                          'Base Rent',
-                          'Rs ${_baseForStatus()}',
-                          textSecondary,
+                  ValueListenableBuilder<int>(
+                    valueListenable: _amountNotifier,
+                    builder: (context, enteredAmount, _) {
+                      final base = _baseForStatus();
+                      final remaining = (base - enteredAmount).clamp(0, base);
+
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: OwnerDashboardColors.border(context),
+                          ),
+                          color: brandColor.withValues(
+                            alpha: isDark ? 0.08 : 0.05,
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        _calcRow(
-                          'Paying Now',
-                          'Rs $_enteredAmount',
-                          brandColor,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _calcRow(
+                              'Base Rent',
+                              'Rs $base',
+                              textSecondary,
+                            ),
+                            const SizedBox(height: 6),
+                            _calcRow(
+                              'Paying Now',
+                              'Rs $enteredAmount',
+                              brandColor,
+                            ),
+                            const SizedBox(height: 6),
+                            _calcRow(
+                              'Remaining After This',
+                              'Rs $remaining',
+                              AppTheme.warningAmber,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        _calcRow(
-                          'Remaining After This',
-                          'Rs ${_remainingAfterPartial()}',
-                          AppTheme.warningAmber,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
                 const SizedBox(height: 14),

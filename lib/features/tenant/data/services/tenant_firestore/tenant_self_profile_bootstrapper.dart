@@ -48,5 +48,12 @@ class TenantSelfProfileBootstrapper {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    await firestore.collection('tenants_mapping').doc(uid).set({
+      'tenantId': uid,
+      'ownerId': '',
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

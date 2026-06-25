@@ -173,10 +173,10 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen>
   String _friendlyError(Object error) {
     final message = error.toString().toLowerCase();
     if (message.contains('500kb')) {
-      return 'PDF must be 500KB or less.';
+      return 'PDF must be under 2MB.';
     }
     if (message.contains('200kb')) {
-      return 'Image must compress to 200KB.';
+      return 'Image must be under 2MB.';
     }
     if (message.contains('permission')) {
       return 'Permission denied. Sign in again and retry.';
@@ -406,7 +406,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen>
                 _UploadActionTile(
                   icon: Icons.picture_as_pdf_rounded,
                   title: 'Upload PDF',
-                  subtitle: 'Will be accepted up to 500KB',
+                  subtitle: 'Up to 2MB',
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
                     await _uploadPdf(tenantId, category);
@@ -415,7 +415,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen>
                 _UploadActionTile(
                   icon: Icons.photo_library_rounded,
                   title: 'Choose Image',
-                  subtitle: 'Will compress to 200KB',
+                  subtitle: 'Will compress automatically',
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
                     await _uploadFromGallery(tenantId, category);
@@ -424,7 +424,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen>
                 _UploadActionTile(
                   icon: Icons.photo_camera_rounded,
                   title: 'Capture Photo',
-                  subtitle: 'Will compress to 200KB',
+                  subtitle: 'Will compress automatically',
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
                     await _captureCamera(tenantId, category);

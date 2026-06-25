@@ -60,25 +60,35 @@ class AppLogger {
     }
     /**
      * Remove sensitive fields like tokens, secrets, or full payment payloads from logs.
+     * Uses a safe recursive approach to avoid JSON.parse(JSON.stringify) risks.
      */
-    static sanitize(data) {
-        if (!data)
+    static sanitize(data, seen = new WeakSet()) {
+        if (data === null || data === undefined)
             return undefined;
-        const sensitiveKeys = ["token", "fcmToken", "secret", "password", "razorpay_secret", "signature"];
-        const sanitized = JSON.parse(JSON.stringify(data));
-        const walk = (obj) => {
-            if (!obj || typeof obj !== "object")
-                return;
-            for (const key in obj) {
-                if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
-                    obj[key] = "[REDACTED]";
+        if (typeof data !== "object")
+            return data;
+        if (data instanceof Date)
+            return data.toISOString();
+        // Prevent circular reference crashes
+        if (seen.has(data))
+            return "[Circular]";
+        seen.add(data);
+        const sensitiveKeys = ["token", "fcmtoken", "secret", "password", "key_secret", "signature"];
+        if (Array.isArray(data)) {
+            return data.map(item => this.sanitize(item, seen));
+        }
+        const sanitized = {};
+        for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                const lowerKey = key.toLowerCase();
+                if (sensitiveKeys.some(s => lowerKey.includes(s))) {
+                    sanitized[key] = "[REDACTED]";
                 }
-                else if (typeof obj[key] === "object") {
-                    walk(obj[key]);
+                else {
+                    sanitized[key] = this.sanitize(data[key], seen);
                 }
             }
-        };
-        walk(sanitized);
+        }
         return sanitized;
     }
 }

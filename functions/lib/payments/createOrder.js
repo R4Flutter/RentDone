@@ -1,7 +1,41 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createRazorpayOrder = void 0;
 const https_1 = require("firebase-functions/v2/https");
+const functions = __importStar(require("firebase-functions"));
 const firebase_1 = require("../utils/firebase");
 const logger_1 = require("../shared/logger");
 const paymentUtils_1 = require("./paymentUtils");
@@ -36,17 +70,28 @@ exports.createRazorpayOrder = (0, https_1.onCall)({
         if (paymentData?.status === "paid") {
             throw new https_1.HttpsError("failed-precondition", "Payment is already completed");
         }
+        // 1. Idempotency Check: Return existing order if already created
+        if (paymentData?.razorpayOrderId) {
+            logger_1.AppLogger.info("Returning existing Razorpay order", { paymentId, orderId: paymentData.razorpayOrderId });
+            return {
+                orderId: paymentData.razorpayOrderId,
+                keyId: paymentData.razorpayKeyId || functions.config().razorpay.key_id,
+                amount: paymentData.totalPayablePaise || paymentData.amount,
+                currency: "INR",
+            };
+        }
         const baseAmount = Number(paymentData?.baseAmount || paymentData?.amount);
         const config = await (0, paymentUtils_1.loadPaymentFeeConfig)("razorpay");
         const breakdown = (0, paymentUtils_1.calculateFeeBreakdownInPaise)({
             rentAmountInRupees: baseAmount,
             config,
         });
-        // Fetch Razorpay credentials from environment/config
-        const keyId = process.env.RAZORPAY_KEY_ID || "";
-        const keySecret = process.env.RAZORPAY_KEY_SECRET || "";
+        // 2. Secure Secrets: Fetch Razorpay credentials from Firebase config
+        const razorConfig = functions.config().razorpay;
+        const keyId = razorConfig?.key_id || "";
+        const keySecret = razorConfig?.key_secret || "";
         if (!keyId || !keySecret) {
-            logger_1.AppLogger.error("Razorpay credentials missing in environment");
+            logger_1.AppLogger.error("Razorpay credentials missing in functions config");
             throw new https_1.HttpsError("internal", "Payment gateway misconfigured");
         }
         const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");

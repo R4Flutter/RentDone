@@ -2,11 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/core/constants/user_role.dart';
 import 'package:rentdone/features/auth/presentation/providers/auth_provider.dart';
-import 'package:rentdone/features/auth/presentation/pages/phone_capture_screen_v2.dart';
+import 'package:rentdone/features/auth/presentation/widgets/auth_aurora_background.dart';
 
 class SignupPageV2 extends ConsumerStatefulWidget {
   const SignupPageV2({
@@ -28,7 +27,7 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
   late final TextEditingController _passCtrl;
   late final TextEditingController _confirmCtrl;
   late final AnimationController _bgCtrl;
-  late final AnimationController _pulseCtrl;
+  late final AnimationController _entryCtrl;
 
   bool _obscurePass = true;
   bool _obscureConfirm = true;
@@ -36,7 +35,8 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
   bool _passFocus = false;
   bool _confirmFocus = false;
 
-  static const _brand = AppTheme.darkPrimaryBlue;
+  static const _brand = AppTheme.primaryBlue;
+  static const _brandDark = AppTheme.primaryHoverBlue;
 
   @override
   void initState() {
@@ -44,8 +44,12 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
     _emailCtrl = TextEditingController();
     _passCtrl = TextEditingController();
     _confirmCtrl = TextEditingController();
-    _bgCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 20))..repeat();
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat(reverse: true);
+    _bgCtrl = AnimationController(
+        vsync: this, duration: const Duration(seconds: 20))
+      ..repeat();
+    _entryCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900))
+      ..forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final n = ref.read(authProvider.notifier);
@@ -57,7 +61,7 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
   @override
   void dispose() {
     _bgCtrl.dispose();
-    _pulseCtrl.dispose();
+    _entryCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
@@ -73,32 +77,13 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          AuthMeshBackground(controller: _bgCtrl, isDark: isDark),
+          AuthAuroraBackground(controller: _bgCtrl, isDark: isDark),
           SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Column(
-                    children: [
-                      _buildHeader(isDark)
-                          .animate()
-                          .fadeIn(duration: 700.ms)
-                          .slideY(begin: -0.3, end: 0, curve: Curves.easeOutCubic),
-                      const SizedBox(height: 24),
-                      _buildCard(isDark, auth)
-                          .animate()
-                          .fadeIn(delay: 150.ms, duration: 600.ms)
-                          .scale(begin: const Offset(0.96, 0.96), curve: Curves.easeOutCubic),
-                      const SizedBox(height: 20),
-                      _buildFooter(isDark)
-                          .animate()
-                          .fadeIn(delay: 1100.ms),
-                    ],
-                  ),
-                ),
-              ),
+            child: Column(
+              children: [
+                _buildHeader(isDark),
+                Expanded(child: _buildGlassCard(isDark, auth)),
+              ],
             ),
           ),
         ],
@@ -107,260 +92,348 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
   }
 
   Widget _buildHeader(bool isDark) {
-    return Column(
-      children: [
-        AnimatedBuilder(
-          animation: _pulseCtrl,
-          builder: (_, child) => Container(
-            width: 84,
-            height: 84,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [_brand, Color(0xFF2563EB)],
+    final isOwner = widget.selectedRole == UserRole.owner;
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.24,
+      child: FadeTransition(
+        opacity: CurvedAnimation(
+            parent: _entryCtrl, curve: const Interval(0.0, 0.45)),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            _buildChip(isOwner),
+            const Spacer(),
+            const Text(
+              'Create Account',
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: -0.5,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: _brand.withValues(alpha: 0.15 + 0.10 * _pulseCtrl.value),
-                  blurRadius: 28 + 14 * _pulseCtrl.value,
-                  spreadRadius: 4,
-                ),
-              ],
             ),
-            child: child,
-          ),
-          child: const Icon(Icons.person_add_rounded, color: Colors.white, size: 40),
-        ),
-        const SizedBox(height: 14),
-        ShaderMask(
-          shaderCallback: (b) => const LinearGradient(
-            colors: [_brand, Color(0xFF60A5FA), Color(0xFF2563EB)],
-          ).createShader(b),
-          child: const Text(
-            'RENTDONE',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 4.5),
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          'Create your account',
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.white.withValues(alpha: isDark ? 0.50 : 0.55),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCard(bool isDark, dynamic auth) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? [Colors.white.withValues(alpha: 0.08), Colors.white.withValues(alpha: 0.04)]
-                  : [Colors.white.withValues(alpha: 0.88), Colors.white.withValues(alpha: 0.72)],
+            const SizedBox(height: 8),
+            Text(
+              'Join thousands managing rent the smart way',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withValues(alpha: 0.70),
+              ),
             ),
-            border: Border.all(color: _brand.withValues(alpha: isDark ? 0.25 : 0.15), width: 1.5),
-            boxShadow: [
-              BoxShadow(color: _brand.withValues(alpha: isDark ? 0.12 : 0.08), blurRadius: 40, offset: const Offset(0, 16)),
-            ],
-          ),
-          padding: const EdgeInsets.all(26),
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildCardTitle(isDark),
-                const SizedBox(height: 20),
-                _buildPhoneBadge(isDark),
-                const SizedBox(height: 20),
-                _buildField(
-                  controller: _emailCtrl,
-                  label: 'Email Address',
-                  icon: Icons.alternate_email_rounded,
-                  keyboard: TextInputType.emailAddress,
-                  validator: (v) {
-                    final s = (v ?? '').trim();
-                    if (s.isEmpty) return 'Email is required';
-                    // BUG-06 fix: proper email regex
-                    final emailRegex = RegExp(
-                      r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$',
-                    );
-                    if (!emailRegex.hasMatch(s)) return 'Enter a valid email address';
-                    return null;
-                  },
-                  isDark: isDark,
-                  hasFocus: _emailFocus,
-                  onFocusChange: (f) => setState(() => _emailFocus = f),
-                ).animate().fadeIn(delay: 400.ms).slideX(begin: -0.08),
-                const SizedBox(height: 14),
-                _buildField(
-                  controller: _passCtrl,
-                  label: 'Password',
-                  icon: Icons.lock_outline_rounded,
-                  obscure: _obscurePass,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Password is required';
-                    if (v.length < 6) return 'At least 6 characters';
-                    return null;
-                  },
-                  isDark: isDark,
-                  hasFocus: _passFocus,
-                  onFocusChange: (f) => setState(() => _passFocus = f),
-                  suffix: IconButton(
-                    icon: Icon(_obscurePass ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                        size: 20, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                    onPressed: () => setState(() => _obscurePass = !_obscurePass),
-                  ),
-                ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.08),
-                const SizedBox(height: 14),
-                _buildField(
-                  controller: _confirmCtrl,
-                  label: 'Confirm Password',
-                  icon: Icons.shield_outlined,
-                  obscure: _obscureConfirm,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please confirm your password';
-                    if (v != _passCtrl.text) return 'Passwords do not match';
-                    return null;
-                  },
-                  isDark: isDark,
-                  hasFocus: _confirmFocus,
-                  onFocusChange: (f) => setState(() => _confirmFocus = f),
-                  suffix: IconButton(
-                    icon: Icon(_obscureConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                        size: 20, color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                    onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
-                  ),
-                ).animate().fadeIn(delay: 600.ms).slideX(begin: -0.08),
-                const SizedBox(height: 20),
-                _buildStrengthIndicator(isDark).animate().fadeIn(delay: 650.ms),
-                const SizedBox(height: 20),
-                if (auth.errorMessage != null) ...[
-                  _buildError(auth.errorMessage!).animate().shake(duration: 400.ms),
-                  const SizedBox(height: 14),
-                ],
-                _buildSignUpButton(auth.isLoading)
-                    .animate()
-                    .fadeIn(delay: 750.ms)
-                    .scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOutBack),
-                const SizedBox(height: 20),
-                _buildDivider(isDark).animate().fadeIn(delay: 850.ms),
-                const SizedBox(height: 20),
-                _buildGoogleButton(isDark, auth.isLoading)
-                    .animate()
-                    .fadeIn(delay: 950.ms)
-                    .slideY(begin: 0.1),
-              ],
-            ),
-          ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildCardTitle(bool isDark) {
-    final textColor = isDark ? Colors.white : AppTheme.lightTextPrimary;
-    final sub = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: _brand.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.person_add_alt_1_rounded, color: _brand, size: 20),
+  Widget _buildChip(bool isOwner) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+            color: Colors.white.withValues(alpha: 0.20), width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+              isOwner ? Icons.domain_rounded : Icons.home_rounded,
+              size: 16,
+              color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            isOwner ? 'Owner' : 'Tenant',
+            style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: Colors.white,
+                letterSpacing: 0.3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassCard(bool isDark, dynamic auth) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+          parent: _entryCtrl, curve: const Interval(0.15, 0.65)),
+      child: SlideTransition(
+        position: Tween(begin: const Offset(0, 0.06), end: Offset.zero)
+            .animate(CurvedAnimation(
+                parent: _entryCtrl,
+                curve:
+                    const Interval(0.15, 0.65, curve: Curves.easeOutCubic))),
+        child: ClipRRect(
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppTheme.darkCard.withValues(alpha: 0.78)
+                    : Colors.white.withValues(alpha: 0.86),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border.all(
+                  color: _brand.withValues(alpha: isDark ? 0.14 : 0.10),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _brand
+                        .withValues(alpha: isDark ? 0.10 : 0.06),
+                    blurRadius: 44,
+                    offset: const Offset(0, 18),
+                  ),
+                  BoxShadow(
+                    color:
+                        Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(28, 32, 28, 36),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildPhoneBadge(isDark),
+                      const SizedBox(height: 22),
+                      _buildGoogleButton(isDark, auth.isLoading),
+                      const SizedBox(height: 18),
+                      _buildDivider(isDark),
+                      const SizedBox(height: 18),
+                      _buildField(
+                        controller: _emailCtrl,
+                        label: 'Email Address',
+                        icon: Icons.alternate_email_rounded,
+                        keyboard: TextInputType.emailAddress,
+                        validator: (v) {
+                          final s = (v ?? '').trim();
+                          if (s.isEmpty) return 'Email is required';
+                          if (!RegExp(
+                                  r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+                              .hasMatch(s)) return 'Enter a valid email';
+                          return null;
+                        },
+                        isDark: isDark,
+                        hasFocus: _emailFocus,
+                        onFocusChange: (f) =>
+                            setState(() => _emailFocus = f),
+                      ),
+                      const SizedBox(height: 14),
+                      _buildField(
+                        controller: _passCtrl,
+                        label: 'Password',
+                        icon: Icons.lock_outline_rounded,
+                        obscure: _obscurePass,
+                        validator: (v) {
+                          if (v == null || v.isEmpty)
+                            return 'Password is required';
+                          if (v.length < 6)
+                            return 'At least 6 characters';
+                          return null;
+                        },
+                        isDark: isDark,
+                        hasFocus: _passFocus,
+                        onFocusChange: (f) =>
+                            setState(() => _passFocus = f),
+                        suffix: IconButton(
+                          icon: Icon(
+                            _obscurePass
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                            size: 20,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                          onPressed: () =>
+                              setState(() => _obscurePass = !_obscurePass),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildStrengthIndicator(isDark),
+                      const SizedBox(height: 14),
+                      _buildField(
+                        controller: _confirmCtrl,
+                        label: 'Confirm Password',
+                        icon: Icons.shield_outlined,
+                        obscure: _obscureConfirm,
+                        validator: (v) {
+                          if (v == null || v.isEmpty)
+                            return 'Please confirm your password';
+                          if (v != _passCtrl.text)
+                            return 'Passwords do not match';
+                          return null;
+                        },
+                        isDark: isDark,
+                        hasFocus: _confirmFocus,
+                        onFocusChange: (f) =>
+                            setState(() => _confirmFocus = f),
+                        suffix: IconButton(
+                          icon: Icon(
+                            _obscureConfirm
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                            size: 20,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                          onPressed: () => setState(
+                              () => _obscureConfirm = !_obscureConfirm),
+                        ),
+                      ),
+                      if (auth.errorMessage != null) ...[
+                        const SizedBox(height: 14),
+                        _buildError(auth.errorMessage!),
+                      ],
+                      const SizedBox(height: 18),
+                      _buildSignUpButton(auth.isLoading),
+                      const SizedBox(height: 24),
+                      _buildFooter(isDark),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(width: 10),
-            Text('Create Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
-          ],
-        ).animate().fadeIn(delay: 200.ms).moveY(begin: 8, end: 0),
-        const SizedBox(height: 5),
-        Text('Join thousands of happy users', style: TextStyle(fontSize: 13, color: sub), textAlign: TextAlign.center)
-            .animate()
-            .fadeIn(delay: 300.ms),
-      ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildPhoneBadge(bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: AppTheme.successGreen.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.20)),
+        color: AppTheme.successGreen.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: AppTheme.successGreen.withValues(alpha: 0.16)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.phone_android_rounded, size: 16, color: AppTheme.successGreen),
+          const Icon(Icons.phone_android_rounded,
+              size: 16, color: AppTheme.successGreen),
           const SizedBox(width: 8),
           Text(
-            '+91 ${widget.phoneNumber}  ✓',
-            style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.3),
+            '+91 ${widget.phoneNumber}',
+            style: const TextStyle(
+                color: AppTheme.successGreen,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                letterSpacing: 0.4),
+          ),
+          const SizedBox(width: 6),
+          const Icon(Icons.verified_rounded,
+              size: 14, color: AppTheme.successGreen),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoogleButton(bool isDark, bool loading) {
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.white,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.10)
+              : _brand.withValues(alpha: 0.10),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black
+                .withValues(alpha: isDark ? 0.18 : 0.03),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-    ).animate().fadeIn(delay: 350.ms).scale(begin: const Offset(0.92, 0.92));
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: loading ? null : _onGoogleSignup,
+          borderRadius: BorderRadius.circular(24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (loading)
+                const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        color: _brand, strokeWidth: 2.5))
+              else ...[
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: const BoxDecoration(
+                      shape: BoxShape.circle, color: Color(0xFF4285F4)),
+                  child: const Center(
+                      child: Text('G',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900))),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Sign up with Google',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? Colors.white
+                          : AppTheme.lightTextPrimary),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  Widget _buildStrengthIndicator(bool isDark) {
-    return ListenableBuilder(
-      listenable: _passCtrl,
-      builder: (context, _) {
-        final p = _passCtrl.text;
-        int s = 0;
-        if (p.length >= 6) s++;
-        if (p.length >= 8) s++;
-        if (RegExp(r'[A-Z]').hasMatch(p)) s++;
-        if (RegExp(r'[0-9]').hasMatch(p)) s++;
-
-        if (p.isEmpty) return const SizedBox.shrink();
-        final activeColor = [AppTheme.errorRed, AppTheme.warningAmber, AppTheme.infoBlue, AppTheme.successGreen][s.clamp(0, 3)];
-        final labels = ['Weak', 'Fair', 'Good', 'Strong'];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: List.generate(4, (i) => Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
-                  height: 4,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    // BUG-13 fix: show at least 1 bar for any non-empty password
-                    // so the bar state is consistent with the label/color.
-                    color: i < (s == 0 ? 1 : s)
-                        ? activeColor
-                        : (isDark ? Colors.white.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.08)),
-                  ),
-                ),
-              )),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Password strength: ${labels[s.clamp(0, 3)]}',
-              style: TextStyle(fontSize: 12, color: activeColor, fontWeight: FontWeight.w600),
-            ),
-          ],
-        );
-      },
+  Widget _buildDivider(bool isDark) {
+    final c = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.06);
+    final muted = isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: c, thickness: 1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text('or use email',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                  color: muted)),
+        ),
+        Expanded(child: Divider(color: c, thickness: 1)),
+      ],
     );
   }
 
@@ -379,11 +452,17 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
     return Focus(
       onFocusChange: onFocusChange,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: hasFocus
-              ? [BoxShadow(color: _brand.withValues(alpha: 0.18), blurRadius: 16, offset: const Offset(0, 4))]
+              ? [
+                  BoxShadow(
+                      color: _brand.withValues(alpha: 0.15),
+                      blurRadius: 22,
+                      offset: const Offset(0, 4)),
+                ]
               : [],
         ),
         child: TextFormField(
@@ -391,41 +470,64 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
           obscureText: obscure,
           keyboardType: keyboard,
           validator: validator,
-          style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppTheme.lightTextPrimary),
+          style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : AppTheme.lightTextPrimary),
           decoration: InputDecoration(
             labelText: label,
             labelStyle: TextStyle(
-              color: hasFocus ? _brand : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+              color: hasFocus
+                  ? _brand
+                  : (isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary),
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
-            prefixIcon: Icon(icon, size: 20,
-                color: hasFocus ? _brand : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+            prefixIcon: Icon(icon,
+                size: 22,
+                color: hasFocus
+                    ? _brand
+                    : (isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary)),
             suffixIcon: suffix,
             filled: true,
             fillColor: isDark
-                ? (hasFocus ? _brand.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.05))
-                : (hasFocus ? _brand.withValues(alpha: 0.04) : AppTheme.lightSurface),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                ? (hasFocus
+                    ? _brand.withValues(alpha: 0.06)
+                    : Colors.white.withValues(alpha: 0.04))
+                : (hasFocus
+                    ? _brand.withValues(alpha: 0.03)
+                    : Colors.white.withValues(alpha: 0.65)),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24),
               borderSide: BorderSide(
-                color: isDark ? Colors.white.withValues(alpha: 0.10) : AppTheme.lightBorder,
-                width: 1.5,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : _brand.withValues(alpha: 0.12),
+                width: 1.2,
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: _brand, width: 2.0),
+              borderRadius: BorderRadius.circular(24),
+              borderSide:
+                  const BorderSide(color: _brand, width: 2),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppTheme.errorRed, width: 1.5),
+              borderRadius: BorderRadius.circular(24),
+              borderSide: const BorderSide(
+                  color: AppTheme.errorRed, width: 1.5),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppTheme.errorRed, width: 2.0),
+              borderRadius: BorderRadius.circular(24),
+              borderSide: const BorderSide(
+                  color: AppTheme.errorRed, width: 2),
             ),
           ),
         ),
@@ -433,21 +535,82 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
     );
   }
 
+  Widget _buildStrengthIndicator(bool isDark) {
+    return ListenableBuilder(
+      listenable: _passCtrl,
+      builder: (context, _) {
+        final p = _passCtrl.text;
+        if (p.isEmpty) return const SizedBox.shrink();
+        int s = 0;
+        if (p.length >= 6) s++;
+        if (p.length >= 8) s++;
+        if (RegExp(r'[A-Z]').hasMatch(p)) s++;
+        if (RegExp(r'[0-9]').hasMatch(p)) s++;
+        final activeColor = [
+          AppTheme.errorRed,
+          AppTheme.warningAmber,
+          AppTheme.infoBlue,
+          AppTheme.successGreen
+        ][s.clamp(0, 3)];
+        final labels = ['Weak', 'Fair', 'Good', 'Strong'];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: List.generate(
+                4,
+                (i) => Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(right: i < 3 ? 5 : 0),
+                    height: 4,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(2),
+                      color: i < (s == 0 ? 1 : s)
+                          ? activeColor
+                          : (isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black
+                                  .withValues(alpha: 0.06)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Password strength: ${labels[s.clamp(0, 3)]}',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: activeColor,
+                  fontWeight: FontWeight.w600),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildError(String msg) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: AppTheme.errorRed.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.20)),
+        color: AppTheme.errorRed.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: AppTheme.errorRed.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppTheme.errorRed, size: 18),
-          const SizedBox(width: 10),
+          const Icon(Icons.error_outline_rounded,
+              color: AppTheme.errorRed, size: 18),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(msg, style: const TextStyle(color: AppTheme.errorRed, fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
+              child: Text(msg,
+                  style: const TextStyle(
+                      color: AppTheme.errorRed,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600))),
         ],
       ),
     );
@@ -455,32 +618,49 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
 
   Widget _buildSignUpButton(bool loading) {
     return Container(
-      height: 56,
+      height: 58,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [_brand, Color(0xFF2563EB)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [BoxShadow(color: _brand.withValues(alpha: 0.38), blurRadius: 18, offset: const Offset(0, 8))],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_brand, _brandDark]),
+        boxShadow: [
+          BoxShadow(
+              color: _brand.withValues(alpha: 0.35),
+              blurRadius: 22,
+              offset: const Offset(0, 10)),
+          BoxShadow(
+              color: _brand.withValues(alpha: 0.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: loading ? null : _onSignup,
-          borderRadius: BorderRadius.circular(16),
-          splashColor: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(24),
+          splashColor: Colors.white.withValues(alpha: 0.10),
           child: Center(
             child: loading
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2.5))
                 : const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.person_add_rounded, color: Colors.white, size: 20),
+                      Icon(Icons.person_add_rounded,
+                          color: Colors.white, size: 20),
                       SizedBox(width: 10),
                       Text('Create Account',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5)),
                     ],
                   ),
           ),
@@ -489,75 +669,50 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
     );
   }
 
-  Widget _buildDivider(bool isDark) {
-    final c = isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.10);
-    return Row(
-      children: [
-        Expanded(child: Divider(color: c, thickness: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'OR',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2,
-                color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted),
-          ),
-        ),
-        Expanded(child: Divider(color: c, thickness: 1)),
-      ],
-    );
-  }
-
-  Widget _buildGoogleButton(bool isDark, bool loading) {
-    return Container(
-      height: 54,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.12) : AppTheme.lightBorder,
-          width: 1.5,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: loading ? null : _onGoogleSignup,
-          borderRadius: BorderRadius.circular(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'G',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF4285F4)),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'Sign up with Google',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildFooter(bool isDark) {
-    final sub = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final sub = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final muted =
+        isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted;
+    return Column(
       children: [
-        Text('Already have an account? ', style: TextStyle(color: sub, fontWeight: FontWeight.w500, fontSize: 14)),
-        GestureDetector(
-          onTap: () => context.go('/login?role=${widget.selectedRole.name}&phone=${widget.phoneNumber}'),
-          child: const Text(
-            'Sign In',
-            style: TextStyle(color: _brand, fontWeight: FontWeight.w800, fontSize: 14, decoration: TextDecoration.underline),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Already have an account? ',
+                style: TextStyle(
+                    color: sub,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14)),
+            GestureDetector(
+              onTap: () => context.go(
+                  '/login?role=${widget.selectedRole.name}&phone=${widget.phoneNumber}'),
+              child: const Text(
+                'Sign In',
+                style: TextStyle(
+                    color: _brand,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    decoration: TextDecoration.underline),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline_rounded, size: 12, color: muted),
+            const SizedBox(width: 4),
+            Text(
+              '256-bit encrypted · Your data is safe with us',
+              style: TextStyle(
+                  fontSize: 11,
+                  color: muted,
+                  fontWeight: FontWeight.w500),
+            ),
+          ],
         ),
       ],
     );
@@ -573,14 +728,9 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
         password: _passCtrl.text,
       );
       if (!mounted) return;
-      if (UserRoleX.tryParse(user.role) == UserRole.owner) {
-        context.goNamed('ownerDashboard');
-      } else {
-        context.goNamed('tenantDashboard');
-      }
+      _navigate(
+          UserRoleX.tryParse(user.role) ?? widget.selectedRole);
     } catch (e, st) {
-      // BUG-02 fix: error is already shown via authState.errorMessage.
-      // Log for crash reporting so it's not completely invisible.
       debugPrint('Signup error: $e\n$st');
     }
   }
@@ -588,16 +738,21 @@ class _SignupPageV2State extends ConsumerState<SignupPageV2>
   Future<void> _onGoogleSignup() async {
     final n = ref.read(authProvider.notifier);
     try {
-      final user = await n.continueWithGoogle(phone: widget.phoneNumber);
+      final user =
+          await n.continueWithGoogle(phone: widget.phoneNumber);
       if (!mounted) return;
-      if (UserRoleX.tryParse(user.role) == UserRole.owner) {
-        context.goNamed('ownerDashboard');
-      } else {
-        context.goNamed('tenantDashboard');
-      }
+      _navigate(
+          UserRoleX.tryParse(user.role) ?? widget.selectedRole);
     } catch (e, st) {
-      // BUG-02 fix: error is already shown via authState.errorMessage.
       debugPrint('Google signup error: $e\n$st');
+    }
+  }
+
+  void _navigate(UserRole role) {
+    if (role == UserRole.owner) {
+      context.goNamed('ownerDashboard');
+    } else {
+      context.goNamed('tenantDashboard');
     }
   }
 }

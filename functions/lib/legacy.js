@@ -1406,7 +1406,7 @@ exports.generateMonthlyPayments = functions
     const month = now.getMonth() + 1;
     const tenantsSnap = await db
         .collection('tenants')
-        .where('isActive', '==', true)
+        .where('status', '==', 'active')
         .get();
     if (tenantsSnap.empty)
         return;

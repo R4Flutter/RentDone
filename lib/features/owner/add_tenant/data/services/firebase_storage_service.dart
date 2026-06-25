@@ -17,8 +17,6 @@ class FirebaseDocumentStorageService {
   String get bucket => _storage.bucket;
 
   static const _maxSourceFileSizeBytes = 12 * 1024 * 1024;
-  static const _targetImageCompressedBytes = 200 * 1024;
-  static const _targetPdfUploadBytes = 500 * 1024;
   static const _maxUploadBytes = 2 * 1024 * 1024;
   static const _allowedExtensions = {'jpg', 'jpeg', 'png', 'pdf', 'webp'};
 
@@ -137,16 +135,6 @@ class FirebaseDocumentStorageService {
     }
 
     final uploadBytes = await uploadFile.length();
-    if (_isImage(extension) && uploadBytes > _targetImageCompressedBytes) {
-      throw const StorageUploadException(
-        'Image could not be compressed to 200KB. Please choose a clearer or smaller image.',
-      );
-    }
-    if (extension == 'pdf' && uploadBytes > _targetPdfUploadBytes) {
-      throw const StorageUploadException(
-        'PDF must be 500KB or below. Please upload a smaller PDF.',
-      );
-    }
     if (uploadBytes > _maxUploadBytes) {
       throw const StorageUploadException(
         'Compressed file exceeds 2MB. Please upload a clearer or smaller file.',
@@ -235,18 +223,45 @@ class FirebaseDocumentStorageService {
     }
   }
 
+  Future<void> deleteTenantDocuments({
+    required String tenantId,
+  }) async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null || userId.isEmpty) {
+      return;
+    }
+
+    final folderPath = 'images/users/$userId/tenants/$tenantId/documents';
+    
+    try {
+      final listResult = await _storage.ref().child(folderPath).listAll();
+      
+      final deleteFutures = listResult.items.map((item) => item.delete());
+      await Future.wait(deleteFutures);
+      
+      if (kDebugMode) {
+        debugPrint('Deleted all documents for tenant: $tenantId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error deleting tenant documents: $e');
+      }
+      // Non-critical error, don't rethrow
+    }
+  }
+
   Future<File> _compressImageToBudget(
     File source,
     String extension,
     String tenantId, {
     required int timestamp,
   }) async {
-    var quality = 82;
-    var width = 1600;
-    var height = 1600;
+    var quality = 80;
+    var width = 1920;
+    var height = 1920;
     File current = source;
 
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < 4; i++) {
       final targetPath =
           '${Directory.systemTemp.path}${Platform.pathSeparator}owner_tenant_${tenantId}_${timestamp}_$i.$extension';
 
@@ -266,13 +281,13 @@ class FirebaseDocumentStorageService {
 
       current = File(compressed.path);
       final size = await current.length();
-      if (size <= _targetImageCompressedBytes) {
+      if (size <= _maxUploadBytes) {
         return current;
       }
 
-      quality = (quality - 10).clamp(45, 82);
-      width = (width * 0.85).round();
-      height = (height * 0.85).round();
+      quality = (quality - 15).clamp(40, 80);
+      width = (width * 0.75).round();
+      height = (height * 0.75).round();
     }
 
     return current;

@@ -13,15 +13,12 @@ class TenantPaymentHistoryFirebaseService {
   TenantPaymentHistoryFirebaseService({
     FirebaseFirestore? firestore,
     FirebaseFunctions? functionsAsia,
-    FirebaseFunctions? functionsUs,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
        _functionsAsia = functionsAsia ?? FirebaseFunctions.instanceFor(region: 'asia-south1'),
-       _functionsUs = functionsUs ?? FirebaseFunctions.instanceFor(region: 'us-central1'),
        _auth = FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseFunctions _functionsAsia;
-  final FirebaseFunctions _functionsUs;
   final FirebaseAuth _auth;
 
   static const int _maxPaymentAmount = 5000000;
@@ -407,7 +404,7 @@ class TenantPaymentHistoryFirebaseService {
       if (e.code == 'already-exists') {
         throw PaymentStorageException.custom('Duplicate payment blocked');
       }
-      throw PaymentStorageException.write(null);
+      throw PaymentStorageException.write(e);
     }
   }
 
@@ -454,7 +451,7 @@ class TenantPaymentHistoryFirebaseService {
           e.message ?? 'invalid',
         );
       }
-      throw PaymentStorageException.update(null);
+      throw PaymentStorageException.update(e);
     }
   }
 
@@ -495,7 +492,7 @@ class TenantPaymentHistoryFirebaseService {
     );
 
     try {
-      final verifyCallable = _functionsUs.httpsCallable('verifyPayment');
+      final verifyCallable = _functionsAsia.httpsCallable('verifyPayment');
       await verifyCallable.call({
         'paymentId': paymentId,
         'razorpayPaymentId': transactionId.trim(),

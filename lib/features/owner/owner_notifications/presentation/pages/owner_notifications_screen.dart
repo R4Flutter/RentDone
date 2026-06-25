@@ -26,8 +26,15 @@ class OwnerNotificationsScreen extends ConsumerWidget {
             );
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
+          return RefreshIndicator(
+            color: theme.colorScheme.primary,
+            onRefresh: () async {
+              ref.invalidate(ownerNotificationsProvider);
+              await ref.read(ownerNotificationsProvider.future);
+            },
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
             itemCount: messages.length,
             separatorBuilder: (_, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
@@ -70,6 +77,7 @@ class OwnerNotificationsScreen extends ConsumerWidget {
                 ),
               );
             },
+          ),
           );
         },
       ),

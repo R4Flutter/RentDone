@@ -18,14 +18,73 @@ class AuthFirebaseService {
   final GoogleSignIn _googleSignIn;
   String? _verificationId;
 
+  static final RegExp _emailRegex = RegExp(
+    r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$',
+  );
+  static final RegExp _phoneDigitsRegex = RegExp(r'^[6-9]\d{9}$');
+
+  String _sanitizeEmail(String email) {
+    final trimmed = email.trim().toLowerCase();
+    if (trimmed.length > 254) {
+      throw const AuthException(message: 'Email address is too long.');
+    }
+    if (!_emailRegex.hasMatch(trimmed)) {
+      throw const AuthException(message: 'Enter a valid email address.');
+    }
+    return trimmed;
+  }
+
+  String _sanitizePhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return '';
+    if (digits.length < 10 || digits.length > 15) {
+      throw const AuthException(message: 'Enter a valid phone number.');
+    }
+    if (!_phoneDigitsRegex.hasMatch(digits) && digits.length == 10) {
+      throw const AuthException(
+        message: 'Enter a valid Indian mobile number.',
+      );
+    }
+    return digits;
+  }
+
+  String _sanitizePassword(String password) {
+    if (password.isEmpty) {
+      throw const AuthException(message: 'Password is required.');
+    }
+    if (password.length < 6) {
+      throw const AuthException(
+        message: 'Password must be at least 6 characters.',
+      );
+    }
+    if (password.length > 128) {
+      throw const AuthException(
+        message: 'Password is too long. Maximum 128 characters.',
+      );
+    }
+    return password;
+  }
+
+  void _validateRole(UserRole role) {
+    if (role != UserRole.tenant && role != UserRole.owner) {
+      throw const AuthException(
+        message: 'Invalid role. Please choose Owner or Tenant.',
+      );
+    }
+  }
+
   Future<void> sendOtp({
     required String phoneNumber,
     Duration timeout = const Duration(seconds: 60),
   }) async {
+    final sanitizedPhone = phoneNumber.trim();
+    if (sanitizedPhone.isEmpty || sanitizedPhone.length < 10) {
+      throw const AuthException(message: 'Enter a valid phone number.');
+    }
     try {
       if (kIsWeb) {
         final confirmationResult = await _auth.signInWithPhoneNumber(
-          phoneNumber,
+          sanitizedPhone,
         );
         _verificationId = confirmationResult.verificationId;
         return;
@@ -34,7 +93,7 @@ class AuthFirebaseService {
       final completer = Completer<void>();
 
       await _auth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
+        phoneNumber: sanitizedPhone,
         timeout: timeout,
         verificationCompleted: (PhoneAuthCredential credential) async {
           try {
@@ -89,23 +148,31 @@ class AuthFirebaseService {
         );
       }
 
+      final sanitizedOtp = otp.trim();
+      if (sanitizedOtp.isEmpty || sanitizedOtp.length > 6 || !RegExp(r'^\d+$').hasMatch(sanitizedOtp)) {
+        throw const AuthException(message: 'Invalid OTP format.');
+      }
+
+      final sanitizedPhone = phone != null ? _sanitizePhone(phone) : '';
+
       final credential = PhoneAuthProvider.credential(
         verificationId: verificationId,
-        smsCode: otp,
+        smsCode: sanitizedOtp,
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
 
-      // Ensure user doc exists for phone auth users
       if (userCredential.user != null) {
         await _upsertAndMapUser(
           user: userCredential.user!,
           selectedRole: selectedRole ?? UserRole.tenant,
-          phone: phone ?? '',
+          phone: sanitizedPhone,
         );
       }
 
       return userCredential;
+    } on AuthException {
+      rethrow;
     } on FirebaseAuthException catch (error) {
       throw _mapFirebaseException(error);
     } catch (_) {
@@ -117,6 +184,8 @@ class AuthFirebaseService {
     required UserRole selectedRole,
     required String phone,
   }) async {
+    _validateRole(selectedRole);
+    final sanitizedPhone = _sanitizePhone(phone);
     try {
       UserCredential credential;
 
@@ -169,7 +238,7 @@ class AuthFirebaseService {
       return _upsertAndMapUser(
         user: user,
         selectedRole: selectedRole,
-        phone: phone,
+        phone: sanitizedPhone,
       );
     } on AuthException {
       rethrow;
@@ -179,14 +248,8 @@ class AuthFirebaseService {
       if (e.code == 'sign_in_canceled') {
         throw const AuthException(message: 'Google sign-in was cancelled.');
       }
-      if (e.message?.contains('serverClientId') == true) {
-        throw const AuthException(
-          message:
-              'Google Sign-In is not configured for this app. Please contact support.',
-        );
-      }
-      throw AuthException(
-        message: e.message ?? 'Unable to sign in with Google right now.',
+      throw const AuthException(
+        message: 'Unable to sign in with Google right now.',
       );
     } catch (_) {
       throw const AuthException(
@@ -201,17 +264,19 @@ class AuthFirebaseService {
     required UserRole selectedRole,
     required String phone,
   }) async {
+    _validateRole(selectedRole);
+    final sanitizedEmail = _sanitizeEmail(email);
+    final sanitizedPassword = _sanitizePassword(password);
+    final sanitizedPhone = _sanitizePhone(phone);
     try {
-      // Sign out any existing session so Firebase doesn't reuse the old
-      // user's token and the router doesn't redirect prematurely.
       final currentFirebaseUser = _auth.currentUser;
-      if (currentFirebaseUser != null && currentFirebaseUser.email?.toLowerCase() != email.trim().toLowerCase()) {
+      if (currentFirebaseUser != null && currentFirebaseUser.email?.toLowerCase() != sanitizedEmail) {
         await _auth.signOut();
       }
 
       final credential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
+        email: sanitizedEmail,
+        password: sanitizedPassword,
       );
       final user = credential.user;
       if (user == null) {
@@ -223,14 +288,14 @@ class AuthFirebaseService {
       return _upsertAndMapUser(
         user: user,
         selectedRole: selectedRole,
-        phone: phone,
+        phone: sanitizedPhone,
       );
     } on AuthException {
       rethrow;
     } on FirebaseAuthException catch (error) {
       throw _mapFirebaseException(error);
     } catch (_) {
-      throw const AuthException(message: 'Unable to sign in with email.');
+      throw const AuthException(message: 'Unable to sign in. Please try again.');
     }
   }
 
@@ -240,16 +305,19 @@ class AuthFirebaseService {
     required UserRole selectedRole,
     required String phone,
   }) async {
+    _validateRole(selectedRole);
+    final sanitizedEmail = _sanitizeEmail(email);
+    final sanitizedPassword = _sanitizePassword(password);
+    final sanitizedPhone = _sanitizePhone(phone);
     try {
-      // If a different user is already signed in, sign them out first.
       final currentFirebaseUser = _auth.currentUser;
-      if (currentFirebaseUser != null && currentFirebaseUser.email?.toLowerCase() != email.trim().toLowerCase()) {
+      if (currentFirebaseUser != null && currentFirebaseUser.email?.toLowerCase() != sanitizedEmail) {
         await _auth.signOut();
       }
 
       final credential = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
+        email: sanitizedEmail,
+        password: sanitizedPassword,
       );
       final user = credential.user;
       if (user == null) {
@@ -258,11 +326,10 @@ class AuthFirebaseService {
         );
       }
 
-      // Immediately create user doc to satisfy security rules and ensure role existence.
       await _firestore.collection('users').doc(user.uid).set({
         'uid': user.uid,
         'email': user.email,
-        'emailLowercase': email.trim().toLowerCase(),
+        'emailLowercase': sanitizedEmail,
         'role': selectedRole.value,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -271,14 +338,14 @@ class AuthFirebaseService {
       return _upsertAndMapUser(
         user: user,
         selectedRole: selectedRole,
-        phone: phone,
+        phone: sanitizedPhone,
       );
     } on AuthException {
       rethrow;
     } on FirebaseAuthException catch (error) {
       throw _mapFirebaseException(error);
     } catch (_) {
-      throw const AuthException(message: 'Unable to create account.');
+      throw const AuthException(message: 'Unable to create account. Please try again.');
     }
   }
 
@@ -303,18 +370,8 @@ class AuthFirebaseService {
         throw const AuthException(message: 'Please sign in again.');
       }
 
-      final currentPasswordText = currentPassword.trim();
-      final newPasswordText = newPassword.trim();
-
-      if (currentPasswordText.isEmpty) {
-        throw const AuthException(message: 'Current password is required.');
-      }
-
-      if (newPasswordText.length < 6) {
-        throw const AuthException(
-          message: 'New password must be at least 6 characters.',
-        );
-      }
+      final currentPasswordText = _sanitizePassword(currentPassword);
+      final newPasswordText = _sanitizePassword(newPassword);
 
       if (currentPasswordText == newPasswordText) {
         throw const AuthException(
@@ -348,22 +405,7 @@ class AuthFirebaseService {
 
   Future<void> sendPasswordResetCode({String? email}) async {
     try {
-      final resolvedEmail = (email ?? _auth.currentUser?.email ?? '')
-          .trim()
-          .toLowerCase();
-
-      if (resolvedEmail.isEmpty) {
-        throw const AuthException(
-          message: 'Email is required to send a reset code.',
-        );
-      }
-
-      final emailRegex = RegExp(
-        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-      );
-      if (!emailRegex.hasMatch(resolvedEmail)) {
-        throw const AuthException(message: 'Please enter a valid email.');
-      }
+      final resolvedEmail = _sanitizeEmail(email ?? _auth.currentUser?.email ?? '');
 
       await _auth.sendPasswordResetEmail(email: resolvedEmail);
     } on AuthException {
@@ -528,7 +570,7 @@ class AuthFirebaseService {
       case 'invalid-credential':
         return const AuthException(message: 'Invalid email or password.');
       case 'user-not-found':
-        return const AuthException(message: 'No account found for this email.');
+        return const AuthException(message: 'Invalid email or password.');
       case 'email-already-in-use':
         return const AuthException(message: 'Email is already in use.');
       case 'weak-password':
@@ -539,13 +581,10 @@ class AuthFirebaseService {
         return const AuthException(message: 'Please enter a valid email.');
       case 'operation-not-allowed':
         return const AuthException(
-          message:
-              'Email/password sign-in is disabled in Firebase. Enable it from Firebase Console > Authentication > Sign-in method.',
+          message: 'This sign-in method is not available right now.',
         );
       default:
-        return AuthException(
-          message: error.message ?? 'Authentication failed.',
-        );
+        return const AuthException(message: 'Authentication failed. Please try again.');
     }
   }
 }

@@ -1,8 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:rentdone/app/app_theme.dart';
 import 'package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/bottom_nav_bar_theme.dart';
-import 'package:rentdone/shared/design/glassmorphism.dart';
 
 // ── Design tokens (spec: RentDoneAnimatedBottomNavbar) ────────────────────────
 const _kBarHeight = 59.0;
@@ -134,7 +132,7 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                     ),
                   ),
 
-                  // ── Glass bar with animated notch cutout ───────────────
+                  // ── Solid bar with animated notch cutout (no BackdropFilter) ──
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -142,32 +140,24 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                     height: _kBarHeight + bottomPadding,
                     child: ClipPath(
                       clipper: clipper,
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(
-                          sigmaX: GlassmorphismConfig.strongBlurAmount,
-                          sigmaY: GlassmorphismConfig.strongBlurAmount,
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                navBase.withValues(alpha: isDark ? 0.75 : 0.88),
-                                brand.withValues(alpha: isDark ? 0.15 : 0.08),
-                              ],
-                            ),
-                            border: Border(
-                              top: BorderSide(
-                                color: hideTopBorderForProperties
-                                    ? AppColors.transparent
-                                    : (isDark
-                                          ? Colors.white.withValues(alpha: 0.25)
-                                          : Colors.black.withValues(
-                                              alpha: 0.1,
-                                            )),
-                                width: 0.8,
-                              ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              navBase.withValues(alpha: isDark ? 0.92 : 0.96),
+                              brand.withValues(alpha: isDark ? 0.18 : 0.10),
+                            ],
+                          ),
+                          border: Border(
+                            top: BorderSide(
+                              color: hideTopBorderForProperties
+                                  ? AppColors.transparent
+                                  : (isDark
+                                        ? Colors.white.withValues(alpha: 0.25)
+                                        : Colors.black.withValues(alpha: 0.1)),
+                              width: 0.8,
                             ),
                           ),
                         ),
@@ -178,7 +168,10 @@ class _PinterestMorphNavBarState extends State<PinterestMorphNavBar>
                   // ── Icons (full height, padded into bar area) ──────────
                   Positioned.fill(
                     child: Padding(
-                      padding: EdgeInsets.only(top: _kIconRise, bottom: bottomPadding),
+                      padding: EdgeInsets.only(
+                        top: _kIconRise,
+                        bottom: bottomPadding,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -257,21 +250,18 @@ class _NavIcon extends StatelessWidget {
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
       child: Center(
-        // Vertical lift animation (spring-like easeOutBack)
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(end: isActive ? -_kIconRise : 0),
           duration: const Duration(milliseconds: 420),
           curve: Curves.easeOutBack,
           builder: (context, dy, _) => Transform.translate(
             offset: Offset(0, dy),
-            // Scale animation
             child: TweenAnimationBuilder<double>(
               tween: Tween<double>(end: isActive ? 1.15 : 0.95),
               duration: const Duration(milliseconds: 420),
               curve: Curves.easeOutBack,
               builder: (context, scale, _) => Transform.scale(
                 scale: scale,
-                // Glassmorphic container for icon
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   width: 48,

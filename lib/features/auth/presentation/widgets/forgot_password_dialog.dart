@@ -93,7 +93,10 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
       if (!mounted) return;
       setState(() => _isSending = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString()), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(error.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -126,10 +129,16 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
             },
             decoration: InputDecoration(
               labelText: 'Email Address',
-              prefixIcon: Icon(Icons.email_outlined, size: 20, color: brandColor),
+              prefixIcon: Icon(
+                Icons.email_outlined,
+                size: 20,
+                color: brandColor,
+              ),
               errorText: _emailError,
               filled: true,
-              fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+              fillColor: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.03),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -156,7 +165,7 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
           label: 'Send Reset Link',
           isPrimary: true,
           isLoading: _isSending,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
       ],
     );

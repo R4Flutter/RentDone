@@ -40,14 +40,25 @@ class TenantInputValidator {
       return 'Phone number is required';
     }
 
-    final phone = _normalizeIndianPhone(input.trim());
-    if (phone == null) {
+    final cleaned = input.trim().replaceAll(RegExp(r'\D'), '');
+    
+    // Support +91, 91, or 10 digits
+    String digits;
+    if (cleaned.length == 12 && cleaned.startsWith('91')) {
+      digits = cleaned.substring(2);
+    } else if (cleaned.length == 10) {
+      digits = cleaned;
+    } else {
       return 'Enter a valid 10-digit mobile number';
     }
 
-    final firstDigit = int.tryParse(phone[0]);
+    final firstDigit = int.tryParse(digits[0]);
     if (firstDigit == null || firstDigit < 6) {
-      return 'Enter a valid Indian mobile number';
+      return 'Enter a valid Indian mobile number starting with 6-9';
+    }
+
+    if (!RegExp(r'^[6-9]\d{9}$').hasMatch(digits)) {
+      return 'Invalid mobile number format';
     }
 
     return null;

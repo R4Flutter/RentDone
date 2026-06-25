@@ -569,7 +569,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            "Limits: image uploads auto-compress to 200KB max, PDFs must be 500KB or below.",
+            "Images auto-compress. Max 2MB per file.",
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
@@ -638,7 +638,7 @@ class _AddTenantScreenState extends ConsumerState<AddTenantScreen> {
           _reviewItem(theme, "Name", nameCtrl.text),
           _reviewItem(theme, "Phone", phoneCtrl.text),
           _reviewItem(theme, "Email", emailCtrl.text),
-          _reviewItem(theme, "Rent", "Rs ${rentCtrl.text}"),
+          _reviewItem(theme, "Rent", "₹${rentCtrl.text}"),
           _reviewItem(theme, "Rent Due Day", rentDueDayCtrl.text),
           _reviewItem(
             theme,

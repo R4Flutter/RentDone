@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import 'package:rentdone/core/logging/app_logger.dart';
 import 'package:rentdone/features/owner/owner_dashboard/data/models/dashboard_payment_dto.dart';
 import 'package:rentdone/features/owner/owner_dashboard/data/models/dashboard_property_dto.dart';
 import 'package:rentdone/features/owner/owner_dashboard/data/models/dashboard_tenant_dto.dart';
@@ -33,7 +33,7 @@ class DashboardFirebaseService {
           .map((doc) => DashboardPropertyDto.fromMap(doc.id, doc.data()))
           .toList();
     } on FirebaseException catch (e) {
-      debugPrint('Error fetching dashboard properties: ${e.code}');
+      AppLogger.error('Error fetching dashboard properties: ${e.code}', tag: 'DashboardService');
       return <DashboardPropertyDto>[];
     }
   }
@@ -74,11 +74,11 @@ class DashboardFirebaseService {
     } on FirebaseException catch (e) {
       // Return empty on permission denied (shouldn't happen)
       if (e.code == 'permission-denied') return <DashboardPaymentDto>[];
-      debugPrint('Error fetching dashboard payments: ${e.code}');
+      AppLogger.error('Error fetching dashboard payments: ${e.code}', tag: 'DashboardService');
       return <DashboardPaymentDto>[];
     } catch (e) {
       // BUG-09 fix: return empty list on all errors, consistent with fetchProperties.
-      debugPrint('Error fetching payments: $e');
+      AppLogger.error('Error fetching payments', error: e, tag: 'DashboardService');
       return <DashboardPaymentDto>[];
     }
   }
@@ -103,7 +103,7 @@ class DashboardFirebaseService {
               .toList(),
         )
         .handleError((error) {
-          debugPrint('Error in watchPayments stream: $error');
+          AppLogger.error('Error in watchPayments stream: $error', tag: 'DashboardService');
           // Log error and return empty list as fallback
           return <DashboardPaymentDto>[];
         });
@@ -122,10 +122,10 @@ class DashboardFirebaseService {
           .get(const GetOptions(source: Source.serverAndCache));
       return snapshot.size;
     } on FirebaseException catch (e) {
-      debugPrint('Error fetching dashboard tenant count: ${e.code}');
+      AppLogger.error('Error fetching dashboard tenant count: ${e.code}', tag: 'DashboardService');
       return 0;
     } catch (e) {
-      debugPrint('Error fetching tenant count: $e');
+      AppLogger.error('Error fetching tenant count', error: e, tag: 'DashboardService');
       return 0;
     }
   }
@@ -155,7 +155,7 @@ class DashboardFirebaseService {
               0;
         })
         .handleError((error) {
-          debugPrint('Error in watchTenantCount stream: $error');
+          AppLogger.error('Error in watchTenantCount stream: $error', tag: 'DashboardService');
           return 0;
         });
   }
@@ -174,7 +174,7 @@ class DashboardFirebaseService {
         yield snapshot.data();
       }
     } catch (error) {
-      debugPrint('Error in watchDashboardSummary stream: $error');
+      AppLogger.error('Error in watchDashboardSummary stream: $error', tag: 'DashboardService');
       yield null;
     }
   }
@@ -195,7 +195,7 @@ class DashboardFirebaseService {
         .snapshots()
         .map((snapshot) => snapshot.docs.map(AppMessageDto.fromDoc).toList())
         .handleError((error) {
-          debugPrint('Error in watchRecentMessages stream: $error');
+          AppLogger.error('Error in watchRecentMessages stream: $error', tag: 'DashboardService');
           return <AppMessageDto>[];
         });
   }
@@ -219,7 +219,7 @@ class DashboardFirebaseService {
               .toList(),
         )
         .handleError((error) {
-          debugPrint('Error in watchTenantActivity stream: $error');
+          AppLogger.error('Error in watchTenantActivity stream: $error', tag: 'DashboardService');
           return <DashboardTenantDto>[];
         });
   }

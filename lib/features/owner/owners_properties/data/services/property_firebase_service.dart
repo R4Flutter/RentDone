@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:rentdone/core/exceptions/security_exceptions.dart';
 import 'package:rentdone/core/logging/app_logger.dart';
 import 'package:rentdone/features/owner/owners_properties/data/models/property_dto.dart';
 
@@ -48,12 +49,21 @@ class PropertyFirebaseService {
   }
 
   Stream<PropertyDto> watchProperty(String propertyId) {
+    final ownerId = _auth.currentUser?.uid;
+    
     try {
       return _db.collection('properties').doc(propertyId).snapshots().map((doc) {
         final data = doc.data();
         if (data == null) {
           throw StateError('Property $propertyId not found');
         }
+        
+        // SECURITY: Verify ownership
+        final propOwnerId = (data['ownerId'] as String? ?? '').trim();
+        if (ownerId == null || propOwnerId != ownerId) {
+          throw UnauthorizedException('Unauthorized property access');
+        }
+        
         return PropertyDto.fromMap({'id': doc.id, ...data});
       });
     } catch (e, stack) {
@@ -92,6 +102,16 @@ class PropertyFirebaseService {
   Future<void> updateProperty(PropertyDto property) async {
     try {
       final ownerId = _requireOwnerId();
+      
+      // SECURITY: Verify ownership before update
+      final doc = await _db.collection('properties').doc(property.id).get();
+      if (!doc.exists) {
+        throw StateError('Property not found');
+      }
+      if ((doc.data()?['ownerId'] as String? ?? '').trim() != ownerId) {
+        throw UnauthorizedException('Unauthorized property update attempt');
+      }
+
       final ownerCoordinates = await _readOwnerCoordinates(ownerId);
       final resolvedCoords = await _resolveCoordinates(
         ownerId: ownerId,

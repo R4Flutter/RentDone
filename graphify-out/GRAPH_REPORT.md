@@ -1,16 +1,16 @@
-# Graph Report - rentdone  (2026-05-05)
+# Graph Report - rentdone  (2026-05-06)
 
 ## Corpus Check
-- 454 files · ~533,185 words
+- 454 files · ~534,548 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3442 nodes · 4394 edges · 251 communities detected
+- 3529 nodes · 4507 edges · 251 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 12 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `45616fd0`
+- Built from commit: `8fe9ceb4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -268,13 +268,13 @@
 - [[_COMMUNITY_Community 290|Community 290]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `package:cloud_firestore/cloud_firestore.dart` - 92 edges
-2. `package:flutter/material.dart` - 90 edges
-3. `package:flutter_riverpod/flutter_riverpod.dart` - 82 edges
-4. `package:rentdone/app/app_theme.dart` - 61 edges
+1. `package:flutter/material.dart` - 93 edges
+2. `package:cloud_firestore/cloud_firestore.dart` - 92 edges
+3. `package:flutter_riverpod/flutter_riverpod.dart` - 84 edges
+4. `package:rentdone/app/app_theme.dart` - 64 edges
 5. `package:firebase_auth/firebase_auth.dart` - 42 edges
-6. `dart:ui` - 28 edges
-7. `package:go_router/go_router.dart` - 26 edges
+6. `dart:ui` - 31 edges
+7. `package:go_router/go_router.dart` - 29 edges
 8. `dart:async` - 24 edges
 9. `package:rentdone/features/owner/owners_properties/domain/entities/tenant.dart` - 21 edges
 10. `package:rentdone/features/owner/owners_properties/domain/entities/property.dart` - 19 edges
@@ -314,15 +314,15 @@ Nodes (27): buildRentDueBody(), dueDateKey(), getTenantUserId(), loadDueTenants(
 
 ### Community 4 - "Community 4"
 Cohesion: 0.04
-Nodes (52): AddPropertyScreen, Consumer, dispose, GoRouter, Icon, isValidPhone, OwnerDashboardPage, OwnerPaymentTenantListScreen (+44 more)
+Nodes (53): AddPropertyScreen, Consumer, dispose, GoRouter, Icon, isValidPhone, OwnerDashboardPage, OwnerPaymentTenantListScreen (+45 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.04
-Nodes (48): activityCardBackground, activityCardBorder, AppColors, AppTheme, border, brandPrimary, brandPrimaryHover, brandPrimarySoft (+40 more)
+Nodes (29): DashboardTenantDto, toDate, TenantTrust, LeaseFirestoreDataSource, compareDocs, PaymentFirestoreDataSource, _toInt, TransactionFirestoreDataSource (+21 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.05
-Nodes (39): getGravatarUrl, getGravatarUrlWithFallback, GravatarService, isValidEmail, AddTenantFirebaseService, _hashPhone, _normalizePhone, StateError (+31 more)
+Cohesion: 0.04
+Nodes (48): activityCardBackground, activityCardBorder, AppColors, AppTheme, border, brandPrimary, brandPrimaryHover, brandPrimarySoft (+40 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.04
@@ -334,19 +334,19 @@ Nodes (45): accentGradient, bottomBlob, brand, brandStrong, build, Container, di
 
 ### Community 9 - "Community 9"
 Cohesion: 0.04
-Nodes (44): _BackgroundBlobs, _Blob, build, _ChartsGrid, Column, _compactMoney, Container, DashboardCard (+36 more)
+Nodes (42): build, Column, _EmptyProperties, _ErrorState, _Header, Icon, Padding, PaymentsScreen (+34 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.04
 Nodes (44): AnimatedBuilder, _BackgroundBlob, build, _buildScaffold, _captureCamera, _categoryIcon, _categorySubtitle, Center (+36 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.05
-Nodes (40): build, Center, ClipRRect, Container, DecoratedBox, dispose, _fitCameraNow, Function (+32 more)
+Cohesion: 0.04
+Nodes (44): _BackgroundBlobs, _Blob, build, _ChartsGrid, Column, _compactMoney, Container, DashboardCard (+36 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.05
-Nodes (38): accentGradient, border, brand, brandStrong, build, elevated, error, InputDecoration (+30 more)
+Nodes (40): build, Center, ClipRRect, Container, DecoratedBox, dispose, _fitCameraNow, Function (+32 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.05
@@ -362,15 +362,15 @@ Nodes (12): assertPaymentsEnabledOrThrow(), assertTenantBackfillProofOrThrow(), 
 
 ### Community 16 - "Community 16"
 Cohesion: 0.06
-Nodes (12): assertPaymentsEnabledOrThrow(), assertTenantBackfillProofOrThrow(), createRazorpayOrderForPayment(), getGlobalAppConfig(), getRazorpayConfig(), hashTenantLinkToken(), leaseBelongsToTenant(), monthKey() (+4 more)
+Nodes (11): assertTenantBackfillProofOrThrow(), hasAnyFieldChanged(), hashTenantLinkToken(), leaseBelongsToTenant(), normalizePropertyNameForComparison(), resolveTenantCandidateIds(), resolveTenantOwnerLinkPolicy(), safeEqualDigest() (+3 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.05
-Nodes (20): DashboardTenantDto, toDate, OwnerUpiFirestoreService, OwnerUpiProfile, TenantTrust, LeaseFirestoreDataSource, TransactionFirestoreDataSource, DateTimeConverter (+12 more)
+Nodes (35): AnimatedBuilder, build, didUpdateWidget, dispose, Function, GestureDetector, initState, _lerpd (+27 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.05
-Nodes (35): AnimatedBuilder, build, didUpdateWidget, dispose, Function, GestureDetector, initState, _lerpd (+27 more)
+Cohesion: 0.06
+Nodes (29): copyWith, OwnerProfile, OwnerProfileDto, _resolveValue, toEntity, OwnerProfileRepositoryImpl, GetOwnerProfile, OwnerProfileAuthService (+21 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.07
@@ -382,67 +382,67 @@ Nodes (31): AnimatedScale, build, _buildBody, _buildPropertyInfoCard, Center, Cl
 
 ### Community 21 - "Community 21"
 Cohesion: 0.06
-Nodes (31): AnimatedBuilder, _blob, build, _buildBrandHeader, _buildCinematicBackground, _buildDivider, _buildFooter, _buildGoogleButton (+23 more)
+Nodes (30): AnimatedBuilder, _blob, build, _buildBrandHeader, _buildCinematicBackground, _buildDivider, _buildFooter, _buildGoogleButton (+22 more)
 
 ### Community 22 - "Community 22"
+Cohesion: 0.06
+Nodes (30): AnimatedBuilder, AnimatedContainer, AuthMeshBackground, _AuthMeshPainter, build, _buildBackButton, _buildCard, _buildCardHeader (+22 more)
+
+### Community 23 - "Community 23"
 Cohesion: 0.07
 Nodes (24): SupportContent, SupportContentDto, toEntity, getSupportContent, SupportRepositoryImpl, getSupportContent, SupportContentDto, SupportLocalService (+16 more)
 
-### Community 23 - "Community 23"
-Cohesion: 0.08
-Nodes (19): Room, RoomDto, toEntity, PropertyRepositoryImpl, AddPropertyUseCase, AddTenantToRoomUseCase, DeletePropertyUseCase, GetTenantByIdUseCase (+11 more)
-
 ### Community 24 - "Community 24"
-Cohesion: 0.08
-Nodes (22): AuthException, AuthRepositoryImpl, AuthException, AuthFirebaseService, AuthUser, _mapFirebaseException, toString, _upsertAndMapUser (+14 more)
-
-### Community 25 - "Community 25"
 Cohesion: 0.07
 Nodes (28): _bgBlob, build, _buildLocationCard, _buildMetaCard, _buildProfileFormCard, _buildProfileHeader, _buildSetupBanner, _cardTitle (+20 more)
 
-### Community 26 - "Community 26"
+### Community 25 - "Community 25"
 Cohesion: 0.07
 Nodes (28): _Blob, _BreakdownRow, build, ClipRRect, Column, dispose, _formatRupees, _GlassCard (+20 more)
 
-### Community 27 - "Community 27"
+### Community 26 - "Community 26"
 Cohesion: 0.11
 Nodes (19): RegisterPlugins(), FlutterWindow(), OnCreate(), Create(), Destroy(), EnableFullDpiSupportIfAvailable(), GetClientArea(), GetThisFromHandle() (+11 more)
 
+### Community 27 - "Community 27"
+Cohesion: 0.08
+Nodes (22): PropertyRepositoryImpl, TenantRepositoryImpl, _deletePropertyClientSide, _hashPhone, _isValidCoordinates, _normalizePhone, PropertyFirebaseService, _requireOwnerId (+14 more)
+
 ### Community 28 - "Community 28"
 Cohesion: 0.07
-Nodes (27): build, copyWith, _friendlyLocationError, OwnerSettings, OwnerSettingsNotifier, OwnerSettingsState, _persistState, setDarkMode (+19 more)
+Nodes (27): build, _buildCard, _buildCardTitle, _buildDivider, _buildError, _buildField, _buildFooter, _buildGoogleButton (+19 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.07
-Nodes (25): build, InkWell, UserMenu, build, Column, _EmptyProperties, _ErrorState, _Header (+17 more)
+Nodes (27): build, copyWith, _friendlyLocationError, OwnerSettings, OwnerSettingsNotifier, OwnerSettingsState, _persistState, setDarkMode (+19 more)
 
 ### Community 30 - "Community 30"
+Cohesion: 0.09
+Nodes (16): Room, RoomDto, toEntity, AddPropertyUseCase, AddTenantToRoomUseCase, DeletePropertyUseCase, GetTenantByIdUseCase, RemoveTenantFromRoomUseCase (+8 more)
+
+### Community 31 - "Community 31"
+Cohesion: 0.07
+Nodes (26): build, _buildCard, _buildCardTitle, _buildDivider, _buildError, _buildField, _buildFooter, _buildGoogleButton (+18 more)
+
+### Community 32 - "Community 32"
 Cohesion: 0.07
 Nodes (26): _buildProfessionalExcel, _buildProfessionalPdf, _currency, DateFormat, _formatDate, _formatDateTime, _friendlyFirestoreReadError, _isCollected (+18 more)
 
-### Community 31 - "Community 31"
+### Community 33 - "Community 33"
+Cohesion: 0.07
+Nodes (26): build, _buildAmountSummaryCard, _buildPaymentDetailsCard, _buildSecurityInfo, _buildTenantInfoCard, Container, dispose, _formatPaise (+18 more)
+
+### Community 34 - "Community 34"
 Cohesion: 0.08
 Nodes (25): AddPropertyScreen, _AddPropertyScreenState, _applyLoadedProperty, build, _buildGlassCard, ClipRRect, Column, dispose (+17 more)
 
-### Community 32 - "Community 32"
-Cohesion: 0.08
-Nodes (25): build, _buildAmountSummaryCard, _buildPaymentDetailsCard, _buildSecurityInfo, _buildTenantInfoCard, Container, dispose, _formatPaise (+17 more)
-
-### Community 33 - "Community 33"
+### Community 35 - "Community 35"
 Cohesion: 0.08
 Nodes (25): AnimatedScale, build, _buildErrorMessage, _buildInstallmentAction, _buildStatusUpdateSection, _chip, Container, DashboardCard (+17 more)
 
-### Community 34 - "Community 34"
+### Community 36 - "Community 36"
 Cohesion: 0.09
 Nodes (22): DateTime, PaymentDue, PaymentDueBuilder, _resolveDueDateForPayment, _resolveLeaseDueDay, ServerFailure, PaymentDuplicateChecker, ServerFailure (+14 more)
-
-### Community 35 - "Community 35"
-Cohesion: 0.08
-Nodes (20): build, DashboardBody, SidebarItem, build, Center, DashboardError, SizedBox, build (+12 more)
-
-### Community 36 - "Community 36"
-Cohesion: 0.08
-Nodes (24): AddPropertyScreen, build, Center, ClipRRect, Column, _confirmDelete, Container, _emptyState (+16 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.08
@@ -450,123 +450,123 @@ Nodes (22): Exception, LatLng, NominatimGeocodingService, _normalizeCity, _cityM
 
 ### Community 38 - "Community 38"
 Cohesion: 0.08
-Nodes (24): AnimatedBuilder, _blob, build, _buildBrandHeader, _buildCinematicBackground, _buildFooter, _buildInput, _buildPrimaryButton (+16 more)
+Nodes (24): AddPropertyScreen, build, Center, ClipRRect, Column, _confirmDelete, Container, _emptyState (+16 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.09
-Nodes (21): build, DriveStyleTile, _DriveStyleTileState, Material, _setPressed, SizedBox, build, _calculateIndex (+13 more)
+Cohesion: 0.08
+Nodes (24): AnimatedBuilder, _blob, build, _buildBrandHeader, _buildCinematicBackground, _buildFooter, _buildInput, _buildPrimaryButton (+16 more)
 
 ### Community 40 - "Community 40"
 Cohesion: 0.09
-Nodes (19): build, TenantDashboardSummary, TenantDashboardSummaryFactory, TenantDashboardSummaryLoader, TenantOwnerDetailsReader, TenantRoomDetailsReader, TenantFirestoreOwnerMixin, TenantOwnerDetailsReader (+11 more)
+Nodes (22): build, DriveStyleTile, _DriveStyleTileState, Material, _setPressed, SizedBox, build, _calculateIndex (+14 more)
 
 ### Community 41 - "Community 41"
+Cohesion: 0.09
+Nodes (21): Exception, TenantDashboardDocumentsCoordinator, TenantDocument, TenantDashboardDocumentsMixin, Exception, TenantDocumentsStore, build, ComplaintSubmittingNotifier (+13 more)
+
+### Community 42 - "Community 42"
+Cohesion: 0.09
+Nodes (20): getGravatarUrl, getGravatarUrlWithFallback, GravatarService, isValidEmail, AddTenantFirebaseService, _hashPhone, _normalizePhone, StateError (+12 more)
+
+### Community 43 - "Community 43"
+Cohesion: 0.09
+Nodes (21): SessionRepositoryImpl, DashboardFirebaseService, DashboardRepositoryImpl, GetDashboardSummary, LogoutOwner, RefreshDashboard, SessionAuthService, SessionRepositoryImpl (+13 more)
+
+### Community 44 - "Community 44"
 Cohesion: 0.08
 Nodes (23): AnimatedBuilder, _blob, build, _buildBrandHeader, _buildCinematicBackground, _buildConfirmationTile, _buildPhoneField, _buildPrimaryButton (+15 more)
 
-### Community 42 - "Community 42"
-Cohesion: 0.08
-Nodes (19): build, DashboardScreen, Scaffold, build, Container, PaymentStatusBadge, build, _colorFor (+11 more)
-
-### Community 43 - "Community 43"
-Cohesion: 0.1
-Nodes (19): auth_notifier.dart, auth_state.dart, AuthStateNotifier, dispose, AppThemeModeNotifier, clearOverride, setDarkMode, setThemeMode (+11 more)
-
-### Community 44 - "Community 44"
-Cohesion: 0.09
-Nodes (17): OwnerNotification, OwnerNotificationDto, _toDateTime, toEntity, OwnerNotificationsRepositoryImpl, OwnerNotificationsFirebaseService, OwnerNotificationsRepositoryImpl, WatchOwnerNotifications (+9 more)
-
 ### Community 45 - "Community 45"
-Cohesion: 0.09
-Nodes (22): AddPaymentForm, _AddPaymentFormState, AddPaymentPayload, AnimatedPadding, _baseForStatus, build, _calcRow, _calculateCarryForward (+14 more)
+Cohesion: 0.08
+Nodes (18): build, DashboardBody, SidebarItem, build, Center, DashboardError, SizedBox, build (+10 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.09
-Nodes (22): AddPropertyUseCase, DeletePropertyUseCase, GetTenantByIdUseCase, PropertyFirebaseService, PropertyRepositoryImpl, RemoveTenantFromRoomUseCase, TenantRepositoryImpl, UpdatePropertyUseCase (+14 more)
+Nodes (19): build, TenantDashboardSummary, TenantDashboardSummaryFactory, TenantDashboardSummaryLoader, TenantOwnerDetailsReader, TenantRoomDetailsReader, TenantFirestoreOwnerMixin, TenantOwnerDetailsReader (+11 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.09
-Nodes (21): AddPaymentForm, build, Center, Container, DashboardCard, _EmptyHistory, _HistoryError, Icon (+13 more)
+Nodes (22): AddPropertyUseCase, DeletePropertyUseCase, GetTenantByIdUseCase, PropertyFirebaseService, PropertyRepositoryImpl, RemoveTenantFromRoomUseCase, TenantRepositoryImpl, UpdatePropertyUseCase (+14 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.1
-Nodes (20): AppMessage, _buildSummary, collectedValue, DashboardRepositoryImpl, DashboardSummary, _formatInr, isCollected, isSameMonth (+12 more)
+Cohesion: 0.09
+Nodes (17): OwnerNotification, OwnerNotificationDto, _toDateTime, toEntity, OwnerNotificationsRepositoryImpl, OwnerNotificationsFirebaseService, OwnerNotificationsRepositoryImpl, WatchOwnerNotifications (+9 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.11
-Nodes (15): PaymentRepositoryImpl, PaymentRepository, TransactionPage, CreatePaymentIntent, GetCurrentDue, GetTransactionHistory, PreventDuplicatePayment, VerifyPayment (+7 more)
+Cohesion: 0.09
+Nodes (22): AddPaymentForm, _AddPaymentFormState, AddPaymentPayload, AnimatedPadding, _baseForStatus, build, _calcRow, _calculateCarryForward (+14 more)
 
 ### Community 50 - "Community 50"
+Cohesion: 0.09
+Nodes (17): TenantDashboardDetailsMixin, TenantDashboardMetrics, tenantPhone, tenureYears, TenantFirestoreRoomMixin, tenantPhone, TenantProfileMetrics, tenureYears (+9 more)
+
+### Community 51 - "Community 51"
 Cohesion: 0.1
 Nodes (18): add_tenant_state.dart, AddTenantRepositoryImpl, AddTenantFirebaseService, AddTenantRepositoryImpl, AddTenantUseCase, AddTenantUseCase, addDocument, AddTenantNotifier (+10 more)
 
-### Community 51 - "Community 51"
+### Community 52 - "Community 52"
+Cohesion: 0.1
+Nodes (20): AppMessage, _buildSummary, collectedValue, DashboardRepositoryImpl, DashboardSummary, _formatInr, isCollected, isSameMonth (+12 more)
+
+### Community 53 - "Community 53"
 Cohesion: 0.09
 Nodes (19): build, Column, DashboardCard, _formatInr, _monthLabel, _PaymentMethodCard, PaymentsOverview, RepaintBoundary (+11 more)
 
-### Community 52 - "Community 52"
-Cohesion: 0.09
-Nodes (19): build, ClipRRect, DashboardCard, RepaintBoundary, build, Column, HeaderSection, RepaintBoundary (+11 more)
-
-### Community 53 - "Community 53"
-Cohesion: 0.1
-Nodes (20): build, Center, ClipRRect, Container, dispose, initState, _liquidBlob, ManageTenantsScreen (+12 more)
-
 ### Community 54 - "Community 54"
-Cohesion: 0.1
-Nodes (18): _badgeColor, build, Card, dispose, Padding, Scaffold, SizedBox, _statRow (+10 more)
+Cohesion: 0.09
+Nodes (21): accentGradient, border, brand, brandStrong, build, elevated, error, InputDecoration (+13 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.11
-Nodes (15): OwnerTenantsRepositoryImpl, CleanupOrphanTenants, OwnerTenantsFirebaseService, OwnerTenantsRepositoryImpl, WatchOwnerTenantProperties, WatchOwnerTenants, CleanupOrphanTenants, WatchOwnerTenantProperties (+7 more)
+Nodes (15): PaymentRepositoryImpl, PaymentRepository, TransactionPage, CreatePaymentIntent, GetCurrentDue, GetTransactionHistory, PreventDuplicatePayment, VerifyPayment (+7 more)
 
 ### Community 56 - "Community 56"
-Cohesion: 0.16
-Nodes (5): recordInAppMessage(), sendMulticastNotification(), calculateFeeBreakdownInPaise(), loadPaymentFeeConfig(), AppLogger
+Cohesion: 0.1
+Nodes (20): build, Center, ClipRRect, Container, dispose, initState, _liquidBlob, ManageTenantsScreen (+12 more)
 
 ### Community 57 - "Community 57"
 Cohesion: 0.1
-Nodes (17): build, Column, Container, DashboardSkeleton, ListView, Row, SizedBox, _SkeletonBox (+9 more)
+Nodes (18): _badgeColor, build, Card, dispose, Padding, Scaffold, SizedBox, _statRow (+10 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.11
-Nodes (18): build, _cardWidth, Container, _displayLocation, dispose, _GlassPill, _InfoRow, initState (+10 more)
+Cohesion: 0.1
+Nodes (16): build, DashboardScreen, Scaffold, build, Container, PaymentStatusBadge, build, initState (+8 more)
 
 ### Community 59 - "Community 59"
-Cohesion: 0.11
-Nodes (18): build, cancelPayment, _classifyPaymentError, _completeCheckoutWithError, _completeCheckoutWithSuccess, dispose, handleExternalWallet, handlePaymentError (+10 more)
+Cohesion: 0.16
+Nodes (5): recordInAppMessage(), sendMulticastNotification(), calculateFeeBreakdownInPaise(), loadPaymentFeeConfig(), AppLogger
 
 ### Community 60 - "Community 60"
-Cohesion: 0.11
-Nodes (15): AuthUser, AuthUserDto, toEntity, SessionAuthService, OwnerNotificationsFirebaseService, build, copyWith, _isValidUpi (+7 more)
+Cohesion: 0.12
+Nodes (15): auth_notifier.dart, auth_state.dart, AuthNotifier, build, clearError, _normalizeOptionalPhone, setMode, setSelectedRole (+7 more)
 
 ### Community 61 - "Community 61"
 Cohesion: 0.11
-Nodes (17): build, Column, DashboardnewBody, Expanded, HeaderSection, ListView, MessagesPanel, Row (+9 more)
+Nodes (16): build, ClipRRect, DashboardCard, RepaintBoundary, build, Column, HeaderSection, RepaintBoundary (+8 more)
 
 ### Community 62 - "Community 62"
 Cohesion: 0.11
-Nodes (17): DashboardFirebaseService, DashboardRepositoryImpl, GetDashboardSummary, LogoutOwner, RefreshDashboard, SessionAuthService, SessionRepositoryImpl, WatchDashboardSummary (+9 more)
+Nodes (18): build, _cardWidth, Container, _displayLocation, dispose, _GlassPill, _InfoRow, initState (+10 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.12
-Nodes (16): build, ClipRRect, Column, Container, _errorCard, _header, _liquidBlob, OwnerSubscriptionScreen (+8 more)
+Nodes (13): AuthUser, AuthUserDto, toEntity, AuthException, AuthRepositoryImpl, GetCurrentUser, SendOtp, SignOut (+5 more)
 
 ### Community 64 - "Community 64"
-Cohesion: 0.12
-Nodes (16): build, Column, Container, DashboardCard, DateFormat, _formatInr, _formatUpdateTime, _isTimelineMessage (+8 more)
+Cohesion: 0.11
+Nodes (18): build, cancelPayment, _classifyPaymentError, _completeCheckoutWithError, _completeCheckoutWithSuccess, dispose, handleExternalWallet, handlePaymentError (+10 more)
 
 ### Community 65 - "Community 65"
-Cohesion: 0.13
-Nodes (13): PaymentRecordModel, PaymentSummaryModel, PaymentService, DateTime, emit, PaymentService, StateError, package:rentdone/features/tenant/payment_module/models/payment_enums.dart (+5 more)
+Cohesion: 0.12
+Nodes (14): OwnerTenantsRepositoryImpl, CleanupOrphanTenants, OwnerTenantsFirebaseService, OwnerTenantsRepositoryImpl, WatchOwnerTenantProperties, WatchOwnerTenants, CleanupOrphanTenants, WatchOwnerTenantProperties (+6 more)
 
 ### Community 66 - "Community 66"
-Cohesion: 0.12
-Nodes (16): CalculateLateFee, CreatePaymentIntent, GetCurrentDue, GetTransactionHistory, PaymentRepositoryImpl, PreventDuplicatePayment, StripeService, VerifyPayment (+8 more)
+Cohesion: 0.11
+Nodes (17): build, Column, DashboardnewBody, Expanded, HeaderSection, ListView, MessagesPanel, Row (+9 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.12
-Nodes (14): TenantDashboardPaymentsMixin, TenantRemindersStore, build, ComplaintSubmittingNotifier, copyWith, Exception, loadInitial, setSubmitting (+6 more)
+Cohesion: 0.11
+Nodes (17): build, ClipRRect, Container, copyWith, Dialog, GestureDetector, GlassAppBar, GlassBottomSheet (+9 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.12
@@ -574,71 +574,71 @@ Nodes (16): _CacheEntry, _CacheMeta, copyWith, _deleteCacheEntry, DocumentCacheS
 
 ### Community 69 - "Community 69"
 Cohesion: 0.12
-Nodes (15): _AvatarPreview, build, CompositedTransformTarget, Container, dispose, initState, Material, _openProfileCard (+7 more)
+Nodes (16): build, Column, Container, DashboardCard, DateFormat, _formatInr, _formatUpdateTime, _isTimelineMessage (+8 more)
 
 ### Community 70 - "Community 70"
 Cohesion: 0.12
-Nodes (14): BarWithNotchClipper, getClip, shouldReclip, AnimatedBuilder, build, _DetailChip, dispose, initState (+6 more)
+Nodes (16): CalculateLateFee, CreatePaymentIntent, GetCurrentDue, GetTransactionHistory, PaymentRepositoryImpl, PreventDuplicatePayment, StripeService, VerifyPayment (+8 more)
 
 ### Community 71 - "Community 71"
+Cohesion: 0.12
+Nodes (16): build, ClipRRect, Column, Container, _errorCard, _header, _liquidBlob, OwnerSubscriptionScreen (+8 more)
+
+### Community 72 - "Community 72"
+Cohesion: 0.13
+Nodes (13): PaymentRecordModel, PaymentSummaryModel, DateTime, emit, PaymentService, StateError, PaymentService, package:rentdone/features/tenant/data/models/payment_enums.dart (+5 more)
+
+### Community 73 - "Community 73"
+Cohesion: 0.12
+Nodes (14): TenantDashboardRepositoryImpl, TenantDashboardPaymentsMixin, permissionDeniedSummary, TenantDashboardSummaryMixin, TenantDashboardSummaryResolver, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_complaints_mixin.dart, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_details_mixin.dart, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_documents_mixin.dart (+6 more)
+
+### Community 74 - "Community 74"
+Cohesion: 0.12
+Nodes (13): permissionDeniedSummary, resolveTenantPhone, TenantDashboardSummary, TenantDashboardSummary, TenantDashboardSummaryResolver, TenantFirestoreSummaryMixin, empty, TenantDashboardSummary (+5 more)
+
+### Community 75 - "Community 75"
+Cohesion: 0.12
+Nodes (10): TenantRepository, OwnerTenantsRepository, WatchOwnerTenants, Tenant, TenantDto, toEntity, _toInt, PropertyRepository (+2 more)
+
+### Community 76 - "Community 76"
+Cohesion: 0.12
+Nodes (15): _AvatarPreview, build, CompositedTransformTarget, Container, dispose, initState, Material, _openProfileCard (+7 more)
+
+### Community 77 - "Community 77"
 Cohesion: 0.17
 Nodes (10): ReportsRepositoryImpl, ReportsRepository, ExportReport, GetReportData, GetReportPropertyOptions, GetReportYearOptions, package:rentdone/features/owner/reports/data/services/reports_firebase_service.dart, package:rentdone/features/owner/reports/domain/entities/report_data.dart (+2 more)
 
-### Community 72 - "Community 72"
-Cohesion: 0.15
-Nodes (12): Exception, TenantDashboardDocumentsCoordinator, TenantDocument, TenantDashboardDocumentsMixin, Exception, TenantDocumentsStore, TenantDashboardRepository, dart:io (+4 more)
-
-### Community 73 - "Community 73"
-Cohesion: 0.13
-Nodes (13): copyWith, Exception, PaymentDashboardNotifier, PaymentDashboardState, PaymentDue, UnauthorizedFailure, copyWith, loadInitial (+5 more)
-
-### Community 74 - "Community 74"
-Cohesion: 0.13
-Nodes (14): build, clearMessages, copyWith, _isValidAccountHolder, _isValidAccountNumber, _isValidIfsc, OwnerBankNotifier, OwnerBankState (+6 more)
-
-### Community 75 - "Community 75"
-Cohesion: 0.15
-Nodes (12): PaymentSummaryModel, DateTime, emit, PaymentService, StateError, PaymentService, package:rentdone/features/tenant/data/models/payment_record_model.dart, package:rentdone/features/tenant/data/models/payment_summary_model.dart (+4 more)
-
-### Community 76 - "Community 76"
-Cohesion: 0.13
-Nodes (11): TenantFirestoreRoomMixin, tenantPhone, TenantProfileMetrics, tenureYears, TenantRoomDetails, TenantRoomDetailsReader, Exception, TenantRoomDetailsWriter (+3 more)
-
-### Community 77 - "Community 77"
+### Community 78 - "Community 78"
 Cohesion: 0.13
 Nodes (14): AppLogger, debug, error, exception, info, _log, logDebug, logError (+6 more)
 
-### Community 78 - "Community 78"
+### Community 79 - "Community 79"
 Cohesion: 0.13
 Nodes (14): build, ClipRRect, dispose, _heroHeader, initState, _liquidBlob, Positioned, RoleSelectionScreen (+6 more)
 
-### Community 79 - "Community 79"
-Cohesion: 0.13
-Nodes (13): AlertsPanel, _AlertTile, build, Container, DashboardCard, SizedBox, build, _formatInr (+5 more)
-
 ### Community 80 - "Community 80"
-Cohesion: 0.14
-Nodes (11): OwnerPaymentQuote, OwnerRazorpayPaymentIntent, OwnerRazorpayPaymentService, StateError, FirebaseFunctionsException, PaymentFunctionsDataSource, TenantDashboardAutoLinkHelper, _tryLinkTenantAccount (+3 more)
+Cohesion: 0.13
+Nodes (13): Exception, TenantDashboardComplaintsMixin, AnimatedBuilder, build, _DetailChip, dispose, initState, launchUrl (+5 more)
 
 ### Community 81 - "Community 81"
-Cohesion: 0.14
-Nodes (13): _buildIdempotencyKey, _currentUserIdOrThrow, emitIfReady, _ownerIdOrThrow, OwnerPropertySummary, OwnerTenantSummary, PaymentGatewayException, _resolveTenantRoomLabel (+5 more)
+Cohesion: 0.13
+Nodes (13): getOwnerProfile, _mapAuthError, OwnerProfileAuthService, OwnerProfileDto, _resolveValue, StateError, build, CircularProfileAvatar (+5 more)
 
 ### Community 82 - "Community 82"
-Cohesion: 0.14
-Nodes (13): build, _cleanErrorMessage, clearTransientState, copyWith, DocumentUploadNotifier, DocumentUploadState, FirebaseDocumentStorageService, removeUploadedUrl (+5 more)
+Cohesion: 0.13
+Nodes (14): build, clearMessages, copyWith, _isValidAccountHolder, _isValidAccountNumber, _isValidIfsc, OwnerBankNotifier, OwnerBankState (+6 more)
 
 ### Community 83 - "Community 83"
-Cohesion: 0.14
-Nodes (11): TenantDashboardDetailsMixin, permissionDeniedSummary, TenantDashboardSummaryMixin, TenantDashboardSummaryResolver, TenantDashboardSummary, TenantDashboardSummaryResolver, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_summary_fallback.dart, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_summary_resolver.dart (+3 more)
+Cohesion: 0.13
+Nodes (13): AppThemeModeNotifier, clearOverride, setDarkMode, setThemeMode, ArgumentError, ensureOwnerSubscriptionDoc, OwnerSubscriptionData, OwnerSubscriptionPaymentIntent (+5 more)
 
 ### Community 84 - "Community 84"
-Cohesion: 0.14
-Nodes (9): TenantRepository, OwnerTenantsRepository, Tenant, TenantDto, toEntity, _toInt, PropertyRepository, TenantRepository (+1 more)
+Cohesion: 0.15
+Nodes (12): onRewardEarned, preload, RewardedAdService, build, ClipRRect, dispose, initState, _load (+4 more)
 
 ### Community 85 - "Community 85"
 Cohesion: 0.15
-Nodes (12): onRewardEarned, preload, RewardedAdService, build, ClipRRect, dispose, initState, _load (+4 more)
+Nodes (10): AppMessage, AppMessageDto, toDate, toEntity, DashboardRepository, GetDashboardSummary, RefreshDashboard, ../entities/dashboard_summary.dart (+2 more)
 
 ### Community 86 - "Community 86"
 Cohesion: 0.14
@@ -646,103 +646,103 @@ Nodes (13): ActionChip, build, Container, _continue, dispose, _GlowOrb, IgnorePo
 
 ### Community 87 - "Community 87"
 Cohesion: 0.14
-Nodes (4): fl_register_plugins(), main(), my_application_activate(), my_application_new()
+Nodes (13): _buildIdempotencyKey, _currentUserIdOrThrow, emitIfReady, _ownerIdOrThrow, OwnerPropertySummary, OwnerTenantSummary, PaymentGatewayException, _resolveTenantRoomLabel (+5 more)
 
 ### Community 88 - "Community 88"
-Cohesion: 0.15
-Nodes (12): build, Divider, _inr, Padding, PaymentScreen, _PaymentScreenState, _sanitizeError, Scaffold (+4 more)
+Cohesion: 0.14
+Nodes (12): copyWith, Exception, PaymentDashboardNotifier, PaymentDashboardState, PaymentDue, UnauthorizedFailure, copyWith, loadInitial (+4 more)
 
 ### Community 89 - "Community 89"
-Cohesion: 0.15
-Nodes (12): build, Divider, _inr, Padding, PaymentScreen, _PaymentScreenState, _sanitizeError, Scaffold (+4 more)
+Cohesion: 0.14
+Nodes (11): OwnerPaymentQuote, OwnerRazorpayPaymentIntent, OwnerRazorpayPaymentService, StateError, FirebaseFunctionsException, PaymentFunctionsDataSource, TenantDashboardAutoLinkHelper, _tryLinkTenantAccount (+3 more)
 
 ### Community 90 - "Community 90"
-Cohesion: 0.15
-Nodes (12): _compressFormat, _contentType, Exception, _extensionFromFileName, File, FirebaseDocumentStorageService, FirebaseDocumentUploadResult, Function (+4 more)
+Cohesion: 0.14
+Nodes (13): build, _cleanErrorMessage, clearTransientState, copyWith, DocumentUploadNotifier, DocumentUploadState, FirebaseDocumentStorageService, removeUploadedUrl (+5 more)
 
 ### Community 91 - "Community 91"
-Cohesion: 0.15
-Nodes (12): AlertDialog, _clearServerTokens, _handleTapNavigation, PushNotificationService, requestPermission, _saveLegacyTokenIfPossible, _saveToken, _showForegroundNotification (+4 more)
+Cohesion: 0.14
+Nodes (4): fl_register_plugins(), main(), my_application_activate(), my_application_new()
 
 ### Community 92 - "Community 92"
 Cohesion: 0.15
-Nodes (12): build, _detailRow, dispose, Icon, initState, Padding, PaymentFailureScreen, _PaymentFailureScreenState (+4 more)
+Nodes (12): _compressFormat, _contentType, Exception, _extensionFromFileName, File, FirebaseDocumentStorageService, FirebaseDocumentUploadResult, Function (+4 more)
 
 ### Community 93 - "Community 93"
 Cohesion: 0.15
-Nodes (12): build, Center, Container, _propertyCard, _propertyGrid, PropertyOverviewScreen, Row, Scaffold (+4 more)
+Nodes (12): AlertDialog, _clearServerTokens, _handleTapNavigation, PushNotificationService, requestPermission, _saveLegacyTokenIfPossible, _saveToken, _showForegroundNotification (+4 more)
 
 ### Community 94 - "Community 94"
-Cohesion: 0.17
-Nodes (11): build, _faqTile, _iconForType, ListTile, Scaffold, _sectionTitle, SizedBox, SupportScreen (+3 more)
+Cohesion: 0.15
+Nodes (11): build, InkWell, UserMenu, build, dispose, initState, Scaffold, SizedBox (+3 more)
 
 ### Community 95 - "Community 95"
-Cohesion: 0.17
-Nodes (11): build, calculateIndex, Container, _LiquidBlob, OwnerDashboardPage, OwnerTopNavBar, package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/botttom_nav_bar.dart, package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/mobile_drawer.dart (+3 more)
+Cohesion: 0.15
+Nodes (12): build, _detailRow, dispose, Icon, initState, Padding, PaymentFailureScreen, _PaymentFailureScreenState (+4 more)
 
 ### Community 96 - "Community 96"
-Cohesion: 0.17
-Nodes (11): AuthFirebaseService, AuthRepositoryImpl, GetCurrentUser, SendOtp, SignOut, VerifyOtp, package:rentdone/features/auth/data/repositories/auth_repository_impl.dart, package:rentdone/features/auth/domain/usecases/get_current_user.dart (+3 more)
+Cohesion: 0.15
+Nodes (12): build, Center, Container, _propertyCard, _propertyGrid, PropertyOverviewScreen, Row, Scaffold (+4 more)
 
 ### Community 97 - "Community 97"
-Cohesion: 0.18
-Nodes (8): WatchDashboardSummary, WatchRecentMessages, useCase, useCase, package:rentdone/features/owner/owner_dashboard/di/dashboard_di.dart, package:rentdone/features/owner/owner_dashboard/domain/entities/app_message.dart, package:rentdone/features/owner/owner_dashboard/domain/entities/dashboard_summary.dart, package:rentdone/features/owner/owner_dashboard/domain/repositories/dashboard_repository.dart
+Cohesion: 0.15
+Nodes (12): build, Divider, _inr, Padding, PaymentScreen, _PaymentScreenState, _sanitizeError, Scaffold (+4 more)
 
 ### Community 98 - "Community 98"
 Cohesion: 0.17
-Nodes (10): fromDb, _complete, dispose, _friendlyError, RazorpayCheckoutResult, RazorpayOrderData, RazorpayService, _recordFailure (+2 more)
+Nodes (9): TenantComplaintsStore, TenantFirestoreDocumentsMixin, TenantRemindersStore, TenantDashboardRepository, package:rentdone/features/tenant/data/models/tenant_complaint.dart, package:rentdone/features/tenant/data/models/tenant_reminder.dart, tenant_complaints_store.dart, tenant_documents_store.dart (+1 more)
 
 ### Community 99 - "Community 99"
-Cohesion: 0.2
-Nodes (8): OwnerProfileRepositoryImpl, OwnerProfileRepository, GetOwnerProfile, SaveOwnerProfile, package:rentdone/features/owner/owner_profile/data/models/owner_profile_dto.dart, package:rentdone/features/owner/owner_profile/data/services/owner_profile_auth_service.dart, package:rentdone/features/owner/owner_profile/domain/entities/owner_profile.dart, package:rentdone/features/owner/owner_profile/domain/repositories/owner_profile_repository.dart
+Cohesion: 0.17
+Nodes (10): fromDb, PaymentSummaryModel, DateTime, emit, PaymentService, StateError, package:rentdone/features/tenant/payment_module/models/payment_record_model.dart, package:rentdone/features/tenant/payment_module/models/tenant_model.dart (+2 more)
 
 ### Community 100 - "Community 100"
-Cohesion: 0.17
-Nodes (9): SupportContact, SupportContactDto, toEntity, SupportFaq, SupportFaqDto, toEntity, SupportContent, package:rentdone/features/owner/owner_support/domain/entities/support_contact.dart (+1 more)
+Cohesion: 0.15
+Nodes (12): build, Divider, _inr, Padding, PaymentScreen, _PaymentScreenState, _sanitizeError, Scaffold (+4 more)
 
 ### Community 101 - "Community 101"
 Cohesion: 0.17
-Nodes (11): ExportReport, GetReportData, GetReportPropertyOptions, GetReportYearOptions, ReportsFirebaseService, ReportsRepositoryImpl, package:rentdone/features/owner/reports/data/repositories/reports_repository_impl.dart, package:rentdone/features/owner/reports/domain/usecases/export_report.dart (+3 more)
+Nodes (11): build, _faqTile, _iconForType, ListTile, Scaffold, _sectionTitle, SizedBox, SupportScreen (+3 more)
 
 ### Community 102 - "Community 102"
 Cohesion: 0.17
-Nodes (10): _markPaymentPaidWithTrustUpdate, PaymentFirebaseService, StateError, _currentUserIdOrThrow, PaymentQueryService, StateError, TenantPaymentHistoryPage, package:rentdone/features/owner/owner_payment/data/models/payment_dto.dart (+2 more)
+Nodes (11): build, Container, _createImageFilter, didUpdateWidget, dispose, _getImageFilter, IgnorePointer, initState (+3 more)
 
 ### Community 103 - "Community 103"
 Cohesion: 0.17
-Nodes (10): isAfterCursor, matches, TransactionDocFilters, build, _compareDocs, TransactionPage, TransactionPageBuilder, package:rentdone/features/payment/data/models/transaction_record_dto.dart (+2 more)
+Nodes (11): build, calculateIndex, Container, _LiquidBlob, OwnerDashboardPage, OwnerTopNavBar, package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/botttom_nav_bar.dart, package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/mobile_drawer.dart (+3 more)
 
 ### Community 104 - "Community 104"
 Cohesion: 0.17
-Nodes (9): Exception, TenantDashboardComplaintsMixin, TenantComplaintsStore, TenantFirestoreDocumentsMixin, package:rentdone/features/tenant/data/models/tenant_complaint.dart, package:url_launcher/url_launcher.dart, tenant_complaints_store.dart, tenant_documents_store.dart (+1 more)
+Nodes (9): SupportContact, SupportContactDto, toEntity, SupportFaq, SupportFaqDto, toEntity, SupportContent, package:rentdone/features/owner/owner_support/domain/entities/support_contact.dart (+1 more)
 
 ### Community 105 - "Community 105"
 Cohesion: 0.17
-Nodes (9): permissionDeniedSummary, resolveTenantPhone, TenantDashboardSummary, TenantFirestoreSummaryMixin, empty, TenantDashboardSummary, TenantSummaryDefaults, package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart (+1 more)
+Nodes (11): ExportReport, GetReportData, GetReportPropertyOptions, GetReportYearOptions, ReportsFirebaseService, ReportsRepositoryImpl, package:rentdone/features/owner/reports/data/repositories/reports_repository_impl.dart, package:rentdone/features/owner/reports/domain/usecases/export_report.dart (+3 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.17
-Nodes (11): build, Container, _createImageFilter, didUpdateWidget, dispose, _getImageFilter, IgnorePointer, initState (+3 more)
+Nodes (10): isAfterCursor, matches, TransactionDocFilters, build, _compareDocs, TransactionPage, TransactionPageBuilder, package:rentdone/features/payment/data/models/transaction_record_dto.dart (+2 more)
 
 ### Community 107 - "Community 107"
-Cohesion: 0.18
-Nodes (11): blockDuplicatePaymentOrThrow(), buildPaymentLogPayload(), getLeaseOrTenantPaymentContext(), logPaymentEvent(), logPaymentIntegrityEvent(), normalizeIntegerAmount(), normalizeLogNumber(), normalizeLogString() (+3 more)
+Cohesion: 0.17
+Nodes (11): AuthFirebaseService, AuthRepositoryImpl, GetCurrentUser, SendOtp, SignOut, VerifyOtp, package:rentdone/features/auth/data/repositories/auth_repository_impl.dart, package:rentdone/features/auth/domain/usecases/get_current_user.dart (+3 more)
 
 ### Community 108 - "Community 108"
-Cohesion: 0.18
-Nodes (11): blockDuplicatePaymentOrThrow(), buildPaymentLogPayload(), getLeaseOrTenantPaymentContext(), logPaymentEvent(), logPaymentIntegrityEvent(), normalizeIntegerAmount(), normalizeLogNumber(), normalizeLogString() (+3 more)
+Cohesion: 0.17
+Nodes (10): _markPaymentPaidWithTrustUpdate, PaymentFirebaseService, StateError, _currentUserIdOrThrow, PaymentQueryService, StateError, TenantPaymentHistoryPage, package:rentdone/features/owner/owner_payment/data/models/payment_dto.dart (+2 more)
 
 ### Community 109 - "Community 109"
-Cohesion: 0.18
-Nodes (10): _friendlyFunctionsMessage, mapFirebaseFailure, mapFunctionsFailure, NetworkFailure, _normalizeFunctionMessage, NotFoundFailure, PaymentFailureMapper, ServerFailure (+2 more)
+Cohesion: 0.17
+Nodes (10): fromDb, _complete, dispose, _friendlyError, RazorpayCheckoutResult, RazorpayOrderData, RazorpayService, _recordFailure (+2 more)
 
 ### Community 110 - "Community 110"
-Cohesion: 0.22
-Nodes (7): OwnerSettingsRepositoryImpl, OwnerSettingsRepository, GetOwnerSettings, SaveOwnerSettings, package:rentdone/features/owner/owner_settings/data/services/owner_settings_firestore_service.dart, package:rentdone/features/owner/owner_settings/domain/entities/owner_settings.dart, package:rentdone/features/owner/owner_settings/domain/repositories/owner_settings_repository.dart
+Cohesion: 0.18
+Nodes (11): blockDuplicatePaymentOrThrow(), buildPaymentLogPayload(), getLeaseOrTenantPaymentContext(), logPaymentEvent(), logPaymentIntegrityEvent(), normalizeIntegerAmount(), normalizeLogNumber(), normalizeLogString() (+3 more)
 
 ### Community 111 - "Community 111"
 Cohesion: 0.18
-Nodes (10): MonthlyCollectionPoint, MonthlySummary, OverdueTenantReport, PaymentMethodBreakdown, PropertyIncomeReport, ReportData, ReportPropertyOption, TenantPaymentStatusReport (+2 more)
+Nodes (11): blockDuplicatePaymentOrThrow(), buildPaymentLogPayload(), getLeaseOrTenantPaymentContext(), logPaymentEvent(), logPaymentIntegrityEvent(), normalizeIntegerAmount(), normalizeLogNumber(), normalizeLogString() (+3 more)
 
 ### Community 112 - "Community 112"
 Cohesion: 0.2
@@ -753,224 +753,224 @@ Cohesion: 0.18
 Nodes (10): _compressFormat, _contentType, FirebaseDocumentStorageService, Function, _isImage, _isNotFoundStorageError, _resolvePrimaryStorage, StorageUploadException (+2 more)
 
 ### Community 114 - "Community 114"
-Cohesion: 0.2
-Nodes (9): build, GestureDetector, Material, _MenuTapScale, _MenuTapScaleState, OwnerTopNavBar, _OwnerTopNavBarState, package:rentdone/features/owner/owner_dashboard/presentation/providers/dashboard_layout_provider.dart (+1 more)
+Cohesion: 0.22
+Nodes (7): OwnerSettingsRepositoryImpl, OwnerSettingsRepository, GetOwnerSettings, SaveOwnerSettings, package:rentdone/features/owner/owner_settings/data/services/owner_settings_firestore_service.dart, package:rentdone/features/owner/owner_settings/domain/entities/owner_settings.dart, package:rentdone/features/owner/owner_settings/domain/repositories/owner_settings_repository.dart
 
 ### Community 115 - "Community 115"
-Cohesion: 0.2
-Nodes (9): build, closeSidebar, copyWith, DashboardLayoutNotifier, DashboardLayoutState, onItemSelected, openSidebar, setSidebarOpen (+1 more)
+Cohesion: 0.18
+Nodes (10): MonthlyCollectionPoint, MonthlySummary, OverdueTenantReport, PaymentMethodBreakdown, PropertyIncomeReport, ReportData, ReportPropertyOption, TenantPaymentStatusReport (+2 more)
 
 ### Community 116 - "Community 116"
-Cohesion: 0.2
-Nodes (9): _complete, dispose, _friendlyError, RazorpayCheckoutResult, RazorpayOrderData, RazorpayService, _recordFailure, StateError (+1 more)
+Cohesion: 0.18
+Nodes (10): _friendlyFunctionsMessage, mapFirebaseFailure, mapFunctionsFailure, NetworkFailure, _normalizeFunctionMessage, NotFoundFailure, PaymentFailureMapper, ServerFailure (+2 more)
 
 ### Community 117 - "Community 117"
 Cohesion: 0.2
-Nodes (9): build, clearMessages, copyWith, ownerAvatarFromCode, OwnerProfileNotifier, OwnerProfileState, setAvatar, updateProfile (+1 more)
+Nodes (9): build, closeSidebar, copyWith, DashboardLayoutNotifier, DashboardLayoutState, onItemSelected, openSidebar, setSidebarOpen (+1 more)
 
 ### Community 118 - "Community 118"
 Cohesion: 0.2
-Nodes (8): _defaultSettings, OwnerSettingsDto, OwnerSettingsFirestoreService, StateError, getSettings, OwnerSettingsLocalService, saveSettings, package:rentdone/features/owner/owner_settings/data/models/owner_settings_dto.dart
+Nodes (9): BackHandler, _BackHandlerState, build, FadeTransition, _LiquidConfirmDialog, PopScope, SafeArea, SizedBox (+1 more)
 
 ### Community 119 - "Community 119"
 Cohesion: 0.2
-Nodes (9): emitIfReady, _ownerIdOrThrow, OwnerPropertySummary, OwnerTenantSummary, PaymentAnalyticsService, _resolveTenantRoomLabel, StateError, package:rentdone/features/owner/owner_payment/domain/entities/owner_property_summary.dart (+1 more)
+Nodes (9): build, Column, Container, DashboardSkeleton, ListView, Row, SizedBox, _SkeletonBox (+1 more)
 
 ### Community 120 - "Community 120"
 Cohesion: 0.2
-Nodes (9): app_router.dart, app_theme.dart, build, didChangeDependencies, MediaQuery, RentDoneApp, _RentDoneAppState, package:rentdone/app/theme_mode_provider.dart (+1 more)
+Nodes (9): build, _detailRow, dispose, initState, PaymentSuccessScreen, _PaymentSuccessScreenState, PopScope, Row (+1 more)
 
 ### Community 121 - "Community 121"
 Cohesion: 0.2
-Nodes (9): build, _detailRow, dispose, initState, PaymentSuccessScreen, _PaymentSuccessScreenState, PopScope, Row (+1 more)
+Nodes (8): _defaultSettings, OwnerSettingsDto, OwnerSettingsFirestoreService, StateError, getSettings, OwnerSettingsLocalService, saveSettings, package:rentdone/features/owner/owner_settings/data/models/owner_settings_dto.dart
 
 ### Community 122 - "Community 122"
+Cohesion: 0.2
+Nodes (9): emitIfReady, _ownerIdOrThrow, OwnerPropertySummary, OwnerTenantSummary, PaymentAnalyticsService, _resolveTenantRoomLabel, StateError, package:rentdone/features/owner/owner_payment/domain/entities/owner_property_summary.dart (+1 more)
+
+### Community 123 - "Community 123"
+Cohesion: 0.2
+Nodes (8): AuthStateNotifier, dispose, PaymentGatewayResult, TenantRazorpayGatewayAdapter, dart:async, package:rentdone/features/owner/owner_payment/data/services/razorpay_service.dart, package:rentdone/features/owner/owner_payment/models/payment_state.dart, package:rentdone/features/payment/data/gateways/payment_gateway.dart
+
+### Community 124 - "Community 124"
+Cohesion: 0.2
+Nodes (9): _complete, dispose, _friendlyError, RazorpayCheckoutResult, RazorpayOrderData, RazorpayService, _recordFailure, StateError (+1 more)
+
+### Community 125 - "Community 125"
+Cohesion: 0.2
+Nodes (9): app_router.dart, app_theme.dart, build, didChangeDependencies, MediaQuery, RentDoneApp, _RentDoneAppState, package:rentdone/app/theme_mode_provider.dart (+1 more)
+
+### Community 126 - "Community 126"
 Cohesion: 0.36
 Nodes (8): build, Container, Padding, PaymentCard, PaymentLineItem, PaymentPrimaryButton, PaymentSecondaryButton, SizedBox
 
-### Community 123 - "Community 123"
-Cohesion: 0.22
-Nodes (8): ArgumentError, ensureOwnerSubscriptionDoc, OwnerSubscriptionData, OwnerSubscriptionPaymentIntent, OwnerSubscriptionService, planConfigByCode, StateError, SubscriptionPlanConfig
-
-### Community 124 - "Community 124"
+### Community 127 - "Community 127"
 Cohesion: 0.22
 Nodes (8): build, copyWith, RemoveTenantNotifier, reset, TenantActionState, useCase, package:rentdone/features/owner/owners_properties/di/property_di.dart, package:rentdone/features/owner/owners_properties/domain/usecases/remove_tenant_from_room.dart
 
-### Community 125 - "Community 125"
+### Community 128 - "Community 128"
+Cohesion: 0.22
+Nodes (8): _Badge, build, DecoratedBox, paint, shouldRepaint, SizedBox, TenantPropertyMarker, _TrianglePainter
+
+### Community 129 - "Community 129"
+Cohesion: 0.22
+Nodes (8): build, Center, Container, OwnerNotificationsScreen, Scaffold, _severityColor, SizedBox, package:rentdone/features/owner/owner_notifications/presentation/providers/owner_notifications_provider.dart
+
+### Community 130 - "Community 130"
+Cohesion: 0.22
+Nodes (8): build, GestureDetector, Material, _MenuTapScale, _MenuTapScaleState, OwnerTopNavBar, _OwnerTopNavBarState, package:rentdone/features/owner/owner_dashboard/presentation/widgets/dashboard/user_menu.dart
+
+### Community 131 - "Community 131"
 Cohesion: 0.22
 Nodes (7): normalizeMethod, normalizeStatus, PaymentInstallmentDto, TenantPaymentRecordDto, toDate, TenantPaymentHistoryPage, package:rentdone/features/owner/owner_payment/domain/entities/tenant_payment_record.dart
 
-### Community 126 - "Community 126"
+### Community 132 - "Community 132"
+Cohesion: 0.22
+Nodes (8): build, copyWith, _isValidUpi, OwnerUpiFirestoreService, OwnerUpiNotifier, OwnerUpiState, updateUpiId, package:rentdone/features/owner/owner_settings/data/services/owner_upi_firestore_service.dart
+
+### Community 133 - "Community 133"
 Cohesion: 0.22
 Nodes (8): TenantFirestoreService, tenant_firestore/tenant_firestore_documents_mixin.dart, tenant_firestore/tenant_firestore_owner_mixin.dart, tenant_firestore/tenant_firestore_payments_mixin.dart, tenant_firestore/tenant_firestore_room_mixin.dart, tenant_firestore/tenant_firestore_settings_mixin.dart, tenant_firestore/tenant_firestore_summary_mixin.dart, tenant_firestore/tenant_firestore_user_sync_mixin.dart
 
-### Community 127 - "Community 127"
-Cohesion: 0.25
-Nodes (8): amountInr(), dispatchPaymentReceivedNotification(), isPaidLikeStatus(), isUnpaidStatus(), normalizePaymentStatus(), reserveNotificationEvent(), sendPushMulticast(), shouldSendUserNotification()
-
-### Community 128 - "Community 128"
-Cohesion: 0.25
-Nodes (8): amountInr(), dispatchPaymentReceivedNotification(), isPaidLikeStatus(), isUnpaidStatus(), normalizePaymentStatus(), reserveNotificationEvent(), sendPushMulticast(), shouldSendUserNotification()
-
-### Community 129 - "Community 129"
-Cohesion: 0.25
-Nodes (7): badgeFor, clamp, consecutiveBonus, paymentDelta, penaltyForIncident, rewardForRecoveryMonths, TenantTrustScore
-
-### Community 130 - "Community 130"
-Cohesion: 0.25
-Nodes (7): build, dispose, initState, Scaffold, SizedBox, SplashPage, _SplashPageState
-
-### Community 131 - "Community 131"
-Cohesion: 0.29
-Nodes (5): DashboardRepository, GetDashboardSummary, RefreshDashboard, ../entities/dashboard_summary.dart, ../repositories/dashboard_repository.dart
-
-### Community 132 - "Community 132"
-Cohesion: 0.25
-Nodes (7): InvalidPaymentAmountException, InvalidPaymentContextException, InvalidPaymentStatusException, PaymentException, PaymentGatewayException, PaymentStorageException, toString
-
-### Community 133 - "Community 133"
-Cohesion: 0.25
-Nodes (7): _buildIdempotencyKey, _currentUserIdOrThrow, _markPaymentPaidWithTrustUpdate, PaymentGatewayException, PaymentWriteService, StateError, package:rentdone/features/owner/owner_payment/domain/exceptions/payment_exceptions.dart
-
 ### Community 134 - "Community 134"
 Cohesion: 0.25
-Nodes (7): GetOwnerProfile, OwnerProfileAuthService, OwnerProfileRepositoryImpl, SaveOwnerProfile, package:rentdone/features/owner/owner_profile/data/repositories/owner_profile_repository_impl.dart, package:rentdone/features/owner/owner_profile/domain/usecases/get_owner_profile.dart, package:rentdone/features/owner/owner_profile/domain/usecases/save_owner_profile.dart
+Nodes (8): amountInr(), dispatchPaymentReceivedNotification(), isPaidLikeStatus(), isUnpaidStatus(), normalizePaymentStatus(), reserveNotificationEvent(), sendPushMulticast(), shouldSendUserNotification()
 
 ### Community 135 - "Community 135"
 Cohesion: 0.25
-Nodes (7): build, CircularProfileAvatar, Container, ProfilePictureAvatar, SquareProfileAvatar, package:cached_network_image/cached_network_image.dart, package:rentdone/core/services/gravatar_service.dart
+Nodes (8): amountInr(), dispatchPaymentReceivedNotification(), isPaidLikeStatus(), isUnpaidStatus(), normalizePaymentStatus(), reserveNotificationEvent(), sendPushMulticast(), shouldSendUserNotification()
 
 ### Community 136 - "Community 136"
 Cohesion: 0.25
-Nodes (7): GetOwnerSettings, OwnerSettingsFirestoreService, OwnerSettingsRepositoryImpl, SaveOwnerSettings, package:rentdone/features/owner/owner_settings/data/repositories/owner_settings_repository_impl.dart, package:rentdone/features/owner/owner_settings/domain/usecases/get_owner_settings.dart, package:rentdone/features/owner/owner_settings/domain/usecases/save_owner_settings.dart
+Nodes (7): addValue, _deviceInfo, logEvent, _normalizeEventName, PaymentEventLogger, package:firebase_analytics/firebase_analytics.dart, package:firebase_crashlytics/firebase_crashlytics.dart
 
 ### Community 137 - "Community 137"
 Cohesion: 0.25
-Nodes (7): build, copyWith, _friendlyErrorMessage, reload, ReportsNotifier, ReportsState, package:rentdone/features/owner/reports/di/reports_di.dart
+Nodes (7): badgeFor, clamp, consecutiveBonus, paymentDelta, penaltyForIncident, rewardForRecoveryMonths, TenantTrustScore
 
 ### Community 138 - "Community 138"
 Cohesion: 0.25
-Nodes (7): NetworkFailure, NotFoundFailure, PaymentFailure, ServerFailure, toString, UnauthorizedFailure, ValidationFailure
+Nodes (7): Property, PropertyDto, _toBool, _toDouble, toEntity, _toInt, package:rentdone/features/owner/owners_properties/data/models/room_dto.dart
 
 ### Community 139 - "Community 139"
 Cohesion: 0.25
-Nodes (7): TenantDashboardRepositoryImpl, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_complaints_mixin.dart, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_details_mixin.dart, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_documents_mixin.dart, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_payments_mixin.dart, package:rentdone/features/tenant/data/repositories/tenant_dashboard/tenant_dashboard_summary_mixin.dart, package:rentdone/features/tenant/domain/repositories/tenant_dashboard_repository.dart
+Nodes (7): AlertsPanel, _AlertTile, build, Container, DashboardCard, SizedBox, package:flutter_animate/flutter_animate.dart
 
 ### Community 140 - "Community 140"
 Cohesion: 0.25
-Nodes (7): Property, PropertyDto, _toBool, _toDouble, toEntity, _toInt, package:rentdone/features/owner/owners_properties/data/models/room_dto.dart
+Nodes (7): InvalidPaymentAmountException, InvalidPaymentContextException, InvalidPaymentStatusException, PaymentException, PaymentGatewayException, PaymentStorageException, toString
 
 ### Community 141 - "Community 141"
 Cohesion: 0.25
-Nodes (7): addValue, _deviceInfo, logEvent, _normalizeEventName, PaymentEventLogger, package:firebase_analytics/firebase_analytics.dart, package:firebase_crashlytics/firebase_crashlytics.dart
+Nodes (7): GetOwnerSettings, OwnerSettingsFirestoreService, OwnerSettingsRepositoryImpl, SaveOwnerSettings, package:rentdone/features/owner/owner_settings/data/repositories/owner_settings_repository_impl.dart, package:rentdone/features/owner/owner_settings/domain/usecases/get_owner_settings.dart, package:rentdone/features/owner/owner_settings/domain/usecases/save_owner_settings.dart
 
 ### Community 142 - "Community 142"
 Cohesion: 0.25
-Nodes (8): Firestore: payments, Firestore: properties, Firestore: tenants, Firebase Functions Index (V1), Firebase Functions Lib Index, Rent Reminder Scheduler, Notification Service, Rate Limit Service
+Nodes (7): build, copyWith, _friendlyErrorMessage, reload, ReportsNotifier, ReportsState, package:rentdone/features/owner/reports/di/reports_di.dart
 
 ### Community 143 - "Community 143"
+Cohesion: 0.25
+Nodes (7): NetworkFailure, NotFoundFailure, PaymentFailure, ServerFailure, toString, UnauthorizedFailure, ValidationFailure
+
+### Community 144 - "Community 144"
+Cohesion: 0.25
+Nodes (7): AuthException, AuthFirebaseService, AuthUser, _mapFirebaseException, toString, _upsertAndMapUser, package:google_sign_in/google_sign_in.dart
+
+### Community 145 - "Community 145"
+Cohesion: 0.25
+Nodes (7): _buildIdempotencyKey, _currentUserIdOrThrow, _markPaymentPaidWithTrustUpdate, PaymentGatewayException, PaymentWriteService, StateError, package:rentdone/features/owner/owner_payment/domain/exceptions/payment_exceptions.dart
+
+### Community 146 - "Community 146"
+Cohesion: 0.25
+Nodes (6): TenantFirestorePaymentsMixin, _safeDateFrom, TenantPaymentWatchStore, package:rentdone/features/tenant/data/models/tenant_payment.dart, tenant_payment_watch_store.dart, tenant_payment_write_store.dart
+
+### Community 147 - "Community 147"
+Cohesion: 0.25
+Nodes (8): Firestore: payments, Firestore: properties, Firestore: tenants, Firebase Functions Index (V1), Firebase Functions Lib Index, Rent Reminder Scheduler, Notification Service, Rate Limit Service
+
+### Community 148 - "Community 148"
 Cohesion: 0.43
 Nodes (8): Firebase Utility, Logger Utility, Notification Service, Payment Callable Triggers, Payment Firestore Trigger, Rate Limit Service, Token Service, Validation Service
 
-### Community 146 - "Community 146"
-Cohesion: 0.29
-Nodes (6): getOwnerProfile, _mapAuthError, OwnerProfileAuthService, OwnerProfileDto, _resolveValue, StateError
-
-### Community 147 - "Community 147"
-Cohesion: 0.29
-Nodes (5): _safeDateFrom, TenantPaymentWatchStore, Exception, TenantPaymentWriteStore, package:intl/intl.dart
-
-### Community 148 - "Community 148"
+### Community 151 - "Community 151"
 Cohesion: 0.29
 Nodes (5): AdMobConfig, DefaultFirebaseOptions, UnsupportedError, package:firebase_core/firebase_core.dart, package:flutter/foundation.dart
 
-### Community 149 - "Community 149"
-Cohesion: 0.29
-Nodes (6): build, Container, InkWell, _pill, PropertyCard, SizedBox
-
-### Community 150 - "Community 150"
-Cohesion: 0.29
-Nodes (6): CircularProgressIndicator, GlassDialogHelper, showDialog, showLoadingDialog, SizedBox, package:rentdone/shared/design/glassmorphism.dart
-
-### Community 151 - "Community 151"
-Cohesion: 0.29
-Nodes (6): build, GlassRoleCard, Icon, LayoutBuilder, Material, SizedBox
-
 ### Community 152 - "Community 152"
 Cohesion: 0.29
-Nodes (6): build, initState, OtpInput, _OtpInputState, Row, SizedBox
+Nodes (5): AuthRepository, AuthState, copyWith, ../entities/auth_user.dart, package:rentdone/core/constants/user_role.dart
 
 ### Community 153 - "Community 153"
 Cohesion: 0.29
-Nodes (7): reserveNotificationEvent, sendMulticastWithRetry, onPaymentCreated Trigger, checkAndIncrementRateLimit, Notification Idempotency Pattern, sendRentDueReminders Scheduler, validatePaymentForNotification
+Nodes (6): CircularProgressIndicator, GlassDialogHelper, showDialog, showLoadingDialog, SizedBox, package:rentdone/shared/design/glassmorphism.dart
 
 ### Community 154 - "Community 154"
+Cohesion: 0.29
+Nodes (6): build, Container, InkWell, _pill, PropertyCard, SizedBox
+
+### Community 155 - "Community 155"
+Cohesion: 0.29
+Nodes (7): reserveNotificationEvent, sendMulticastWithRetry, onPaymentCreated Trigger, checkAndIncrementRateLimit, Notification Idempotency Pattern, sendRentDueReminders Scheduler, validatePaymentForNotification
+
+### Community 156 - "Community 156"
 Cohesion: 0.67
 Nodes (4): assertAdminCallableAuth(), getSecurityConfig(), parseBool(), rateLimitAdminOrThrow()
 
-### Community 155 - "Community 155"
-Cohesion: 0.4
-Nodes (6): calculateFeeBreakdownInPaise(), ceilDivide(), defaultPaymentFeeConfig(), loadPaymentFeeConfig(), parsePercent(), percentToBps()
-
-### Community 156 - "Community 156"
-Cohesion: 0.4
-Nodes (6): calculateFeeBreakdownInPaise(), ceilDivide(), defaultPaymentFeeConfig(), loadPaymentFeeConfig(), parsePercent(), percentToBps()
-
 ### Community 157 - "Community 157"
-Cohesion: 0.33
-Nodes (5): InsufficientPermissionException, QuotaExceededException, ResourceNotAccessibleException, toString, UnauthorizedException
+Cohesion: 0.4
+Nodes (6): calculateFeeBreakdownInPaise(), ceilDivide(), defaultPaymentFeeConfig(), loadPaymentFeeConfig(), parsePercent(), percentToBps()
 
 ### Community 158 - "Community 158"
-Cohesion: 0.33
-Nodes (4): SessionRepositoryImpl, LogoutOwner, package:rentdone/features/owner/owner_dashboard/data/services/session_auth_service.dart, package:rentdone/features/owner/owner_dashboard/domain/repositories/session_repository.dart
+Cohesion: 0.4
+Nodes (6): calculateFeeBreakdownInPaise(), ceilDivide(), defaultPaymentFeeConfig(), loadPaymentFeeConfig(), parsePercent(), percentToBps()
 
 ### Community 159 - "Community 159"
 Cohesion: 0.33
-Nodes (5): PaymentGatewayResult, TenantRazorpayGatewayAdapter, dart:async, package:rentdone/features/owner/owner_payment/data/services/razorpay_service.dart, package:rentdone/features/owner/owner_payment/models/payment_state.dart
+Nodes (5): Function, StorageUploadException, TenantDocumentRepository, ../exceptions/document_upload_exceptions.dart, ../services/firebase_storage_service.dart
 
 ### Community 160 - "Community 160"
 Cohesion: 0.33
-Nodes (5): copyWith, OwnerProfile, OwnerProfileDto, _resolveValue, toEntity
+Nodes (5): InsufficientPermissionException, QuotaExceededException, ResourceNotAccessibleException, toString, UnauthorizedException
 
 ### Community 161 - "Community 161"
 Cohesion: 0.33
-Nodes (5): _asDouble, _asInt, PaymentIntent, PaymentIntentDto, toEntity
+Nodes (5): app_config.dart, AppConfigService, _isStale, _saveToPrefs, package:shared_preferences/shared_preferences.dart
 
 ### Community 162 - "Community 162"
 Cohesion: 0.33
-Nodes (5): app_config.dart, AppConfigService, _isStale, _saveToPrefs, package:shared_preferences/shared_preferences.dart
+Nodes (4): WatchDashboardSummary, WatchRecentMessages, package:rentdone/features/owner/owner_dashboard/domain/entities/dashboard_summary.dart, package:rentdone/features/owner/owner_dashboard/domain/repositories/dashboard_repository.dart
 
 ### Community 163 - "Community 163"
 Cohesion: 0.33
-Nodes (5): TenantDashboardMetrics, tenantPhone, tenureYears, tenant_payment_rate_metrics.dart, tenant_profile_metrics.dart
+Nodes (5): build, Color, Container, CreditCardOfferWidget, SizedBox
 
 ### Community 164 - "Community 164"
 Cohesion: 0.33
-Nodes (5): DashboardPaymentDto, normalizeMethod, normalizeStatus, toDate, toInt
+Nodes (5): build, _colorFor, Container, PaymentBadge, SizedBox
 
 ### Community 165 - "Community 165"
 Cohesion: 0.33
-Nodes (5): normalizeMethod, normalizeStatus, PaymentInstallment, TenantPaymentRecord, toDate
+Nodes (5): _asDouble, _asInt, PaymentIntent, PaymentIntentDto, toEntity
 
 ### Community 166 - "Community 166"
 Cohesion: 0.33
-Nodes (5): Function, StorageUploadException, TenantDocumentRepository, ../exceptions/document_upload_exceptions.dart, ../services/firebase_storage_service.dart
+Nodes (4): SessionAuthService, OwnerNotificationsFirebaseService, package:firebase_auth/firebase_auth.dart, package:rentdone/features/owner/owner_notifications/data/models/owner_notification_dto.dart
 
 ### Community 167 - "Community 167"
 Cohesion: 0.33
-Nodes (3): RegisterGeneratedPlugins(), NSWindow, MainFlutterWindow
+Nodes (5): DashboardPaymentDto, normalizeMethod, normalizeStatus, toDate, toInt
 
 ### Community 168 - "Community 168"
 Cohesion: 0.33
-Nodes (5): build, Color, Container, CreditCardOfferWidget, SizedBox
+Nodes (5): normalizeMethod, normalizeStatus, PaymentInstallment, TenantPaymentRecord, toDate
 
 ### Community 169 - "Community 169"
-Cohesion: 0.47
-Nodes (4): wWinMain(), CreateAndAttachConsole(), GetCommandLineArguments(), Utf8FromUtf16()
+Cohesion: 0.33
+Nodes (3): RegisterGeneratedPlugins(), NSWindow, MainFlutterWindow
 
 ### Community 170 - "Community 170"
-Cohesion: 0.4
-Nodes (5): assertCallableAuth(), getSecurityConfig(), parseBool(), setCorsHeaders(), verifyHttpAppCheckOrThrow()
+Cohesion: 0.47
+Nodes (4): wWinMain(), CreateAndAttachConsole(), GetCommandLineArguments(), Utf8FromUtf16()
 
 ### Community 171 - "Community 171"
 Cohesion: 0.4
@@ -978,79 +978,79 @@ Nodes (5): cleanupOldReportExports(), cleanupOrphanTenantDocumentFiles(), delete
 
 ### Community 172 - "Community 172"
 Cohesion: 0.4
-Nodes (5): cleanupOldReportExports(), cleanupOrphanTenantDocumentFiles(), deleteStoragePathIfExists(), dueDateLabel(), toDate()
+Nodes (5): assertCallableAuth(), getSecurityConfig(), parseBool(), setCorsHeaders(), verifyHttpAppCheckOrThrow()
 
 ### Community 173 - "Community 173"
 Cohesion: 0.4
 Nodes (5): assertCallableAuth(), getSecurityConfig(), parseBool(), setCorsHeaders(), verifyHttpAppCheckOrThrow()
 
-### Community 175 - "Community 175"
+### Community 174 - "Community 174"
 Cohesion: 0.4
-Nodes (4): DocumentUploadException, FirestoreSaveException, StorageUploadException, toString
+Nodes (5): cleanupOldReportExports(), cleanupOrphanTenantDocumentFiles(), deleteStoragePathIfExists(), dueDateLabel(), toDate()
 
 ### Community 176 - "Community 176"
 Cohesion: 0.4
-Nodes (4): AppMessage, AppMessageDto, toDate, toEntity
+Nodes (4): DocumentUploadException, FirestoreSaveException, StorageUploadException, toString
 
 ### Community 177 - "Community 177"
 Cohesion: 0.4
-Nodes (4): TenantPaymentHistoryFirebaseService, package:rentdone/features/owner/owner_payment/data/services/tenant_payment_history_firebase_service.dart, package:rentdone/features/owner/owner_payment/models/owner_property_summary.dart, package:rentdone/features/owner/owner_payment/models/owner_tenant_summary.dart
+Nodes (4): build, Container, _statusColor, TransactionStatusDot
 
 ### Community 178 - "Community 178"
 Cohesion: 0.4
-Nodes (4): copyWith, ReportFilter, thisMonth, thisYear
+Nodes (4): TenantPaymentHistoryFirebaseService, package:rentdone/features/owner/owner_payment/data/services/tenant_payment_history_firebase_service.dart, package:rentdone/features/owner/owner_payment/models/owner_property_summary.dart, package:rentdone/features/owner/owner_payment/models/owner_tenant_summary.dart
 
 ### Community 179 - "Community 179"
 Cohesion: 0.4
-Nodes (4): toDate, toEntity, TransactionRecord, TransactionRecordDto
+Nodes (4): copyWith, ReportFilter, thisMonth, thisYear
 
 ### Community 180 - "Community 180"
 Cohesion: 0.4
-Nodes (4): TenantFirestoreUserSyncMixin, tenant_basic_details_store.dart, tenant_self_profile_bootstrapper.dart, tenant_user_sync_store.dart
+Nodes (4): BarWithNotchClipper, getClip, shouldReclip, dart:math
+
+### Community 181 - "Community 181"
+Cohesion: 0.4
+Nodes (4): toDate, toEntity, TransactionRecord, TransactionRecordDto
 
 ### Community 182 - "Community 182"
-Cohesion: 0.5
-Nodes (4): getWhatsAppConfig(), postWhatsAppMessage(), sendWhatsAppMessage(), sleep()
+Cohesion: 0.4
+Nodes (4): PaymentService, package:rentdone/features/tenant/payment_module/models/payment_summary_model.dart, package:rentdone/features/tenant/payment_module/services/payment_service.dart, package:rentdone/features/tenant/payment_module/services/razorpay_service.dart
 
-### Community 183 - "Community 183"
+### Community 184 - "Community 184"
 Cohesion: 0.5
 Nodes (4): getWhatsAppConfig(), postWhatsAppMessage(), sendWhatsAppMessage(), sleep()
 
 ### Community 185 - "Community 185"
 Cohesion: 0.5
-Nodes (3): copyWith, Property, Room
-
-### Community 186 - "Community 186"
-Cohesion: 0.5
-Nodes (3): OwnerSettings, OwnerSettingsDto, toEntity
+Nodes (4): getWhatsAppConfig(), postWhatsAppMessage(), sendWhatsAppMessage(), sleep()
 
 ### Community 187 - "Community 187"
 Cohesion: 0.5
-Nodes (3): PaymentGateway, PaymentGatewayRequest, PaymentGatewayResult
+Nodes (3): copyWith, Property, Room
 
 ### Community 188 - "Community 188"
 Cohesion: 0.5
-Nodes (3): PaymentGatewayResult, StripeService, payment_gateway.dart
+Nodes (3): OwnerSettings, OwnerSettingsDto, toEntity
 
 ### Community 189 - "Community 189"
 Cohesion: 0.5
-Nodes (3): compareDocs, PaymentFirestoreDataSource, _toInt
+Nodes (3): PaymentGateway, PaymentGatewayRequest, PaymentGatewayResult
 
 ### Community 190 - "Community 190"
 Cohesion: 0.5
-Nodes (3): _readByAuthUid, _readById, TenantSummarySeedResolver
+Nodes (3): PaymentGatewayResult, StripeService, payment_gateway.dart
 
 ### Community 191 - "Community 191"
 Cohesion: 0.5
-Nodes (3): TenantFirestorePaymentsMixin, tenant_payment_watch_store.dart, tenant_payment_write_store.dart
+Nodes (3): Exception, TenantPaymentWriteStore, package:intl/intl.dart
 
 ### Community 192 - "Community 192"
 Cohesion: 0.5
-Nodes (3): PaymentValidator, PropertyValidator, TenantValidator
+Nodes (3): _readByAuthUid, _readById, TenantSummarySeedResolver
 
-### Community 194 - "Community 194"
-Cohesion: 0.67
-Nodes (3): hasAnyFieldChanged(), shouldRecomputeOwnerSummaryForPaymentWrite(), shouldRecomputeOwnerSummaryForPropertyWrite()
+### Community 193 - "Community 193"
+Cohesion: 0.5
+Nodes (3): PaymentValidator, PropertyValidator, TenantValidator
 
 ### Community 195 - "Community 195"
 Cohesion: 1.0
@@ -1064,26 +1064,26 @@ Nodes (3): hasAnyFieldChanged(), shouldRecomputeOwnerSummaryForPaymentWrite(), s
 Cohesion: 1.0
 Nodes (3): minuteBucketKey(), rateLimitOrThrow(), recordSecuritySignal()
 
-### Community 211 - "Community 211"
+### Community 209 - "Community 209"
 Cohesion: 0.67
 Nodes (3): Firestore: users, Email Duplicate Cleanup Functions, Gravatar Migration Functions
 
 ## Knowledge Gaps
-- **2395 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `FlutterAppDelegate`, `-registerWithRegistry`, `XCTestCase`, `_initializeFunctionsEmulatorIfEnabled` (+2390 more)
+- **2476 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `FlutterAppDelegate`, `-registerWithRegistry`, `XCTestCase`, `_initializeFunctionsEmulatorIfEnabled` (+2471 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **58 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `package:flutter_riverpod/flutter_riverpod.dart` connect `Community 43` to `Community 0`, `Community 2`, `Community 130`, `Community 4`, `Community 134`, `Community 7`, `Community 136`, `Community 9`, `Community 137`, `Community 10`, `Community 8`, `Community 13`, `Community 11`, `Community 18`, `Community 19`, `Community 20`, `Community 21`, `Community 22`, `Community 25`, `Community 26`, `Community 28`, `Community 29`, `Community 31`, `Community 32`, `Community 35`, `Community 36`, `Community 37`, `Community 38`, `Community 39`, `Community 44`, `Community 46`, `Community 47`, `Community 177`, `Community 50`, `Community 53`, `Community 54`, `Community 55`, `Community 59`, `Community 60`, `Community 61`, `Community 62`, `Community 63`, `Community 64`, `Community 65`, `Community 66`, `Community 67`, `Community 69`, `Community 73`, `Community 74`, `Community 75`, `Community 82`, `Community 86`, `Community 88`, `Community 89`, `Community 94`, `Community 95`, `Community 96`, `Community 97`, `Community 101`, `Community 112`, `Community 114`, `Community 115`, `Community 117`, `Community 120`, `Community 123`, `Community 124`?**
-  _High betweenness centrality (0.225) - this node is a cross-community bridge._
-- **Why does `package:flutter/material.dart` connect `Community 35` to `Community 0`, `Community 2`, `Community 130`, `Community 4`, `Community 5`, `Community 7`, `Community 8`, `Community 9`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 135`, `Community 18`, `Community 20`, `Community 21`, `Community 149`, `Community 150`, `Community 24`, `Community 25`, `Community 26`, `Community 151`, `Community 152`, `Community 29`, `Community 31`, `Community 32`, `Community 33`, `Community 36`, `Community 38`, `Community 39`, `Community 168`, `Community 41`, `Community 42`, `Community 43`, `Community 45`, `Community 47`, `Community 51`, `Community 52`, `Community 53`, `Community 54`, `Community 57`, `Community 58`, `Community 61`, `Community 63`, `Community 64`, `Community 69`, `Community 70`, `Community 78`, `Community 79`, `Community 85`, `Community 86`, `Community 88`, `Community 89`, `Community 91`, `Community 92`, `Community 93`, `Community 94`, `Community 95`, `Community 106`, `Community 112`, `Community 114`, `Community 120`, `Community 121`, `Community 122`?**
-  _High betweenness centrality (0.198) - this node is a cross-community bridge._
-- **Why does `package:cloud_firestore/cloud_firestore.dart` connect `Community 17` to `Community 0`, `Community 133`, `Community 6`, `Community 14`, `Community 146`, `Community 19`, `Community 147`, `Community 24`, `Community 30`, `Community 162`, `Community 34`, `Community 164`, `Community 165`, `Community 163`, `Community 37`, `Community 40`, `Community 43`, `Community 44`, `Community 47`, `Community 176`, `Community 48`, `Community 179`, `Community 180`, `Community 60`, `Community 189`, `Community 190`, `Community 191`, `Community 65`, `Community 67`, `Community 72`, `Community 73`, `Community 202`, `Community 75`, `Community 76`, `Community 206`, `Community 208`, `Community 81`, `Community 210`, `Community 209`, `Community 84`, `Community 90`, `Community 91`, `Community 96`, `Community 102`, `Community 103`, `Community 104`, `Community 105`, `Community 109`, `Community 112`, `Community 118`, `Community 119`, `Community 123`, `Community 125`, `Community 126`?**
-  _High betweenness centrality (0.109) - this node is a cross-community bridge._
+- **Why does `package:flutter_riverpod/flutter_riverpod.dart` connect `Community 60` to `Community 0`, `Community 129`, `Community 130`, `Community 2`, `Community 4`, `Community 132`, `Community 7`, `Community 8`, `Community 9`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 141`, `Community 142`, `Community 17`, `Community 18`, `Community 19`, `Community 20`, `Community 21`, `Community 23`, `Community 24`, `Community 25`, `Community 28`, `Community 29`, `Community 31`, `Community 33`, `Community 34`, `Community 37`, `Community 38`, `Community 39`, `Community 40`, `Community 41`, `Community 43`, `Community 47`, `Community 48`, `Community 178`, `Community 51`, `Community 182`, `Community 56`, `Community 57`, `Community 64`, `Community 65`, `Community 66`, `Community 69`, `Community 70`, `Community 71`, `Community 72`, `Community 76`, `Community 82`, `Community 83`, `Community 86`, `Community 88`, `Community 90`, `Community 94`, `Community 97`, `Community 100`, `Community 101`, `Community 103`, `Community 105`, `Community 107`, `Community 112`, `Community 117`, `Community 123`, `Community 125`, `Community 127`?**
+  _High betweenness centrality (0.238) - this node is a cross-community bridge._
+- **Why does `package:flutter/material.dart` connect `Community 45` to `Community 0`, `Community 129`, `Community 130`, `Community 2`, `Community 4`, `Community 128`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 10`, `Community 139`, `Community 11`, `Community 13`, `Community 14`, `Community 12`, `Community 17`, `Community 20`, `Community 21`, `Community 22`, `Community 152`, `Community 24`, `Community 154`, `Community 25`, `Community 28`, `Community 153`, `Community 31`, `Community 33`, `Community 34`, `Community 35`, `Community 164`, `Community 163`, `Community 38`, `Community 39`, `Community 40`, `Community 44`, `Community 49`, `Community 177`, `Community 180`, `Community 53`, `Community 54`, `Community 56`, `Community 57`, `Community 58`, `Community 61`, `Community 62`, `Community 66`, `Community 67`, `Community 69`, `Community 71`, `Community 76`, `Community 79`, `Community 80`, `Community 81`, `Community 83`, `Community 84`, `Community 86`, `Community 93`, `Community 94`, `Community 95`, `Community 96`, `Community 97`, `Community 100`, `Community 101`, `Community 102`, `Community 103`, `Community 112`, `Community 118`, `Community 119`, `Community 120`, `Community 125`, `Community 126`?**
+  _High betweenness centrality (0.210) - this node is a cross-community bridge._
+- **Why does `package:cloud_firestore/cloud_firestore.dart` connect `Community 5` to `Community 0`, `Community 131`, `Community 133`, `Community 9`, `Community 14`, `Community 144`, `Community 145`, `Community 146`, `Community 19`, `Community 27`, `Community 32`, `Community 161`, `Community 36`, `Community 37`, `Community 166`, `Community 167`, `Community 168`, `Community 41`, `Community 42`, `Community 46`, `Community 48`, `Community 50`, `Community 52`, `Community 181`, `Community 191`, `Community 192`, `Community 72`, `Community 202`, `Community 75`, `Community 74`, `Community 206`, `Community 207`, `Community 208`, `Community 81`, `Community 83`, `Community 85`, `Community 87`, `Community 88`, `Community 92`, `Community 93`, `Community 98`, `Community 99`, `Community 106`, `Community 107`, `Community 108`, `Community 112`, `Community 116`, `Community 121`, `Community 122`, `Community 123`?**
+  _High betweenness centrality (0.121) - this node is a cross-community bridge._
 - **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `FlutterAppDelegate`, `-registerWithRegistry` to the rest of the system?**
-  _2395 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2476 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

@@ -181,7 +181,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
         type: type,
         title: title,
         body:
-            'Amount Rs ${_formatInr(amount)} • ${payment.status.toUpperCase()}',
+            'Amount ₹${_formatInr(amount)} • ${payment.status.toUpperCase()}',
         severity: severity,
         tenantId: payment.tenantId,
         paymentId: payment.id,

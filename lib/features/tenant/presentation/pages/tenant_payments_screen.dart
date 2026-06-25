@@ -15,6 +15,7 @@ import 'package:rentdone/features/payment/presentation/providers/payment_di.dart
 import 'package:rentdone/features/payment/presentation/providers/transaction_history_provider.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_owner_details.dart';
 import 'package:rentdone/features/tenant/data/models/tenant_room_details.dart';
+import 'package:rentdone/features/tenant/data/services/payment_constants.dart';
 import 'package:rentdone/features/tenant/domain/entities/tenant_dashboard_summary.dart';
 import 'package:rentdone/features/tenant/presentation/providers/tenant_dashboard_provider.dart';
 
@@ -30,6 +31,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   static final NumberFormat _currency = NumberFormat('#,##,##0', 'en_IN');
 
   final TextEditingController _amountController = TextEditingController();
+  final ValueNotifier<int> _amountNotifier = ValueNotifier<int>(0);
 
   bool _isPaying = false;
   bool _isSavingUpi = false;
@@ -43,6 +45,8 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   @override
   void initState() {
     super.initState();
+    _amountController.addListener(_onAmountChanged);
+    _amountNotifier.value = _enteredAmount;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref
           .read(transactionHistoryProvider.notifier)
@@ -50,16 +54,24 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     });
   }
 
+  void _onAmountChanged() {
+    final val = int.tryParse(_amountController.text.trim()) ?? 0;
+    if (_amountNotifier.value != val) {
+      _amountNotifier.value = val;
+    }
+  }
+
   @override
   void dispose() {
     _amountController.dispose();
+    _amountNotifier.dispose();
     super.dispose();
   }
 
   int get _enteredAmount => int.tryParse(_amountController.text.trim()) ?? 0;
-  int get _feeAmount => (_enteredAmount * 0.02).round();
-  int get _gstOnFeeAmount => (_feeAmount * 0.18).round();
-  int get _totalPayable => _enteredAmount + _feeAmount;
+  int get _feeAmount => (_enteredAmount * PaymentConstants.gatewayFeePercent).round();
+  int get _gstAmount => (_feeAmount * PaymentConstants.gstOnFeePercent).round();
+  int get _totalPayable => _enteredAmount + _feeAmount + _gstAmount;
 
   String _formatRupees(int amount) => '\u20B9${_currency.format(amount)}';
 
@@ -423,10 +435,20 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
         );
 
         return _PageScaffold(
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
-            children: [
+          child: RefreshIndicator(
+            color: OwnerDashboardColors.brandPrimary(context),
+            onRefresh: () async {
+              ref.invalidate(tenantDashboardProvider);
+              ref.invalidate(tenantOwnerDetailsProvider(summary.tenantId));
+              ref.invalidate(tenantRoomDetailsProvider(summary.tenantId));
+              ref.invalidate(paymentDashboardProvider);
+              ref.invalidate(transactionHistoryProvider);
+              await ref.read(tenantDashboardProvider.future);
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+              children: [
               Row(
                 children: [
                   Expanded(
@@ -456,14 +478,6 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                   title: 'Owner Details',
                   line1: _ownerName,
                   line2: _ownerUpiId.isEmpty ? 'UPI not set' : _ownerUpiId,
-                  actionText: 'Edit UPI',
-                  onAction: summary.tenantId.isEmpty
-                      ? null
-                      : () => _showEditUpiModal(
-                          tenantId: summary.tenantId,
-                          summary: summary,
-                          currentOwner: owner,
-                        ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -472,14 +486,6 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                   title: 'Monthly Rent',
                   line1: _formatRupees(_monthlyRent),
                   line2: 'Due day: ${summary.rentDueDay}',
-                  actionText: 'Edit Rent',
-                  onAction: summary.tenantId.isEmpty
-                      ? null
-                      : () => _showEditRentModal(
-                          tenantId: summary.tenantId,
-                          summary: summary,
-                          currentRoom: room,
-                        ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -505,7 +511,6 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                       ),
-                      onChanged: (_) => setState(() {}),
                       decoration: _PaymentsTheme.inputDecoration(
                         context,
                         label: 'Amount',
@@ -517,36 +522,45 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
               ),
               const SizedBox(height: 10),
               _GlassCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Payment Breakdown',
-                      style: TextStyle(
-                        color: OwnerDashboardColors.textPrimary(context),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _BreakdownRow(
-                      label: 'Rent',
-                      value: _formatRupees(_enteredAmount),
-                    ),
-                    _BreakdownRow(
-                      label: 'Gateway Fee (2%)',
-                      value: _formatRupees(_feeAmount),
-                    ),
-                    _BreakdownRow(
-                      label: 'GST (18% on fee)',
-                      value: _formatRupees(_gstOnFeeAmount),
-                    ),
-                    Divider(color: OwnerDashboardColors.border(context)),
-                    _BreakdownRow(
-                      label: 'Total Payable',
-                      value: _formatRupees(_totalPayable),
-                      bold: true,
-                    ),
-                  ],
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _amountNotifier,
+                  builder: (context, amount, _) {
+                    final fee = (amount * PaymentConstants.gatewayFeePercent).round();
+                    final gst = (fee * PaymentConstants.gstOnFeePercent).round();
+                    final total = amount + fee + gst;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Payment Breakdown',
+                          style: TextStyle(
+                            color: OwnerDashboardColors.textPrimary(context),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _BreakdownRow(
+                          label: 'Rent',
+                          value: _formatRupees(amount),
+                        ),
+                        _BreakdownRow(
+                          label: 'Gateway Fee (2%)',
+                          value: _formatRupees(fee),
+                        ),
+                        _BreakdownRow(
+                          label: 'GST (18% on fee)',
+                          value: _formatRupees(gst),
+                        ),
+                        Divider(color: OwnerDashboardColors.border(context)),
+                        _BreakdownRow(
+                          label: 'Total Payable',
+                          value: _formatRupees(total),
+                          bold: true,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 10),
@@ -595,6 +609,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                 ),
             ],
           ),
+        ),
         );
       },
     );
@@ -777,15 +792,15 @@ class _InfoCardContent extends StatelessWidget {
   final String title;
   final String line1;
   final String line2;
-  final String actionText;
+  final String? actionText;
   final VoidCallback? onAction;
 
   const _InfoCardContent({
     required this.title,
     required this.line1,
     required this.line2,
-    required this.actionText,
-    required this.onAction,
+    this.actionText,
+    this.onAction,
   });
 
   @override
@@ -804,7 +819,8 @@ class _InfoCardContent extends StatelessWidget {
                 ),
               ),
             ),
-            TextButton(onPressed: onAction, child: Text(actionText)),
+            if (actionText != null && onAction != null)
+              TextButton(onPressed: onAction, child: Text(actionText!)),
           ],
         ),
         Text(

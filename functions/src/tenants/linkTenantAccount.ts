@@ -77,7 +77,16 @@ export const linkTenantAccount = onCall(
         updatedAt: FieldValue.serverTimestamp(),
       });
 
-      // 5. Update user role if needed
+      // 5. Create tenant mapping so Firestore rules can verify access
+      const mappingRef = db.collection("tenants_mapping").doc(uid);
+      await mappingRef.set({
+        tenantId: tenantDoc.id,
+        ownerId: tenantData.ownerId || "",
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      // 6. Update user role if needed
       await userRef.update({
         role: "tenant",
         updatedAt: FieldValue.serverTimestamp(),

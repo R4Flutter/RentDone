@@ -166,7 +166,7 @@ class _PaymentMethodCard extends StatelessWidget {
               FittedBox(
                 alignment: Alignment.centerLeft,
                 fit: BoxFit.scaleDown,
-                child: Text('\u20B9${_formatInr(amount)}', style: amountStyle),
+                child: Text('₹${_formatInr(amount)}', style: amountStyle),
               ),
               const SizedBox(height: 2),
               Text(

@@ -43,8 +43,6 @@ class FirebaseDocumentStorageService {
   final FirebaseFirestore _firestore;
 
   static const int _maxSourceFileSizeBytes = 100 * 1024 * 1024;
-  static const int _targetImageCompressedBytes = 200 * 1024;
-  static const int _targetPdfUploadBytes = 500 * 1024;
   static const int _maxUploadBytes = 2 * 1024 * 1024;
   static const int _maxThumbnailBytes = 120 * 1024;
   static const Set<String> _allowedExtensions = {
@@ -173,16 +171,6 @@ class FirebaseDocumentStorageService {
     }
 
     final uploadBytes = await uploadFile.length();
-    if (_isImage(extension) && uploadBytes > _targetImageCompressedBytes) {
-      throw Exception(
-        'Image could not be compressed to 200KB. Please choose a clearer or smaller image.',
-      );
-    }
-    if (extension == 'pdf' && uploadBytes > _targetPdfUploadBytes) {
-      throw Exception(
-        'PDF must be 500KB or below. Please upload a smaller PDF.',
-      );
-    }
     if (uploadBytes > _maxUploadBytes) {
       throw Exception(
         'Compressed file exceeds 2MB. Please upload a clearer or smaller file.',
@@ -325,12 +313,12 @@ class FirebaseDocumentStorageService {
     String tenantId,
     int millis,
   ) async {
-    var quality = 82;
-    var width = 1600;
-    var height = 1600;
+    var quality = 80;
+    var width = 1920;
+    var height = 1920;
     File current = source;
 
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < 4; i++) {
       final targetPath =
           '${Directory.systemTemp.path}${Platform.pathSeparator}tenant_${tenantId}_${millis}_$i.$extension';
 
@@ -350,13 +338,13 @@ class FirebaseDocumentStorageService {
 
       current = File(compressed.path);
       final size = await current.length();
-      if (size <= _targetImageCompressedBytes) {
+      if (size <= _maxUploadBytes) {
         return current;
       }
 
-      quality = (quality - 10).clamp(45, 82);
-      width = (width * 0.85).round();
-      height = (height * 0.85).round();
+      quality = (quality - 15).clamp(40, 80);
+      width = (width * 0.75).round();
+      height = (height * 0.75).round();
     }
 
     return current;

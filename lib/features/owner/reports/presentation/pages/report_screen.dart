@@ -1326,7 +1326,7 @@ class _Blob extends StatelessWidget {
 }
 
 String _money(int value) {
-  return NumberFormat.currency(locale: 'en_IN', symbol: 'Rs ').format(value);
+  return NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(value);
 }
 
 String _compactMoney(int value) {

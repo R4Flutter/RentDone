@@ -187,11 +187,13 @@ service cloud.firestore {
       }
 
       match /room_details/{documentId} {
-        allow read, create, update, delete: if canAccessTenant(tenantId);
+        allow read: if canAccessTenant(tenantId);
+        allow create, update, delete: if isTenantOwner(tenantId);
       }
 
       match /owner_details/{documentId} {
-        allow read, create, update, delete: if canAccessTenant(tenantId);
+        allow read: if canAccessTenant(tenantId);
+        allow create, update, delete: if isTenantOwner(tenantId);
       }
 
       match /reminders/{documentId} {
@@ -218,10 +220,23 @@ service cloud.firestore {
           || (resource.data.ownerId == uid())
         );
 
-      allow create, update: if isAuth()
-        && request.resource.data.ownerId == uid();
+      allow create: if isAuth()
+        && (
+          authUid == uid()
+          || request.resource.data.ownerId == uid()
+        );
 
-      allow delete: if isAuth() && resource.data.ownerId == uid();
+      allow update: if isAuth()
+        && (
+          authUid == uid()
+          || resource.data.ownerId == uid()
+        );
+
+      allow delete: if isAuth()
+        && (
+          authUid == uid()
+          || resource.data.ownerId == uid()
+        );
     }
 
     // Top-level payments used by owner dashboard/payment screens.
@@ -313,8 +328,7 @@ service cloud.firestore {
 
       allow create: if isAuth()
         && request.resource.data.userId == uid()
-        && request.resource.data.tenantId is string
-        && canAccessTenant(request.resource.data.tenantId);
+        && request.resource.data.tenantId is string;
 
       allow update, delete: if isAuth() && resource.data.userId == uid();
     }

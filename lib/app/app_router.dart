@@ -45,7 +45,6 @@ import 'package:rentdone/shared/pages/splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authRouterStateProvider);
-  var hasHandledInitialRouteGuard = false;
 
   return GoRouter(
     navigatorKey: appNavigatorKey,
@@ -63,15 +62,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       bool isValidPhone(String? value) {
         final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
         return RegExp(r'^[6-9]\d{9}$').hasMatch(digits);
-      }
-
-      if (!hasHandledInitialRouteGuard) {
-        hasHandledInitialRouteGuard = true;
-        final isProtectedRoute =
-            path.startsWith('/owner') || path.startsWith('/tenant');
-        if (isProtectedRoute && path != '/') {
-          return '/';
-        }
       }
 
       // Allow access to role selection and login for unauthenticated users

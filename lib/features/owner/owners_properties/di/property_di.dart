@@ -15,9 +15,15 @@ import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_
 import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_property.dart';
 import 'package:rentdone/features/owner/owners_properties/domain/usecases/watch_property_tenants.dart';
 
+import 'package:rentdone/features/owner/add_tenant/data/services/firebase_storage_service.dart';
+
 // Services
 final propertyFirebaseServiceProvider = Provider<PropertyFirebaseService>((ref) => PropertyFirebaseService());
-final tenantFirebaseServiceProvider = Provider<TenantFirebaseService>((ref) => TenantFirebaseService());
+final tenantFirebaseServiceProvider = Provider<TenantFirebaseService>((ref) {
+  return TenantFirebaseService(
+    storageService: FirebaseDocumentStorageService(),
+  );
+});
 
 // Repositories
 final propertyRepositoryProvider = Provider<PropertyRepository>((ref) {

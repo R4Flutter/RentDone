@@ -198,9 +198,7 @@ class RazorpayService {
       return data['ok'] == true || data['verified'] == true;
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'unimplemented' || e.code == 'not-found') {
-        // Mock-ready fallback for environments where verification callable
-        // is not yet deployed.
-        return razorpaySignature.trim().isNotEmpty;
+        return false;
       }
       rethrow;
     }

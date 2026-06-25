@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -29,6 +30,13 @@ Future<void> main() async {
 
   // Initialize Firebase (single responsibility)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Configure Firestore for optimal performance with offline persistence.
+  // Uses locally cached data first (instant load) and syncs in the background.
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: 41943040, // 40 MB cache for smooth offline experience
+  );
 
   // Optional local Functions emulator mode for Spark/testing environments.
   await _initializeFunctionsEmulatorIfEnabled();

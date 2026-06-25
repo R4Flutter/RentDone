@@ -62,9 +62,24 @@ class AddTenantFirebaseService {
         throw StateError('Selected room is already occupied');
       }
 
-      rooms[roomIndex] = {...room, 'isOccupied': true, 'tenantId': dto.id};
+      final propertyName = (data?['name'] as String? ?? 'Property').trim();
+      final roomNumber = (room['roomNumber'] as String? ?? room['name'] ?? 'Room').trim();
 
+      rooms[roomIndex] = {...room, 'isOccupied': true, 'tenantId': dto.id};
       txn.set(tenantRef, tenantMap, SetOptions(merge: true));
+
+      // NEW: Update room_details subcollection for the tenant
+      final roomDetailsRef = tenantRef.collection('room_details').doc('current');
+      txn.set(roomDetailsRef, {
+        'propertyId': dto.propertyId,
+        'propertyName': propertyName,
+        'roomId': dto.roomId,
+        'roomNumber': roomNumber,
+        'isOccupied': true,
+        'status': 'active',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
       txn.update(propertyRef, {'rooms': rooms});
     });
   }
